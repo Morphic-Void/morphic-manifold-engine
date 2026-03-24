@@ -1,0 +1,59 @@
+# ================================
+# Build artefacts
+# ================================
+/build/
+/out/
+/bin/
+/obj/
+/cmake-build-*/
+/CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# ================================
+# IDE / editor files
+# ================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Visual Studio
+.vs/
+*.sln
+*.sln.docstates
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
+
+# Visual Studio build output
+x64/
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+
+# ================================
+# OS / filesystem noise
+# ================================
+.DS_Store
+Thumbs.db
+
+# ================================
+# Temporary / generated files
+# ================================
+*.log
+*.tmp
+
+# ================================
+# Perforce leftovers (defensive)
+# ================================
+.p4config
+.p4ignore
+
+# ================================
+# Not for redistribution (internal staging)
+# ================================
+not_for_redistribution/
