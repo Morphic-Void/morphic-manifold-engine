@@ -1,0 +1,3 @@
+[submodule "external/SuiteUTF"]
+	path = external/SuiteUTF
+	url = https://github.com/Icabod66/SuiteUTF
