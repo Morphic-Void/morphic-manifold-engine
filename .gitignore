@@ -54,6 +54,17 @@ Thumbs.db
 .p4ignore
 
 # ================================
+# Module artefacts
+# ================================
+
+external/**/Debug/
+external/**/Release/
+external/**/x64/
+external/**/x86/
+external/**/bin/
+external/**/obj/
+
+# ================================
 # Not for redistribution (internal staging)
 # ================================
 not_for_redistribution/
