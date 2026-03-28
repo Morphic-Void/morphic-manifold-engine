@@ -113,8 +113,8 @@ Called during visit operations with slot_index and identifier.
 
 Identifier values used by this template:
 
-- (-1) for empty slots
-- (-2) for loose slots
+- (-1) for loose slots
+- (-2) for empty slots
 
 ### on_move_payload
 

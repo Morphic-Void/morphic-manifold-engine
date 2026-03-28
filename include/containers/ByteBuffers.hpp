@@ -208,7 +208,7 @@ public:
     void zero_fill() const noexcept;
 
     //  Handoff
-    memory::CMemoryToken&& disown(MetaByteBuffer& meta) noexcept { meta = m_meta; m_meta.reset(); return std::move(m_token); }
+    memory::CMemoryToken disown(MetaByteBuffer& meta) noexcept { meta = m_meta; m_meta.reset(); return std::move(m_token); }
 
 private:
     memory::CMemoryToken m_token;
@@ -406,7 +406,7 @@ public:
     void zero_fill() const noexcept;
 
     //  Handoff
-    memory::CMemoryToken&& disown(MetaByteRectBuffer& meta) noexcept { meta = m_meta; m_meta.reset(); return std::move(m_token); }
+    memory::CMemoryToken disown(MetaByteRectBuffer& meta) noexcept { meta = m_meta; m_meta.reset(); return std::move(m_token); }
 
 private:
     memory::CMemoryToken m_token;

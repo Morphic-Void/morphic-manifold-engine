@@ -259,8 +259,8 @@ protected:
     //  For each visited slot, calls on_visit(slot_index, identifier).
     //  The identifier is category-derived and is not a slot or rank index:
     //
-    //      - identifier == -1 for empty slots
-    //      - identifier == -2 for loose slots
+    //      - identifier == -1 for loose slots
+    //      - identifier == -2 for empty slots
     void visit_loose() noexcept;
     void visit_empty() noexcept;
     void visit_all() noexcept;
@@ -286,8 +286,8 @@ protected:
     ///
     /// identifier is category-derived and is not a slot index:
     ///
-    ///     - identifier == -1 for empty slots
-    ///     - identifier == -2 for loose slots
+    ///     - identifier == -1 for loose slots
+    ///     - identifier == -2 for empty slots
     virtual void on_visit(const std::int32_t slot_index, const std::int32_t identifier) noexcept
     {
         (void)slot_index;
@@ -1102,7 +1102,7 @@ inline void TUnorderedSlots<TIndex>::private_on_visit_dispatcher(const bool visi
         std::int32_t slot_index = m_loose_list_head;
         for (std::uint32_t loose_count = m_loose_count; loose_count != 0; --loose_count)
         {
-            on_visit(slot_index, -2);
+            on_visit(slot_index, -1);
             slot_index = m_meta_slot_array[slot_index].get_next_index();
         }
     }
@@ -1111,7 +1111,7 @@ inline void TUnorderedSlots<TIndex>::private_on_visit_dispatcher(const bool visi
         std::int32_t slot_index = m_empty_list_head;
         for (std::uint32_t empty_count = m_empty_count; empty_count != 0; --empty_count)
         {
-            on_visit(slot_index, -1);
+            on_visit(slot_index, -2);
             slot_index = m_meta_slot_array[slot_index].get_next_index();
         }
     }

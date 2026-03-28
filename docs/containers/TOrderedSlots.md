@@ -361,26 +361,29 @@ Rebuilds ordering of currently lexed slots.
 
 ### sort_and_pack()
 
-Physically reorders payload and rebuilds metadata.
+Physically reorders payload into canonical packed order and rebuilds metadata.
 
 After completion:
 
-- Lexed payload occupies slot indices [0, lexed_count()) in order
-- Loose payload occupies slot indices [lexed_count(), lexed_count() + loose_count())
-- Remaining slots are empty
+- Lexed slots occupy indices [0, lexed_count()) in lex order
+- Loose slots occupy [lexed_count(), lexed_count() + loose_count())
+- Empty slots occupy [lexed_count() + loose_count(), capacity())
 
-Reordering uses on_move_payload() and may use temporary -1 moves.
+Reordering uses on_move_payload():
+
+- In-place mode: uses cycle resolution (temporary -1 moves)
+- External mode: performs a single pass to a complete external domain
 
 On completion:
 
 - Logical traversal order is unchanged
 - Occupied region is traversal-contiguous
-- For all occupied slots: slot_index == rank_index
+- For all slots: slot_index == rank_index
 
 The rank mapping becomes identity:
 
-- Occupied: out_rank_indices[slot_index] == slot_index
-- Empty: out_rank_indices[slot_index] = -1
+- rank_to_slot[rank] == rank
+- slot_to_rank[slot] == slot
 
 ---
 
@@ -458,7 +461,7 @@ Rank index during visit:
 
 - Lexed: [0, lexed_count())
 - Loose: [lexed_count(), lexed_count() + loose_count())
-- Empty: -1
+- Empty: [lexed_count() + loose_count(), capacity())
 
 ---
 

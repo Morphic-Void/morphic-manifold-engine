@@ -61,7 +61,7 @@
 //  Empty slots are available for acquisition.
 //
 //  Ordered traversal and ordered rank are defined by in-order traversal
-//  of the lexed slots, followed by the loose slots.
+//  of the lexed slots, followed by the loose slots and then empty slots.
 //
 //  In TOrderedSlots, TRAVERSAL ORDER DEFINES RANK ORDER.
 //
@@ -208,6 +208,14 @@
 #include "memory/memory_allocation.hpp"
 #include "debug/debug.hpp"
 
+struct RankMapEntry
+{
+    std::int32_t rank_to_slot;
+    std::int32_t slot_to_rank;
+};
+
+using RankMap = TPodVector<RankMapEntry>;
+
 /// An ordered index over slot metadata for externally stored payload items.
 ///
 /// TOrderedSlots stores only slot metadata (tree/list links, balance, occupancy).
@@ -344,35 +352,30 @@ protected:
     //  Can result in a marginally more balanced tree.
     void relex_all() noexcept;
 
-    //  Physically reorder payload items.
+    //  Build bidirectional rank/slot mapping for current slot state.
+    //  Traversal order is lexed, then loose, then empty.
+    [[nodiscard]] RankMap build_rank_map() const noexcept;
+
+    //  Physically reorder payload items into canonical packed order.
     //
     //  After completion:
-    //      - Lexed payload items occupy slot indices [0, lexed_count()) in lex order.
-    //      - Loose payload items occupy slot indices [lexed_count(), lexed_count() + loose_count()).
-    //      - Remaining slots are Empty.
-    //      - Lexed slot metadata is rebuilt as a balanced AVL tree.
+    //      - Lexed slots occupy [0, lexed_count) in lex order.
+    //      - Loose slots occupy [lexed_count, lexed_count + loose_count).
+    //      - Empty slots occupy [lexed_count + loose_count, capacity()).
+    //      - Lexed metadata is rebuilt as a balanced AVL tree.
+    //      - Loose and empty metadata are rebuilt as linear lists.
     //
-    //  Uses on_move_payload() (including temporary moves via -1).
+    //  Payload movement is performed via on_move_payload():
+    //      - In-place mode: uses cycle resolution (temporary slot index -1).
+    //      - External mode: performs a single pass to a complete external domain.
     //
-    //  See docs/TOrderedSlots.md for more detail.
-    void sort_and_pack() noexcept;
+    //  See docs/TOrderedSlots.md for further detail.
+    void sort_and_pack(const bool use_external_payload = false) noexcept;
 
     //  Index order list rebuilding utilities.
     //  For loose slots index order == rank_index order.
     void rebuild_loose_in_index_order() noexcept;
     void rebuild_empty_in_index_order() noexcept;
-
-    //  Build slot_index -> rank_index mapping.
-    //  The rank represents the index of the slot payload after sort_and_pack().
-    //  Lexed slots have ranks in the range [0, lexed_count()) in lex order.
-    //  Loose slots have ranks in the range [lexed_count(), lexed_count() + loose_count()).
-    //  Empty slots have a rank of -1 (empty index order is indeterminate).
-    //  The returned vector may be empty, indicating failure or no data.
-    [[nodiscard]] TPodVector<std::int32_t> build_rank_indices() const noexcept;
-
-    //  Build slot_index -> rank_index mapping.
-    //  The out_rank_indices array must have capacity() or more entries.
-    [[nodiscard]] bool build_rank_indices(std::int32_t* const out_rank_indices) const noexcept;
 
     //  Return the ranked index of a payload item by slot index, or -1 if the slot is empty.
     [[nodiscard]] std::int32_t rank_index_of(const std::int32_t slot_index) const noexcept;
@@ -403,7 +406,7 @@ protected:
     //
     //  For lexed slots, rank_index increases monotonically in the range [0 : lexed_count()).
     //  For loose slots, rank_index increases monotonically in the range [lexed_count() : lexed_count() + loose_count()).
-    //  For empty slots, rank_index is -1.
+    //  For empty slots, rank_index increases monotonically in the range [lexed_count() + loose_count(), capacity()).
     void visit_occupied() noexcept;
     void visit_lexed() noexcept;
     void visit_loose() noexcept;
@@ -442,7 +445,7 @@ protected:
     ///
     /// For lexed slots the rank_index increases monotonically in the range [0 : lexed_count()).
     /// For loose slots the rank_index increases monotonically in the range [lexed_count() : lexed_count() + loose_count()).
-    /// For empty slots the rank_index is -1.
+    //  For empty slots the rank_index increases monotonically in the range [lexed_count() + loose_count(), capacity()).
     virtual void on_visit(const std::int32_t slot_index, const std::int32_t rank_index) noexcept
     {
         (void)slot_index;
@@ -583,13 +586,6 @@ private:
     //  Capacity growth recommendation.
     static inline std::uint32_t apply_growth_policy(const std::uint32_t capacity) noexcept;
 
-    //  Build slot_index -> rank_index table.
-    //  Ranks follow the canonical traversal order:
-    //  - Lexed slots first, in lex order, ranks [0, lexed_count()).
-    //  - Loose slots next, ranks [lexed_count(), lexed_count() + loose_count()).
-    //  Empty slots have rank -1.
-    void build_rank_index_table(std::int32_t* const out_rank_indices) const noexcept;
-
     //  Tree validation functions.
     //  Returns height >= 0 on success; returns -1 on failure
     static inline [[nodiscard]] std::int32_t failed_validate_subtree() noexcept;
@@ -623,7 +619,7 @@ private:
 
     //  Implementation of sort_and_pack().
     //  See the sort_and_pack() function prefix comments for details.
-    void private_sort_and_compact() noexcept;
+    void private_sort_and_compact(const bool use_external_payload = false) noexcept;
 
     //  Build a balanced subtree over an inclusive range range of slot indices.
     [[nodiscard]] std::int32_t build_balanced_subtree(const std::int32_t lower_index, const std::int32_t upper_index, const std::int32_t parent_index) noexcept;
@@ -671,12 +667,12 @@ private:
     void move_to_empty_list(const std::int32_t slot_index) noexcept;
 
     //  Convert a slot index to its rank index.
-    //  Returns the rank index for lexed and loose slots, or -1 if the slot is empty.
+    //  Returns the rank index for a slots.
     [[nodiscard]] std::int32_t convert_to_rank_index(const std::int32_t slot_index) const noexcept;
 
     //  Locate a slot index by its rank index.
     //  Returns the slot index or -1 if rank_index out of range.
-    //  Valid ranks are in [0, lexed_count() + loose_count()).
+    //  Valid ranks are in [0, capacity()).
     [[nodiscard]] std::int32_t locate_by_rank_index(const std::int32_t rank_index) const noexcept;
 
     //  Locate functions search the lexed tree using the current query key via on_compare_keys(-1, target).
@@ -1168,11 +1164,71 @@ inline void TOrderedSlots<TIndex, TMeta>::relex_all() noexcept
 }
 
 template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::sort_and_pack() noexcept
+[[nodiscard]] RankMap TOrderedSlots<TIndex, TMeta>::build_rank_map() const noexcept
+{
+    RankMap rank_map;
+    if (is_safe() && (m_capacity != 0u))
+    {
+        if (rank_map.allocate(static_cast<std::size_t>(m_capacity)))
+        {
+            (void)rank_map.set_size(static_cast<std::size_t>(m_capacity));
+            RankMapEntry* const map = rank_map.data();
+            const Slot* const meta = m_meta_slot_array;
+            std::int32_t rank_index = 0;
+            if (m_lexed_count != 0)
+            {
+                std::int32_t slot_index = -1;
+                for (std::int32_t left_index = m_lexed_tree_root; left_index >= 0; left_index = meta[slot_index = left_index].child_index[0]) {}
+                while (slot_index >= 0)
+                {
+                    map[rank_index].rank_to_slot = slot_index;
+                    map[slot_index].slot_to_rank = rank_index;
+                    std::int32_t from_index = meta[slot_index].child_index[1];
+                    if (from_index < 0)
+                    {
+                        for (from_index = slot_index; (((slot_index = meta[from_index].parent_index) >= 0) && (meta[slot_index].child_index[0] != from_index)); from_index = slot_index) {}
+                    }
+                    else
+                    {
+                        for (slot_index = from_index; ((from_index = meta[slot_index].child_index[0]) >= 0); slot_index = from_index) {}
+                    }
+                    ++rank_index;
+                }
+            }
+            if (m_loose_count != 0)
+            {
+                std::int32_t slot_index = m_loose_list_head;
+                for (std::uint32_t loose_count = m_loose_count; loose_count != 0; --loose_count)
+                {
+                    map[rank_index].rank_to_slot = slot_index;
+                    map[slot_index].slot_to_rank = rank_index;
+                    slot_index = meta[slot_index].child_index[1];
+                    ++rank_index;
+                }
+            }
+            if (m_empty_count != 0)
+            {
+                std::int32_t slot_index = m_empty_list_head;
+                for (std::uint32_t empty_count = m_empty_count; empty_count != 0; --empty_count)
+                {
+                    map[rank_index].rank_to_slot = slot_index;
+                    map[slot_index].slot_to_rank = rank_index;
+                    slot_index = meta[slot_index].child_index[1];
+                    ++rank_index;
+                }
+            }
+            MV_HARD_ASSERT(rank_index == static_cast<std::int32_t>(m_capacity));
+        }
+    }
+    return rank_map;
+}
+
+template<typename TIndex, typename TMeta>
+inline void TOrderedSlots<TIndex, TMeta>::sort_and_pack(const bool use_external_payload) noexcept
 {
     if (lock(LockState::on_move_payload))
     {
-        private_sort_and_compact();
+        private_sort_and_compact(use_external_payload);
         unlock(LockState::on_move_payload);
     }
 }
@@ -1195,31 +1251,6 @@ inline void TOrderedSlots<TIndex, TMeta>::rebuild_empty_in_index_order() noexcep
             state_to_list(0, m_high_index, SlotState::is_empty_slot),
             range_to_list((m_high_index + 1), static_cast<std::int32_t>(m_capacity - 1u), SlotState::is_empty_slot));
     }
-}
-
-template<typename TIndex, typename TMeta>
-inline TPodVector<std::int32_t> TOrderedSlots<TIndex, TMeta>::build_rank_indices() const noexcept
-{
-    TPodVector<std::int32_t> rank_indices;
-    if (is_safe())
-    {
-        if (rank_indices.allocate(static_cast<std::size_t>(m_capacity)))
-        {
-            build_rank_index_table(rank_indices.data());
-        }
-    }
-    return rank_indices;
-}
-
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::build_rank_indices(std::int32_t* const out_rank_indices) const noexcept
-{
-    if (is_safe() && (out_rank_indices != nullptr))
-    {
-        build_rank_index_table(out_rank_indices);
-        return true;
-    }
-    return false;
 }
 
 template<typename TIndex, typename TMeta>
@@ -1869,42 +1900,6 @@ inline std::uint32_t TOrderedSlots<TIndex, TMeta>::apply_growth_policy(const std
     return static_cast<std::uint32_t>(std::min(memory::vector_growth_policy(static_cast<std::size_t>(capacity)), static_cast<std::size_t>(k_capacity_limit)));
 }
 
-//  Build slot_index -> rank_index mapping.
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::build_rank_index_table(std::int32_t* const out_rank_indices) const noexcept
-{
-    std::fill_n(out_rank_indices, m_capacity, -1);
-    if (m_lexed_count != 0)
-    {
-        std::int32_t slot_index = -1;
-        for (std::int32_t left_index = m_lexed_tree_root; left_index >= 0; left_index = m_meta_slot_array[slot_index = left_index].child_index[0]) {}
-        for (std::int32_t rank_index = 0; slot_index >= 0; ++rank_index)
-        {
-            out_rank_indices[slot_index] = rank_index;
-            std::int32_t from_index = m_meta_slot_array[slot_index].child_index[1];
-            if (from_index < 0)
-            {
-                for (from_index = slot_index; (((slot_index = m_meta_slot_array[from_index].parent_index) >= 0) && (m_meta_slot_array[slot_index].child_index[0] != from_index)); from_index = slot_index) {}
-            }
-            else
-            {
-                for (slot_index = from_index; ((from_index = m_meta_slot_array[slot_index].child_index[0]) >= 0); slot_index = from_index) {}
-            }
-        }
-    }
-    if (m_loose_count != 0)
-    {
-        std::int32_t rank_index = static_cast<std::int32_t>(m_lexed_count);
-        std::int32_t slot_index = m_loose_list_head;
-        for (std::uint32_t loose_count = m_loose_count; loose_count != 0; --loose_count)
-        {
-            out_rank_indices[slot_index] = rank_index;
-            slot_index = m_meta_slot_array[slot_index].child_index[1];
-            ++rank_index;
-        }
-    }
-}
-
 template<typename TIndex, typename TMeta>
 inline std::int32_t TOrderedSlots<TIndex, TMeta>::failed_validate_subtree() noexcept
 {
@@ -2376,21 +2371,22 @@ template<typename TIndex, typename TMeta>
 inline void TOrderedSlots<TIndex, TMeta>::private_on_visit_dispatcher(const bool visit_lexed, const bool visit_loose, const bool visit_empty) noexcept
 {
     MV_HARD_ASSERT(m_lock == LockState::on_visit);
+    const Slot* const meta = m_meta_slot_array;
     if (visit_lexed)
     {
         std::int32_t slot_index = m_lexed_tree_root;
-        for (std::int32_t to_index = slot_index; to_index >= 0; to_index = m_meta_slot_array[slot_index].child_index[0]) slot_index = to_index;
+        for (std::int32_t to_index = slot_index; to_index >= 0; to_index = meta[slot_index].child_index[0]) slot_index = to_index;
         for (std::int32_t rank_index = 0; slot_index >= 0; ++rank_index)
         {
             on_visit(slot_index, rank_index);
-            std::int32_t from_index = m_meta_slot_array[slot_index].child_index[1];
+            std::int32_t from_index = meta[slot_index].child_index[1];
             if (from_index < 0)
             {
-                for (from_index = slot_index; (((slot_index = m_meta_slot_array[from_index].parent_index) >= 0) && (m_meta_slot_array[slot_index].child_index[0] != from_index)); from_index = slot_index) {}
+                for (from_index = slot_index; (((slot_index = meta[from_index].parent_index) >= 0) && (meta[slot_index].child_index[0] != from_index)); from_index = slot_index) {}
             }
             else
             {
-                for (slot_index = from_index; ((from_index = m_meta_slot_array[slot_index].child_index[0]) >= 0); slot_index = from_index) {}
+                for (slot_index = from_index; ((from_index = meta[slot_index].child_index[0]) >= 0); slot_index = from_index) {}
             }
         }
     }
@@ -2401,17 +2397,19 @@ inline void TOrderedSlots<TIndex, TMeta>::private_on_visit_dispatcher(const bool
         for (std::uint32_t loose_count = m_loose_count; loose_count != 0; --loose_count)
         {
             on_visit(slot_index, rank_index);
-            slot_index = m_meta_slot_array[slot_index].child_index[1];
+            slot_index = meta[slot_index].child_index[1];
             ++rank_index;
         }
     }
     if (visit_empty)
     {
+        std::int32_t rank_index = static_cast<std::int32_t>(m_lexed_count + m_loose_count);
         std::int32_t slot_index = m_empty_list_head;
         for (std::uint32_t empty_count = m_empty_count; empty_count != 0; --empty_count)
         {
-            on_visit(slot_index, -1);
-            slot_index = m_meta_slot_array[slot_index].child_index[1];
+            on_visit(slot_index, rank_index);
+            slot_index = meta[slot_index].child_index[1];
+            ++rank_index;
         }
     }
 }
@@ -2640,92 +2638,79 @@ inline bool TOrderedSlots<TIndex, TMeta>::private_has_duplicate_key_in_loose(con
 }
 
 template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::private_sort_and_compact() noexcept
+inline void TOrderedSlots<TIndex, TMeta>::private_sort_and_compact(const bool use_external_payload) noexcept
 {
     MV_HARD_ASSERT(m_lock == LockState::on_move_payload);
-    const std::uint32_t occupied_count = m_lexed_count + m_loose_count;
-    if (occupied_count)
+    if (m_capacity != 0u)
     {
-        std::int32_t list_head = combine_lists(lexed_to_list(), m_loose_list_head);
-        set_list_ordinals(list_head, occupied_count, 0);
-        std::uint32_t remaining = occupied_count;
-    
-        for (std::uint32_t check_remaining = remaining; check_remaining; --check_remaining)
+        Slot* const meta = m_meta_slot_array;
+        std::int32_t list_head = combine_lists(lexed_to_list(), combine_lists(m_loose_list_head, m_empty_list_head));
+        if (use_external_payload)
         {
-            std::int32_t source_index = list_head;
-            Slot& source_slot = m_meta_slot_array[source_index];
-    
-            std::int32_t target_index = source_slot.parent_index;
-            Slot& target_slot = m_meta_slot_array[target_index];
-    
-            list_head = source_slot.child_index[1];
-    
-            if (target_slot.is_empty_slot())
+            std::int32_t slot_index = list_head;
+            std::int32_t rank_index = 0;
+            for (std::uint32_t count = m_capacity; count != 0; --count)
             {
-                on_move_payload(source_index, target_index);
-                if (static_cast<std::uint32_t>(source_index) < occupied_count)
+                on_move_payload(slot_index, rank_index);
+                slot_index = meta[slot_index].child_index[1];
+                ++rank_index;
+            }
+        }
+        else
+        {
+            std::uint32_t remaining = m_capacity;
+            set_list_ordinals(list_head, m_capacity, 0);
+            while (remaining)
+            {
+                std::int32_t cycle_start = list_head;
+
+                std::int32_t slot_index = -1;
+                std::int32_t rank_index = cycle_start;
+
+                do
                 {
-                    check_remaining = remaining;
+                    Slot& rank_slot = meta[rank_index];
+
+                    list_head = rank_slot.child_index[1];
+
+                    meta[rank_slot.child_index[0]].child_index[1] = rank_slot.child_index[1];
+                    meta[rank_slot.child_index[1]].child_index[0] = rank_slot.child_index[0];
+                    --remaining;
+
+                    rank_slot.child_index[1] = static_cast<TIndex>(slot_index);
+
+                    slot_index = rank_index;
+                    rank_index = rank_slot.parent_index;
+
+                } while (rank_index != cycle_start);
+
+                if (meta[slot_index].child_index[1] >= 0)
+                {   //  process a multi-slot cycle
+
+                    on_move_payload(slot_index, -1);
+
+                    while ((rank_index = slot_index) >= 0)
+                    {
+                        slot_index = meta[rank_index].child_index[1];
+                        on_move_payload(slot_index, rank_index);
+                    }
                 }
-                source_slot.set_is_empty_slot();
-                source_index = target_index;
-            }
-    
-            if (source_index == target_index)
-            {
-                target_slot.set_is_unassigned();
-                m_meta_slot_array[source_slot.child_index[0]].child_index[1] = source_slot.child_index[1];
-                m_meta_slot_array[source_slot.child_index[1]].child_index[0] = source_slot.child_index[0];
-                --remaining;
             }
         }
-    
-        while (remaining)
-        {
-            std::int32_t cycle_start = list_head;
-    
-            std::int32_t source_index = -1;
-            std::int32_t target_index = cycle_start;
-    
-            do
-            {
-                Slot& target_slot = m_meta_slot_array[target_index];
-    
-                list_head = target_slot.child_index[1];
-    
-                m_meta_slot_array[target_slot.child_index[0]].child_index[1] = target_slot.child_index[1];
-                m_meta_slot_array[target_slot.child_index[1]].child_index[0] = target_slot.child_index[0];
-                --remaining;
-    
-                target_slot.child_index[1] = static_cast<TIndex>(source_index);
-    
-                source_index = target_index;
-                target_index = target_slot.parent_index;
-    
-            } while (target_index != cycle_start);
-    
-            on_move_payload(source_index, -1);
-    
-            while ((target_index = source_index) >= 0)
-            {
-                source_index = m_meta_slot_array[target_index].child_index[1];
-                on_move_payload(source_index, target_index);
-            }
-        }
-    
+
         const std::int32_t lexed_lower_index = 0;
         const std::int32_t lexed_upper_index = lexed_lower_index + static_cast<std::int32_t>(m_lexed_count - 1);
-    
+
         const std::int32_t loose_lower_index = lexed_lower_index + static_cast<std::int32_t>(m_lexed_count);
         const std::int32_t loose_upper_index = loose_lower_index + static_cast<std::int32_t>(m_loose_count - 1);
-    
+
         const std::int32_t empty_lower_index = loose_lower_index + static_cast<std::int32_t>(m_loose_count);
         const std::int32_t empty_upper_index = empty_lower_index + static_cast<std::int32_t>(m_empty_count - 1);
-    
+
         m_lexed_tree_root = build_balanced_subtree(lexed_lower_index, lexed_upper_index, -1);
         m_loose_list_head = range_to_list(loose_lower_index, loose_upper_index, SlotState::is_loose_slot);
         m_empty_list_head = range_to_list(empty_lower_index, empty_upper_index, SlotState::is_empty_slot);
-    
+
         m_high_index = static_cast<std::int32_t>(m_lexed_count + m_loose_count - 1u);
     }
 }
@@ -3100,28 +3085,37 @@ template<typename TIndex, typename TMeta>
 inline std::int32_t TOrderedSlots<TIndex, TMeta>::convert_to_rank_index(const std::int32_t slot_index) const noexcept
 {
     std::int32_t rank_index = -1;
-    const SlotState state = m_meta_slot_array[slot_index].get_slot_state();
+    const Slot* const meta = m_meta_slot_array;
+    const SlotState state = meta[slot_index].get_slot_state();
     if (state == SlotState::is_lexed_slot)
     {
         std::int32_t scan_index = slot_index;
         while (scan_index >= 0)
         {
             ++rank_index;
-            std::int32_t from_index = m_meta_slot_array[scan_index].child_index[0];
+            std::int32_t from_index = meta[scan_index].child_index[0];
             if (from_index < 0)
             {
-                for (from_index = scan_index; (((scan_index = m_meta_slot_array[from_index].parent_index) >= 0) && (m_meta_slot_array[scan_index].child_index[1] != from_index)); from_index = scan_index) {}
+                for (from_index = scan_index; (((scan_index = meta[from_index].parent_index) >= 0) && (meta[scan_index].child_index[1] != from_index)); from_index = scan_index) {}
             }
             else
             {
-                for (scan_index = from_index; ((from_index = m_meta_slot_array[scan_index].child_index[1]) >= 0); scan_index = from_index) {}
+                for (scan_index = from_index; ((from_index = meta[scan_index].child_index[1]) >= 0); scan_index = from_index) {}
             }
         }
     }
     else if (state == SlotState::is_loose_slot)
     {
         rank_index = static_cast<std::int32_t>(m_lexed_count);
-        for (std::int32_t scan_index = m_loose_list_head; scan_index != slot_index; scan_index = m_meta_slot_array[scan_index].child_index[1])
+        for (std::int32_t scan_index = m_loose_list_head; scan_index != slot_index; scan_index = meta[scan_index].child_index[1])
+        {
+            ++rank_index;
+        }
+    }
+    else if (state == SlotState::is_empty_slot)
+    {
+        rank_index = static_cast<std::int32_t>(m_lexed_count + m_loose_count);
+        for (std::int32_t scan_index = m_empty_list_head; scan_index != slot_index; scan_index = meta[scan_index].child_index[1])
         {
             ++rank_index;
         }
@@ -3135,6 +3129,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_by_rank_index(const std
     std::int32_t slot_index = -1;
     if (rank_index >= 0)
     {
+        const Slot* const meta = m_meta_slot_array;
         std::uint32_t search_count = static_cast<std::uint32_t>(rank_index);
         if (search_count < m_lexed_count)
         {
@@ -3145,27 +3140,51 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_by_rank_index(const std
                 search_count = m_lexed_count - search_count - 1u;
             }
             std::uint32_t next_side = prev_side ^ 1u;
-            for (std::int32_t scan_index = m_lexed_tree_root; scan_index >= 0; scan_index = m_meta_slot_array[slot_index = scan_index].child_index[prev_side]) {}
+            for (std::int32_t scan_index = m_lexed_tree_root; scan_index >= 0; scan_index = meta[slot_index = scan_index].child_index[prev_side]) {}
             while (search_count)
             {
-                std::int32_t from_index = m_meta_slot_array[slot_index].child_index[next_side];
+                std::int32_t from_index = meta[slot_index].child_index[next_side];
                 if (from_index < 0)
                 {
-                    for (from_index = slot_index; (((slot_index = m_meta_slot_array[from_index].parent_index) >= 0) && (m_meta_slot_array[slot_index].child_index[prev_side] != from_index)); from_index = slot_index) {}
+                    for (from_index = slot_index; (((slot_index = meta[from_index].parent_index) >= 0) && (meta[slot_index].child_index[prev_side] != from_index)); from_index = slot_index) {}
                 }
                 else
                 {
-                    for (slot_index = from_index; ((from_index = m_meta_slot_array[slot_index].child_index[prev_side]) >= 0); slot_index = from_index) {}
+                    for (slot_index = from_index; ((from_index = meta[slot_index].child_index[prev_side]) >= 0); slot_index = from_index) {}
                 }
                 --search_count;
             }
         }
-        else if ((search_count - m_lexed_count) < m_loose_count)
+        else if ((search_count -= m_lexed_count) < m_loose_count)
         {
             slot_index = m_loose_list_head;
-            for (search_count -= m_lexed_count; search_count != 0; --search_count)
+            std::uint32_t side = 1u;
+            if (search_count > (m_loose_count >> 1))
             {
-                slot_index = m_meta_slot_array[slot_index].child_index[1];
+                side = 0u;
+                slot_index = meta[slot_index].child_index[side];
+                search_count = (m_loose_count - search_count);
+            }
+            while (search_count != 0)
+            {
+                slot_index = meta[slot_index].child_index[side];
+                --search_count;
+            }
+        }
+        else if ((search_count -= m_loose_count) < m_empty_count)
+        {
+            slot_index = m_empty_list_head;
+            std::uint32_t side = 1u;
+            if (search_count > (m_empty_count >> 1))
+            {
+                side = 0u;
+                slot_index = meta[slot_index].child_index[side];
+                search_count = (m_empty_count - search_count);
+            }
+            while (search_count != 0)
+            {
+                slot_index = meta[slot_index].child_index[side];
+                --search_count;
             }
         }
     }
