@@ -245,14 +245,22 @@ strict weak ordering breaks structural correctness.
 
 Moves payload between slot indices.
 
+Only called by sort_and_pack().
+
 Contract:
 
-- source_index != target_index
+- If use_external_payload is true:
+  - source_index may be equal to target_index
+  - equal indices do not imply in-place self-assignment
+  - the payload is being copied from the current slot domain to a separate external payload domain
+
+- If use_external_payload is false:
+  - source_index != target_index
+  - source_index and target_index refer to positions in the same payload domain
+
 - Exactly one of source_index or target_index may be -1
 - -1 denotes temporary storage owned by the derived class
 - Both are never -1
-
-Only called by sort_and_pack().
 
 ### on_reserve_empty
 
