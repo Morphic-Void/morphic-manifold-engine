@@ -819,7 +819,7 @@ inline bool TMemoryToken<T>::clone(const TMemoryToken<T> src, const std::size_t 
         T* data = t_allocate<T>(size);
         if (data != nullptr)
         {
-            deallocate();
+            t_deallocate<T>(m_data);
             m_data = data;
             std::memcpy(m_data, src.m_data, (size * k_element_size));
             return true;
