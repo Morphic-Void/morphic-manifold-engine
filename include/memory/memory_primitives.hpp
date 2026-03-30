@@ -333,6 +333,9 @@ public:
     [[nodiscard]] bool reallocate(const std::size_t old_size, const std::size_t new_size, const bool zero_extra = true) noexcept;
     void deallocate() noexcept;
 
+    //  Utility
+    bool populate_n(const T* const src, const std::size_t count) const noexcept;
+
     //  Constants
     static constexpr std::size_t k_max_elements = t_max_elements<T>();
     static constexpr std::size_t k_element_size = sizeof(T);
@@ -803,6 +806,20 @@ inline void TMemoryToken<T>::deallocate() noexcept
         t_deallocate<T>(m_data);
         m_data = nullptr;
     }
+}
+
+template<typename T>
+inline bool TMemoryToken<T>::populate_n(const T* const src, const std::size_t count) const noexcept
+{
+    if ((m_data != nullptr) && (src != nullptr))
+    {
+        if (count != 0u)
+        {
+            std::memcpy(m_data, src, (count * k_element_size));
+        }
+        return true;
+    }
+    return false;
 }
 
 //==============================================================================

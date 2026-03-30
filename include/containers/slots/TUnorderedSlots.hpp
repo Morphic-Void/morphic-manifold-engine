@@ -1678,8 +1678,7 @@ inline bool TUnorderedSlots<TIndex>::copy_from(const TUnorderedSlots& src) noexc
         m_empty_list_head = src.m_empty_list_head;
         m_lock = LockState::none;
 
-        std::size_t bytes = (m_capacity * sizeof(Slot));
-        std::memcpy(m_meta_slot_array.data(), src.m_meta_slot_array.data(), bytes);
+        (void)m_meta_slot_array.populate_n(src.m_meta_slot_array.data(), static_cast<std::size_t>(m_capacity));
     }
     else
     {
