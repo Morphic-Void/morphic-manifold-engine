@@ -17,6 +17,8 @@
 #include "containers/StringBuffers.hpp"
 #include "containers/TPodVector.hpp"
 #include "containers/TStableStorage.hpp"
+#include "containers/TOrderedCollection.hpp"
+#include "containers/TUnorderedCollection.hpp"
 #include "debug/debug.hpp"
 #include "io/file/file.hpp"
 #include "io/file/log.hpp"

@@ -120,6 +120,12 @@
     <ClInclude Include="include\containers\slots\TUnorderedSlots.hpp">
       <Filter>include\containers\slots</Filter>
     </ClInclude>
+    <ClInclude Include="include\containers\TOrderedCollection.hpp">
+      <Filter>include\containers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\containers\TUnorderedCollection.hpp">
+      <Filter>include\containers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\io\file\file.cpp">

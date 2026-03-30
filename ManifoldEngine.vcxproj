@@ -165,8 +165,10 @@
     <ClInclude Include="include\containers\slots\TOrderedSlots.hpp" />
     <ClInclude Include="include\containers\slots\TUnorderedSlots.hpp" />
     <ClInclude Include="include\containers\StringBuffers.hpp" />
+    <ClInclude Include="include\containers\TOrderedCollection.hpp" />
     <ClInclude Include="include\containers\TPodVector.hpp" />
     <ClInclude Include="include\containers\TStableStorage.hpp" />
+    <ClInclude Include="include\containers\TUnorderedCollection.hpp" />
     <ClInclude Include="include\debug\debug.hpp" />
     <ClInclude Include="include\io\file\file.hpp" />
     <ClInclude Include="include\io\file\internal\file_utils.hpp" />
