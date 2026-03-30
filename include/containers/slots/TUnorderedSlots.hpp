@@ -597,15 +597,16 @@ private:
 private:
 
     //  Private data.
-    std::uint32_t m_capacity = 0u;              //  allocated slot count
-    std::uint32_t m_peak_usage = 0u;            //  peak occupied slot count
-    std::int32_t  m_peak_index = -1;            //  peak occupied slot index
-    std::int32_t  m_high_index = -1;            //  highest currently occupied index
-    std::uint32_t m_loose_count = 0u;           //  count of slots in the loose list
-    std::uint32_t m_empty_count = 0u;           //  count of slots in the empty list
-    std::int32_t  m_loose_list_head = -1;       //  index of the loose slot list head (or -1)
-    std::int32_t  m_empty_list_head = -1;       //  index of the empty slot list head (or -1)
-    Slot*         m_meta_slot_array = nullptr;  //  slot metadata array
+    std::uint32_t m_capacity = 0u;          //  allocated slot count
+    std::uint32_t m_peak_usage = 0u;        //  peak occupied slot count
+    std::int32_t  m_peak_index = -1;        //  peak occupied slot index
+    std::int32_t  m_high_index = -1;        //  highest currently occupied index
+    std::uint32_t m_loose_count = 0u;       //  count of slots in the loose list
+    std::uint32_t m_empty_count = 0u;       //  count of slots in the empty list
+    std::int32_t  m_loose_list_head = -1;   //  index of the loose slot list head (or -1)
+    std::int32_t  m_empty_list_head = -1;   //  index of the empty slot list head (or -1)
+
+    memory::TMemoryToken<Slot>  m_meta_slot_array;  //  slot meta data array
 
     //  Private lock state.
     mutable LockState m_lock = LockState::none;
@@ -737,10 +738,7 @@ inline bool TUnorderedSlots<TIndex>::shutdown() noexcept
 {
     if (is_safe(true))
     {
-        if (m_meta_slot_array != nullptr)
-        {
-            memory::t_deallocate<Slot>(m_meta_slot_array);
-        }
+        m_meta_slot_array.deallocate();
         set_empty();
         return true;
     }
@@ -818,7 +816,8 @@ inline bool TUnorderedSlots<TIndex>::erase(const std::int32_t slot_index) noexce
             }
             else
             {
-                for (--m_high_index; !m_meta_slot_array[m_high_index].is_loose_slot(); --m_high_index) {}
+                const Slot* const meta = m_meta_slot_array.data();
+                for (--m_high_index; !meta[m_high_index].is_loose_slot(); --m_high_index) {}
             }
         }
         return true;
@@ -835,13 +834,13 @@ inline bool TUnorderedSlots<TIndex>::is_safe_slot(const std::int32_t slot_index)
 template<typename TIndex>
 inline bool TUnorderedSlots<TIndex>::is_loose_slot(const std::int32_t slot_index) const noexcept
 {
-    return is_safe_slot(slot_index) && m_meta_slot_array[slot_index].is_loose_slot();
+    return is_safe_slot(slot_index) && m_meta_slot_array.data()[slot_index].is_loose_slot();
 }
 
 template<typename TIndex>
 inline bool TUnorderedSlots<TIndex>::is_empty_slot(const std::int32_t slot_index) const noexcept
 {
-    return is_safe_slot(slot_index) && m_meta_slot_array[slot_index].is_empty_slot();
+    return is_safe_slot(slot_index) && m_meta_slot_array.data()[slot_index].is_empty_slot();
 }
 
 template<typename TIndex>
@@ -853,19 +852,19 @@ inline std::int32_t TUnorderedSlots<TIndex>::first_loose() const noexcept
 template<typename TIndex>
 inline std::int32_t TUnorderedSlots<TIndex>::last_loose() const noexcept
 {
-    return (is_safe() && (m_loose_list_head != -1)) ? m_meta_slot_array[m_loose_list_head].get_prev_index() : -1;
+    return (is_safe() && (m_loose_list_head != -1)) ? m_meta_slot_array.data()[m_loose_list_head].get_prev_index() : -1;
 }
 
 template<typename TIndex>
 inline std::int32_t TUnorderedSlots<TIndex>::prev_loose(const std::int32_t slot_index) const noexcept
 {
-    return is_loose_slot(slot_index) ? m_meta_slot_array[slot_index].get_prev_index() : -1;
+    return is_loose_slot(slot_index) ? m_meta_slot_array.data()[slot_index].get_prev_index() : -1;
 }
 
 template<typename TIndex>
 inline std::int32_t TUnorderedSlots<TIndex>::next_loose(const std::int32_t slot_index) const noexcept
 {
-    return is_loose_slot(slot_index) ? m_meta_slot_array[slot_index].get_next_index() : -1;
+    return is_loose_slot(slot_index) ? m_meta_slot_array.data()[slot_index].get_next_index() : -1;
 }
 
 template<typename TIndex>
@@ -879,7 +878,7 @@ template<typename TIndex>
             (void)rank_map.set_size(static_cast<std::size_t>(m_capacity));
             RankMapEntry* const map = rank_map.data();
             std::fill_n(map, rank_map.size(), RankMapEntry{});
-            const Slot* const meta = m_meta_slot_array;
+            const Slot* const meta = m_meta_slot_array.data();
             std::int32_t rank_index = 0;
             std::int32_t slot_index = 0;
             for (std::uint32_t count = static_cast<std::uint32_t>(m_high_index) + 1u; count != 0; --count)
@@ -969,14 +968,14 @@ inline bool TUnorderedSlots<TIndex>::check_integrity() const noexcept
 template<typename TIndex>
 inline bool TUnorderedSlots<TIndex>::is_safe(const bool allow_null) const noexcept
 {
-    return MV_FAIL_SAFE_ASSERT(m_lock == LockState::none) && (allow_null || (m_meta_slot_array != nullptr));
+    return MV_FAIL_SAFE_ASSERT(m_lock == LockState::none) && (allow_null || (m_meta_slot_array.data() != nullptr));
 }
 
 template<typename TIndex>
 inline bool TUnorderedSlots<TIndex>::lock(const LockState lock, const bool allow_null) const noexcept
 {
     bool success = false;
-    if (MV_FAIL_SAFE_ASSERT(m_lock == LockState::none) && (allow_null || (m_meta_slot_array != nullptr)))
+    if (MV_FAIL_SAFE_ASSERT(m_lock == LockState::none) && (allow_null || (m_meta_slot_array.data() != nullptr)))
     {
         m_lock = lock;
         success = true;
@@ -999,7 +998,7 @@ inline void TUnorderedSlots<TIndex>::safe_on_visit(const std::int32_t slot_index
     if (lock(LockState::on_visit))
     {
         std::int32_t identifier = 0;
-        switch (m_meta_slot_array[slot_index].get_slot_state())
+        switch (m_meta_slot_array.data()[slot_index].get_slot_state())
         {
             case (SlotState::is_loose_slot):
             {
@@ -1073,10 +1072,9 @@ inline bool TUnorderedSlots<TIndex>::failed_integrity_check() noexcept
 template<typename TIndex>
 inline bool TUnorderedSlots<TIndex>::private_integrity_check() const noexcept
 {
-    if (m_meta_slot_array != nullptr)
+    const Slot* const meta = m_meta_slot_array.data();
+    if (meta != nullptr)
     {
-        const Slot* const meta = m_meta_slot_array;
-
         if ((std::uintptr_t(meta) % alignof(Slot)) != 0u)
         {   //  basic slot array alignment check failed
             return failed_integrity_check();
@@ -1213,8 +1211,7 @@ template<typename TIndex>
 inline void TUnorderedSlots<TIndex>::private_on_visit_dispatcher(const bool visit_loose, const bool visit_empty) noexcept
 {
     MV_HARD_ASSERT(m_lock == LockState::on_visit);
-
-    const Slot* const meta = m_meta_slot_array;
+    const Slot* const meta = m_meta_slot_array.data();
     if (meta != nullptr)
     {
         if (visit_loose)
@@ -1248,10 +1245,9 @@ inline bool TUnorderedSlots<TIndex>::private_resize(const std::uint32_t requeste
         {
             resized = true;
         }
-        else if (m_meta_slot_array == nullptr)
+        else if (m_meta_slot_array.data() == nullptr)
         {   //  initialisation
-            m_meta_slot_array = memory::t_allocate<Slot>(static_cast<std::size_t>(requested_capacity));
-            if (m_meta_slot_array != nullptr)
+            if (m_meta_slot_array.allocate(static_cast<std::size_t>(requested_capacity), false))
             {
                 m_capacity = m_empty_count = requested_capacity;
                 m_empty_list_head = range_to_list(0, static_cast<std::int32_t>(m_empty_count - 1), SlotState::is_empty_slot);
@@ -1261,11 +1257,8 @@ inline bool TUnorderedSlots<TIndex>::private_resize(const std::uint32_t requeste
         else if (requested_capacity >= minimum_safe_capacity())
         {
             Slot* new_meta_slot_array = memory::t_allocate<Slot>(static_cast<std::size_t>(requested_capacity));
-            if (new_meta_slot_array != nullptr)
+            if (m_meta_slot_array.reallocate(static_cast<std::size_t>(std::min(requested_capacity, m_capacity)), static_cast<std::size_t>(requested_capacity), false))
             {
-                std::memcpy(new_meta_slot_array, m_meta_slot_array, (sizeof(Slot) * std::min(requested_capacity, m_capacity)));
-                memory::t_deallocate<Slot>(m_meta_slot_array);
-                m_meta_slot_array = new_meta_slot_array;
                 if (requested_capacity > m_capacity)
                 {   //  grow
                     m_empty_list_head = combine_lists(m_empty_list_head, range_to_list(static_cast<std::int32_t>(m_capacity), static_cast<std::int32_t>(requested_capacity - 1), SlotState::is_empty_slot));
@@ -1322,7 +1315,7 @@ inline std::int32_t TUnorderedSlots<TIndex>::private_acquire(const std::int32_t 
                 }
             }
         }
-        else if ((static_cast<std::uint32_t>(slot_index) < m_capacity) && m_meta_slot_array[slot_index].is_empty_slot())
+        else if ((static_cast<std::uint32_t>(slot_index) < m_capacity) && m_meta_slot_array.data()[slot_index].is_empty_slot())
         {
             acquired_index = slot_index;
         }
@@ -1352,11 +1345,12 @@ inline void TUnorderedSlots<TIndex>::private_compact() noexcept
     MV_HARD_ASSERT(m_lock == LockState::on_move_payload);
     if (m_loose_count)
     {
+        Slot* const meta = m_meta_slot_array.data();
         std::int32_t target_index = 0;
         std::uint32_t count = m_loose_count;
         for (std::int32_t source_index = 0; count != 0; ++source_index)
         {
-            if (m_meta_slot_array[source_index].is_loose_slot())
+            if (meta[source_index].is_loose_slot())
             {
                 if (source_index != target_index)
                 {
@@ -1386,12 +1380,13 @@ inline std::int32_t TUnorderedSlots<TIndex>::state_to_list(const std::int32_t lo
     std::int32_t head_index = -1;
     if ((lower_index <= upper_index) && (lower_index >= 0))
     {
+        Slot* const meta = m_meta_slot_array.data();
         std::int32_t prev_index = -1;
         std::int32_t next_index = -1;
         std::uint32_t scan_count = 0;
         for (std::int32_t scan_index = upper_index; scan_index >= lower_index; --scan_index)
         {   //  scan backwards creating a singly linked forward list
-            Slot& slot = m_meta_slot_array[scan_index];
+            Slot& slot = meta[scan_index];
             if (slot.get_slot_state() == state)
             {   //  note: the first encountered slot sets the next index to a silently invalid value
                 slot.set_next_index(next_index);
@@ -1404,7 +1399,7 @@ inline std::int32_t TUnorderedSlots<TIndex>::state_to_list(const std::int32_t lo
         {   //  note: after this loop the next index will contain the silently invalid index
             while (scan_count != 0)
             {   //  scan the singly linked list patching it up to a bi-directional list
-                Slot& slot = m_meta_slot_array[next_index];
+                Slot& slot = meta[next_index];
                 slot.set_prev_index(prev_index);
                 prev_index = next_index;
                 next_index = slot.get_next_index();
@@ -1412,8 +1407,8 @@ inline std::int32_t TUnorderedSlots<TIndex>::state_to_list(const std::int32_t lo
             }
 
             //  fix up the list to be circular (next_index is silently invalid at this point)
-            m_meta_slot_array[head_index].set_prev_index(prev_index);
-            m_meta_slot_array[prev_index].set_next_index(head_index);
+            meta[head_index].set_prev_index(prev_index);
+            meta[prev_index].set_next_index(head_index);
         }
     }
     return head_index;
@@ -1424,17 +1419,18 @@ inline std::int32_t TUnorderedSlots<TIndex>::range_to_list(const std::int32_t lo
 {
     if ((lower_index <= upper_index) && (lower_index >= 0))
     {
+        Slot* const meta = m_meta_slot_array.data();
         for (std::int32_t scan_index = lower_index; scan_index <= upper_index; ++scan_index)
         {   //  scan the range creating new list members
-            Slot& slot = m_meta_slot_array[scan_index];
+            Slot& slot = meta[scan_index];
             slot.set_prev_index(scan_index - 1);    //  potentially transiently invalid
             slot.set_next_index(scan_index + 1);    //  potentially transiently invalid
             slot.set_slot_state(state);
         }
 
         //  fix up the list to be circular (and correct any transiently invalid index values)
-        m_meta_slot_array[upper_index].set_next_index(lower_index);
-        m_meta_slot_array[lower_index].set_prev_index(upper_index);
+        meta[upper_index].set_next_index(lower_index);
+        meta[lower_index].set_prev_index(upper_index);
         return lower_index;
     }
     return -1;
@@ -1450,12 +1446,13 @@ inline std::int32_t TUnorderedSlots<TIndex>::combine_lists(const std::int32_t li
     }
     if (list2_head_index >= 0)
     {
-        std::int32_t list1_tail_index = m_meta_slot_array[list1_head_index].get_prev_index();
-        std::int32_t list2_tail_index = m_meta_slot_array[list2_head_index].get_prev_index();
-        m_meta_slot_array[list1_head_index].set_prev_index(list2_tail_index);
-        m_meta_slot_array[list1_tail_index].set_next_index(list2_head_index);
-        m_meta_slot_array[list2_head_index].set_prev_index(list1_tail_index);
-        m_meta_slot_array[list2_tail_index].set_next_index(list1_head_index);
+        Slot* const meta = m_meta_slot_array.data();
+        std::int32_t list1_tail_index = meta[list1_head_index].get_prev_index();
+        std::int32_t list2_tail_index = meta[list2_head_index].get_prev_index();
+        meta[list1_head_index].set_prev_index(list2_tail_index);
+        meta[list1_tail_index].set_next_index(list2_head_index);
+        meta[list2_head_index].set_prev_index(list1_tail_index);
+        meta[list2_tail_index].set_next_index(list1_head_index);
     }
     return list1_head_index;
 }
@@ -1477,7 +1474,8 @@ inline void TUnorderedSlots<TIndex>::append_range_to_empty_list(const std::int32
 template<typename TIndex>
 inline void TUnorderedSlots<TIndex>::attach_to_loose(const std::int32_t slot_index) noexcept
 {
-    Slot& slot = m_meta_slot_array[slot_index];
+    Slot* const meta = m_meta_slot_array.data();
+    Slot& slot = meta[slot_index];
     slot.set_is_loose_slot();
     if (m_loose_list_head == -1)
     {
@@ -1487,9 +1485,9 @@ inline void TUnorderedSlots<TIndex>::attach_to_loose(const std::int32_t slot_ind
     else
     {
         slot.set_next_index(m_loose_list_head);
-        slot.set_prev_index(m_meta_slot_array[m_loose_list_head].get_prev_index());
-        m_meta_slot_array[slot.get_prev_index()].set_next_index(slot_index);
-        m_meta_slot_array[slot.get_next_index()].set_prev_index(slot_index);
+        slot.set_prev_index(meta[m_loose_list_head].get_prev_index());
+        meta[slot.get_prev_index()].set_next_index(slot_index);
+        meta[slot.get_next_index()].set_prev_index(slot_index);
     }
     m_loose_list_head = slot_index;
     ++m_loose_count;
@@ -1498,7 +1496,8 @@ inline void TUnorderedSlots<TIndex>::attach_to_loose(const std::int32_t slot_ind
 template<typename TIndex>
 inline void TUnorderedSlots<TIndex>::attach_to_empty(const std::int32_t slot_index) noexcept
 {
-    Slot& slot = m_meta_slot_array[slot_index];
+    Slot* const meta = m_meta_slot_array.data();
+    Slot& slot = meta[slot_index];
     slot.set_is_empty_slot();
     if (m_empty_list_head == -1)
     {
@@ -1508,9 +1507,9 @@ inline void TUnorderedSlots<TIndex>::attach_to_empty(const std::int32_t slot_ind
     else
     {
         slot.set_next_index(m_empty_list_head);
-        slot.set_prev_index(m_meta_slot_array[m_empty_list_head].get_prev_index());
-        m_meta_slot_array[slot.get_prev_index()].set_next_index(slot_index);
-        m_meta_slot_array[slot.get_next_index()].set_prev_index(slot_index);
+        slot.set_prev_index(meta[m_empty_list_head].get_prev_index());
+        meta[slot.get_prev_index()].set_next_index(slot_index);
+        meta[slot.get_next_index()].set_prev_index(slot_index);
     }
     m_empty_list_head = slot_index;
     ++m_empty_count;
@@ -1519,7 +1518,8 @@ inline void TUnorderedSlots<TIndex>::attach_to_empty(const std::int32_t slot_ind
 template<typename TIndex>
 inline void TUnorderedSlots<TIndex>::remove_from_loose(const std::int32_t slot_index) noexcept
 {
-    Slot& slot = m_meta_slot_array[slot_index];
+    Slot* const meta = m_meta_slot_array.data();
+    Slot& slot = meta[slot_index];
     --m_loose_count;
     if (m_loose_list_head == slot_index)
     {
@@ -1527,8 +1527,8 @@ inline void TUnorderedSlots<TIndex>::remove_from_loose(const std::int32_t slot_i
     }
     if (m_loose_count != 0)
     {
-        m_meta_slot_array[slot.get_prev_index()].set_next_index(slot.get_next_index());
-        m_meta_slot_array[slot.get_next_index()].set_prev_index(slot.get_prev_index());
+        meta[slot.get_prev_index()].set_next_index(slot.get_next_index());
+        meta[slot.get_next_index()].set_prev_index(slot.get_prev_index());
     }
     slot.set_is_unassigned();
 }
@@ -1536,7 +1536,8 @@ inline void TUnorderedSlots<TIndex>::remove_from_loose(const std::int32_t slot_i
 template<typename TIndex>
 inline void TUnorderedSlots<TIndex>::remove_from_empty(const std::int32_t slot_index) noexcept
 {
-    Slot& slot = m_meta_slot_array[slot_index];
+    Slot* const meta = m_meta_slot_array.data();
+    Slot& slot = meta[slot_index];
     --m_empty_count;
     if (m_empty_list_head == slot_index)
     {
@@ -1544,8 +1545,8 @@ inline void TUnorderedSlots<TIndex>::remove_from_empty(const std::int32_t slot_i
     }
     if (m_empty_count != 0)
     {
-        m_meta_slot_array[slot.get_prev_index()].set_next_index(slot.get_next_index());
-        m_meta_slot_array[slot.get_next_index()].set_prev_index(slot.get_prev_index());
+        meta[slot.get_prev_index()].set_next_index(slot.get_next_index());
+        meta[slot.get_next_index()].set_prev_index(slot.get_prev_index());
     }
     slot.set_is_unassigned();
 }
@@ -1553,7 +1554,7 @@ inline void TUnorderedSlots<TIndex>::remove_from_empty(const std::int32_t slot_i
 template<typename TIndex>
 inline void TUnorderedSlots<TIndex>::move_to_loose_list(const std::int32_t slot_index) noexcept
 {
-    if (m_meta_slot_array[slot_index].is_empty_slot())
+    if (m_meta_slot_array.data()[slot_index].is_empty_slot())
     {
         remove_from_empty(slot_index);
         attach_to_loose(slot_index);
@@ -1563,7 +1564,7 @@ inline void TUnorderedSlots<TIndex>::move_to_loose_list(const std::int32_t slot_
 template<typename TIndex>
 inline void TUnorderedSlots<TIndex>::move_to_empty_list(const std::int32_t slot_index) noexcept
 {
-    if (m_meta_slot_array[slot_index].is_loose_slot())
+    if (m_meta_slot_array.data()[slot_index].is_loose_slot())
     {
         remove_from_loose(slot_index);
         attach_to_empty(slot_index);
@@ -1574,12 +1575,13 @@ template<typename TIndex>
 inline std::int32_t TUnorderedSlots<TIndex>::convert_to_rank_index(const std::int32_t slot_index) const noexcept
 {
     std::int32_t rank_index = -1;
-    if (m_meta_slot_array[slot_index].is_loose_slot())
+    const Slot* const meta = m_meta_slot_array.data();
+    if (meta[slot_index].is_loose_slot())
     {
         rank_index = 0;
         for (std::int32_t scan_index = 0; scan_index != slot_index; ++scan_index)
         {
-            if (m_meta_slot_array[scan_index].is_loose_slot())
+            if (meta[scan_index].is_loose_slot())
             {
                 ++rank_index;
             }
@@ -1594,9 +1596,10 @@ inline std::int32_t TUnorderedSlots<TIndex>::locate_by_rank_index(const std::int
     std::int32_t slot_index = -1;
     if ((rank_index >= 0) && (rank_index < m_loose_count))
     {
+        const Slot* const meta = m_meta_slot_array.data();
         for (std::uint32_t count = static_cast<std::uint32_t>(rank_index) + 1u; count != 0; --count)
         {
-            for (++slot_index; !m_meta_slot_array[slot_index].is_loose_slot(); ++slot_index) {}
+            for (++slot_index; !meta[slot_index].is_loose_slot(); ++slot_index) {}
         }
     }
     return slot_index;
@@ -1605,10 +1608,11 @@ inline std::int32_t TUnorderedSlots<TIndex>::locate_by_rank_index(const std::int
 template<typename TIndex>
 inline std::int32_t TUnorderedSlots<TIndex>::min_occupied_index() const noexcept
 {
+    const Slot* const meta = m_meta_slot_array.data();
     std::int32_t slot_index = 0;
     for (std::uint32_t slot_count = m_capacity; slot_count > 0; --slot_count)
     {
-        Slot& slot = m_meta_slot_array[slot_index];
+        Slot& slot = meta[slot_index];
         if (!slot.is_empty_slot())
         {
             return static_cast<std::int32_t>(slot_index);
@@ -1621,10 +1625,11 @@ inline std::int32_t TUnorderedSlots<TIndex>::min_occupied_index() const noexcept
 template<typename TIndex>
 inline std::int32_t TUnorderedSlots<TIndex>::max_occupied_index() const noexcept
 {
+    const Slot* const meta = m_meta_slot_array.data();
     std::int32_t slot_index = static_cast<std::int32_t>(m_capacity - 1);
     for (std::uint32_t slot_count = m_capacity; slot_count > 0; --slot_count)
     {
-        Slot& slot = m_meta_slot_array[slot_index];
+        Slot& slot = meta[slot_index];
         if (!slot.is_empty_slot())
         {
             return static_cast<std::int32_t>(slot_index);
@@ -1646,7 +1651,7 @@ inline bool TUnorderedSlots<TIndex>::move_from(TUnorderedSlots& src) noexcept
     m_empty_count = src.m_empty_count;
     m_loose_list_head = src.m_loose_list_head;
     m_empty_list_head = src.m_empty_list_head;
-    m_meta_slot_array = src.m_meta_slot_array;
+    m_meta_slot_array = std::move(src.m_meta_slot_array);
     m_lock = LockState::none;
     src.set_empty();
     return true;
@@ -1658,8 +1663,7 @@ inline bool TUnorderedSlots<TIndex>::copy_from(const TUnorderedSlots& src) noexc
 {
     if (src.is_initialised())
     {
-        m_meta_slot_array = memory::t_allocate<Slot>(static_cast<std::size_t>(src.m_capacity));
-        if (m_meta_slot_array == nullptr)
+        if (!m_meta_slot_array.allocate(static_cast<std::size_t>(src.m_capacity)))
         {
             return false;
         }
@@ -1675,7 +1679,7 @@ inline bool TUnorderedSlots<TIndex>::copy_from(const TUnorderedSlots& src) noexc
         m_lock = LockState::none;
 
         std::size_t bytes = (m_capacity * sizeof(Slot));
-        std::memcpy(m_meta_slot_array, src.m_meta_slot_array, bytes);
+        std::memcpy(m_meta_slot_array.data(), src.m_meta_slot_array.data(), bytes);
     }
     else
     {
@@ -1695,7 +1699,7 @@ inline void TUnorderedSlots<TIndex>::set_empty() noexcept
     m_empty_count = 0;
     m_loose_list_head = -1;
     m_empty_list_head = -1;
-    m_meta_slot_array = nullptr;
+    m_meta_slot_array.deallocate();
     m_lock = LockState::none;
 }
 
