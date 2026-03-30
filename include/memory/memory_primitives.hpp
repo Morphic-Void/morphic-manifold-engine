@@ -331,10 +331,8 @@ public:
     //  Capacity management (state unchanged on failure)
     [[nodiscard]] bool allocate(const std::size_t size, const bool zero = true) noexcept;
     [[nodiscard]] bool reallocate(const std::size_t old_size, const std::size_t new_size, const bool zero_extra = true) noexcept;
+    [[nodiscard]] bool clone(const TMemoryToken<T> src, const std::size_t size) const noexcept;
     void deallocate() noexcept;
-
-    //  Utility
-    bool populate_n(const T* const src, const std::size_t count) const noexcept;
 
     //  Constants
     static constexpr std::size_t k_max_elements = t_max_elements<T>();
@@ -809,15 +807,23 @@ inline void TMemoryToken<T>::deallocate() noexcept
 }
 
 template<typename T>
-inline bool TMemoryToken<T>::populate_n(const T* const src, const std::size_t count) const noexcept
+inline bool TMemoryToken<T>::clone(const TMemoryToken<T> src, const std::size_t size) const noexcept
 {
-    if ((m_data != nullptr) && (src != nullptr))
+    if (size == 0u)
     {
-        if (count != 0u)
-        {
-            std::memcpy(m_data, src, (count * k_element_size));
-        }
+        deallocate();
         return true;
+    }
+    if (src.m_data != nullptr)
+    {
+        T* data = t_allocate<T>(size);
+        if (data != nullptr)
+        {
+            deallocate();
+            m_data = data;
+            std::memcpy(m_data, src.m_data, (size * k_element_size));
+            return true;
+        }
     }
     return false;
 }

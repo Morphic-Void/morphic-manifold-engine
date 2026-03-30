@@ -3423,7 +3423,7 @@ inline bool TOrderedSlots<TIndex, TMeta>::copy_from(const TOrderedSlots& src) no
 {
     if (src.is_initialised())
     {
-        if (!m_meta_slot_array.allocate(src.m_capacity, false))
+        if (!m_meta_slot_array.clone(src.m_meta_slot_array, src.m_capacity))
         {
             return false;
         }
@@ -3439,8 +3439,6 @@ inline bool TOrderedSlots<TIndex, TMeta>::copy_from(const TOrderedSlots& src) no
         m_loose_list_head = src.m_loose_list_head;
         m_empty_list_head = src.m_empty_list_head;
         m_lock = LockState::none;
-
-        (void)m_meta_slot_array.populate_n(src.m_meta_slot_array.data(), static_cast<std::size_t>(m_capacity));
     }
     else
     {
