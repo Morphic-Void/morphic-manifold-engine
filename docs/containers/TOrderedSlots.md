@@ -265,10 +265,9 @@ Contract:
   - source_index and target_index refer to positions in the same payload domain
   - source_index identifies the pre-remap payload position
   - target_index identifies the corresponding post-remap payload position
-
-- Exactly one of source_index or target_index may be -1
-- -1 denotes temporary storage owned by the derived class
-- Both are never -1
+  - Exactly one of source_index or target_index may be -1
+  - -1 denotes temporary storage owned by the derived class
+  - Both are never -1
 
 ### on_reserve_empty
 
