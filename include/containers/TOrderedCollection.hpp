@@ -21,13 +21,17 @@
 #include <algorithm>    //  std::max, std::min
 #include <cstddef>      //  std::size_t
 #include <type_traits>  //  std::is_const_v, std::is_trivially_copyable_v
+#include <utility>      //  std::forward<TArgs>
 
-#include "TPodVector.hpp"
-#include "TStableStorage.hpp"
-#include "slots/TOrderedSlots.hpp"
+#include "algo/validate_permutations.hpp"
 #include "memory/memory_allocation.hpp"
 #include "memory/memory_primitives.hpp"
+#include "slots/TOrderedSlots.hpp"
+#include "slots/SlotsRankMap.hpp"
 #include "bit_utils/bit_ops.hpp"
+#include "TStableStorage.hpp"
+#include "TPodVector.hpp"
+
 #include "debug/debug.hpp"
 
 //==============================================================================
@@ -62,15 +66,27 @@ public:
     [[nodiscard]] bool is_ready() const noexcept;
 
     //  Accessors
+    T* get_object(const TKey& key) noexcept;
     T* get_object(const std::int32_t slot_index) noexcept;
+    const T* get_object(const TKey& key) const noexcept;
     const T* get_object(const std::int32_t slot_index) const noexcept;
 
+    //  Utility
+    [[nodiscard]] slots::RankMap build_rank_map() const noexcept;
+    std::int32_t find_slot(const TKey& key) const noexcept;
+
     //  Content management
+    template<typename... TArgs> std::int32_t emplace(const TKey& key, TArgs&&... args) noexcept;
+    bool erase(const TKey& key) noexcept;
     bool erase(const std::int32_t slot_index) noexcept;
+    void sort_and_pack() noexcept;
 
     //  Initialisation and deallocation
     bool initialise(const std::size_t initial_slot_count = 0u, const std::size_t slots_per_buffer = 0u) noexcept;
     void deallocate() noexcept;
+
+    //  Integrity audit
+    [[nodiscard]] bool check_integrity() const noexcept;
 
     //  Constants
     static constexpr std::size_t k_max_elements = memory::t_max_elements<T>();
@@ -83,6 +99,7 @@ protected:
 
 private:
     void deconstruct_payload() noexcept;
+    static [[nodiscard]] bool failed_integrity_check() noexcept;
 
     enum class SlotState : std::size_t
     {
@@ -100,9 +117,10 @@ private:
     TStableStorage<T> m_storage;
     TPodVector<SlotData> m_slots;
     TPodVector<TKey> m_keys;
-    SlotData m_spare_slot;
-    TKey m_spare_key;
-    TKey m_staged_key;
+    SlotData m_swap_slot;
+    TKey m_swap_key;
+
+    mutable TKey m_staged_key;
 };
 
 //==============================================================================
@@ -111,20 +129,30 @@ private:
 
 template<typename T, typename TKey>
 inline bool TOrderedCollection<T, TKey>::is_valid() const noexcept
-{   //  bare bones - needs hardening pass
-    return m_slots.is_valid() && m_storage.is_valid();
+{
+    return
+        m_storage.is_valid() &&
+        m_slots.is_valid() && (m_slots.size() == base_class::capacity()) &&
+        m_keys.is_valid() &&  (m_keys.size() == base_class::capacity());
 }
 
 template<typename T, typename TKey>
 inline bool TOrderedCollection<T, TKey>::is_empty() const noexcept
-{   //  bare bones - needs hardening pass
+{
     return m_slots.is_empty();
 }
 
 template<typename T, typename TKey>
 inline bool TOrderedCollection<T, TKey>::is_ready() const noexcept
-{   //  bare bones - needs hardening pass
+{
     return m_slots.is_ready() && m_storage.is_ready();
+}
+
+template<typename T, typename TKey>
+inline T* TOrderedCollection<T, TKey>::get_object(const TKey& key) noexcept
+{
+    m_staged_key = key;
+    return get_object(base_class::find_any_equal());
 }
 
 template<typename T, typename TKey>
@@ -145,6 +173,13 @@ inline T* TOrderedCollection<T, TKey>::get_object(const std::int32_t slot_index)
 }
 
 template<typename T, typename TKey>
+inline const T* TOrderedCollection<T, TKey>::get_object(const TKey& key) const noexcept
+{
+    m_staged_key = key;
+    return get_object(base_class::find_any_equal());
+}
+
+template<typename T, typename TKey>
 inline const T* TOrderedCollection<T, TKey>::get_object(const std::int32_t slot_index) const noexcept
 {
     const std::size_t element_index = static_cast<std::size_t>(slot_index);
@@ -159,6 +194,68 @@ inline const T* TOrderedCollection<T, TKey>::get_object(const std::int32_t slot_
         }
     }
     return nullptr;
+}
+
+template<typename T, typename TKey>
+inline std::int32_t TOrderedCollection<T, TKey>::find_slot(const TKey& key) const noexcept
+{
+    m_staged_key = key;
+    return base_class::find_any_equal();
+}
+
+template<typename T, typename TKey>
+slots::RankMap TOrderedCollection<T, TKey>::build_rank_map() const noexcept
+{
+    return base_class::build_rank_map();
+}
+
+template<typename T, typename TKey>
+template<typename... TArgs>
+inline std::int32_t TOrderedCollection<T, TKey>::emplace(const TKey& key, TArgs&&... args) noexcept
+{
+    //  Acquire a slot index
+    m_staged_key = key;
+    const std::int32_t slot_index = base_class::reserve_and_acquire(-1, /* lex */ true, /* require_unique */ true);
+    if (slot_index < 0)
+    {
+        return -1;
+    }
+
+    //  Fetch or map backing storage
+    T* element = nullptr;
+    SlotData& slot = m_slots[static_cast<std::size_t>(slot_index)];
+    MV_HARD_ASSERT(slot.state != SlotState::Constructed);
+    if (slot.state == SlotState::Unmapped)
+    {
+        element = m_storage.map_index(slot.storage_index);
+        if (element != nullptr)
+        {
+            slot.state = SlotState::Mapped;
+        }
+    }
+    else if(slot.state == SlotState::Mapped)
+    {
+        element = m_storage.index_ptr(slot.storage_index);
+    }
+    if (element == nullptr)
+    {
+        (void)base_class::erase(slot_index);
+        MV_HARD_ASSERT(false);
+        return -1;
+    }
+
+    //  Construct the object
+    new (element) T(std::forward<TArgs>(args)...);
+    slot.state = SlotState::Constructed;
+    m_keys[static_cast<std::size_t>(slot_index)] = key;
+    return slot_index;
+}
+
+template<typename T, typename TKey>
+inline bool TOrderedCollection<T, TKey>::erase(const TKey& key) noexcept
+{
+    m_staged_key = key;
+    return erase(base_class::find_any_equal());
 }
 
 template<typename T, typename TKey>
@@ -184,6 +281,12 @@ inline bool TOrderedCollection<T, TKey>::erase(const std::int32_t slot_index) no
 }
 
 template<typename T, typename TKey>
+inline void TOrderedCollection<T, TKey>::sort_and_pack() noexcept
+{
+    base_class::sort_and_pack(false);
+}
+
+template<typename T, typename TKey>
 inline bool TOrderedCollection<T, TKey>::initialise(const std::size_t initial_slot_count, const std::size_t slots_per_buffer) noexcept
 {
     deallocate();
@@ -200,7 +303,7 @@ inline bool TOrderedCollection<T, TKey>::initialise(const std::size_t initial_sl
                     {
                         m_slots.push_back({ SlotState::Unmapped, i });
                     }
-                    (void)m_keys.resize(size);
+                    (void)m_keys.set_size(size);
                     return true;
                 }
                 m_slots.deallocate();
@@ -223,13 +326,91 @@ inline void TOrderedCollection<T, TKey>::deallocate() noexcept
 }
 
 template<typename T, typename TKey>
+inline bool TOrderedCollection<T, TKey>::check_integrity() const noexcept
+{
+    //  basic structural integrity check
+    if (!is_valid())
+    {
+        return failed_integrity_check();
+    }
+
+    //  base class integrity check
+    if (!base_class::check_integrity())
+    {   //  no need to catch the error here as the base class will have already caught it
+        return false;
+    }
+
+
+    //  metadata coherence check
+    const std::size_t element_count = m_slots.size();
+    for (std::size_t element_index = 0u; element_index < element_count; ++element_index)
+    {
+        const std::int32_t slot_index = static_cast<std::int32_t>(element_index);
+        const SlotData& slot = m_slots[element_index];
+        if (slot.storage_index >= element_count)
+        {
+            return failed_integrity_check();
+        }
+        switch (slot.state)
+        {
+            case(SlotState::Unmapped):
+            {
+                if (!base_class::is_empty_slot(slot_index))
+                {
+                    return failed_integrity_check();
+                }
+                break;
+            }
+            case(SlotState::Mapped):
+            {
+                if (!base_class::is_empty_slot(slot_index))
+                {
+                    return failed_integrity_check();
+                }
+                if (m_storage.index_ptr(slot.storage_index) == nullptr)
+                {
+                    return failed_integrity_check();
+                }
+                break;
+            }
+            case(SlotState::Constructed):
+            {
+                if (!base_class::is_lexed_slot(slot_index))
+                {
+                    return failed_integrity_check();
+                }
+                if (m_storage.index_ptr(slot.storage_index) == nullptr)
+                {
+                    return failed_integrity_check();
+                }
+                break;
+            }
+            default:
+            {
+                return failed_integrity_check();
+            }
+        }
+    }
+
+    //  storage mapping permutation check
+    if (!algo::validate_extracted_permutation(m_slots.data(), m_slots.size(),
+        [](const SlotData& slot) noexcept { return slot.storage_index; }))
+    {
+        return failed_integrity_check();
+    }
+
+    //  base class tree structure and ordering check
+    return base_class::validate_tree(base_class::LexCheck::Unique);
+}
+
+template<typename T, typename TKey>
 inline void TOrderedCollection<T, TKey>::on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
 {
-    SlotData& source_slot = (source_index < 0) ? m_spare_slot : m_slots[source_index];
-    SlotData& target_slot = (target_index < 0) ? m_spare_slot : m_slots[target_index];
+    SlotData& source_slot = (source_index < 0) ? m_swap_slot : m_slots[source_index];
+    SlotData& target_slot = (target_index < 0) ? m_swap_slot : m_slots[target_index];
     target_slot = source_slot;
-    TKey& source_key = (source_index < 0) ? m_spare_key : m_keys[source_index];
-    TKey& target_key = (target_index < 0) ? m_spare_key : m_keys[target_index];
+    TKey& source_key = (source_index < 0) ? m_swap_key : m_keys[source_index];
+    TKey& target_key = (target_index < 0) ? m_swap_key : m_keys[target_index];
     target_key = source_key;
 }
 
@@ -246,7 +427,7 @@ inline std::uint32_t TOrderedCollection<T, TKey>::on_reserve_empty(const std::ui
     {
         (void)m_slots.push_back({ SlotState::Unmapped, i });
     }
-    (void)m_keys.resize(new_capacity);
+    (void)m_keys.set_size(new_capacity);
     return recommended_capacity;
 }
 
@@ -277,6 +458,13 @@ inline void TOrderedCollection<T, TKey>::deconstruct_payload() noexcept
             }
         }
     }
+}
+
+template<typename T, typename TKey>
+inline bool TOrderedCollection<T, TKey>::failed_integrity_check() noexcept
+{
+    MV_HARD_ASSERT(false);
+    return false;
 }
 
 #endif  //  TORDERED_COLLECTION_HPP_INCLUDED

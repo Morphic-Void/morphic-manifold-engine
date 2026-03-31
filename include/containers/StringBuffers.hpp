@@ -12,8 +12,7 @@
 //  - Requires C++17 or later.
 //  - No exceptions.
 //  - Strings are stored and manipulated as byte sequences.
-//  - No wchar_t, char16_t, char32_t, or platform-specific wide encodings
-//    are used.
+//  - No wchar_t, char16_t, char32_t, or platform-specific wide encodings are used.
 //  - Zero-terminated and explicit-length string forms are both supported.
 //
 //  Overview:
@@ -32,8 +31,7 @@
 //    this substrate.
 //
 //  String model:
-//  - CStringView and CSimpleString carry a string pointer plus
-//    explicit length.
+//  - CStringView and CSimpleString carry a string pointer plus explicit length.
 //  - CStringBuffer stores strings in packed form as:
 //      0 + payload bytes + 0
 //  - Offsets returned by CStringBuffer refer to the first payload byte,
@@ -72,11 +70,12 @@
 #include <limits>       //  std::numeric_limits
 #include <utility>      //  std::move
 
-#include "ByteBuffers.hpp"
-#include "TPodVector.hpp"
 #include "algo/validate_permutations.hpp"
 #include "memory/memory_allocation.hpp"
 #include "memory/memory_primitives.hpp"
+#include "ByteBuffers.hpp"
+#include "TPodVector.hpp"
+
 #include "debug/debug.hpp"
 
 //==============================================================================
@@ -937,10 +936,10 @@ inline void CStableStrings::deallocate() noexcept
     }
 
     //  validate the range and permutation of sorted_ref_indices
-    if (!algo::validate_permutations<std::size_t, std::uint32_t>(
+    if (!algo::validate_extracted_permutation(
         sorted_ref_indices_data,
         static_cast<std::uint32_t>(count),
-        std::numeric_limits<std::uint32_t>::digits))
+        [](const std::size_t value) noexcept { return value; }))
     {
         return failed_integrity_check();
     }

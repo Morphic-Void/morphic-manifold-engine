@@ -21,13 +21,17 @@
 #include <algorithm>    //  std::max, std::min
 #include <cstddef>      //  std::size_t
 #include <type_traits>  //  std::is_const_v
+#include <utility>      //  std::forward<TArgs>
 
-#include "TPodVector.hpp"
-#include "TStableStorage.hpp"
-#include "slots/TUnorderedSlots.hpp"
+#include "algo/validate_permutations.hpp"
 #include "memory/memory_allocation.hpp"
 #include "memory/memory_primitives.hpp"
+#include "slots/TUnorderedSlots.hpp"
+#include "slots/SlotsRankMap.hpp"
 #include "bit_utils/bit_ops.hpp"
+#include "TStableStorage.hpp"
+#include "TPodVector.hpp"
+
 #include "debug/debug.hpp"
 
 //==============================================================================
@@ -63,12 +67,20 @@ public:
     T* get_object(const std::int32_t slot_index) noexcept;
     const T* get_object(const std::int32_t slot_index) const noexcept;
 
+    //  Utility
+    [[nodiscard]] slots::RankMap build_rank_map() const noexcept;
+
     //  Content management
+    template<typename... TArgs> std::int32_t emplace(TArgs&&... args) noexcept;
     bool erase(const std::int32_t slot_index) noexcept;
+    void pack() noexcept;
 
     //  Initialisation and deallocation
     bool initialise(const std::size_t initial_slot_count = 0u, const std::size_t slots_per_buffer = 0u) noexcept;
     void deallocate() noexcept;
+
+    //  Integrity audit
+    [[nodiscard]] bool check_integrity() const noexcept;
 
     //  Constants
     static constexpr std::size_t k_max_elements = memory::t_max_elements<T>();
@@ -80,6 +92,7 @@ protected:
 
 private:
     void deconstruct_payload() noexcept;
+    static [[nodiscard]] bool failed_integrity_check() noexcept;
 
     enum class SlotState : std::size_t
     {
@@ -104,19 +117,21 @@ private:
 
 template<typename T>
 inline bool TUnorderedCollection<T>::is_valid() const noexcept
-{   //  bare bones - needs hardening pass
-    return m_slots.is_valid() && m_storage.is_valid();
+{
+    return
+        m_storage.is_valid() &&
+        m_slots.is_valid() && (m_slots.size() == base_class::capacity());
 }
 
 template<typename T>
 inline bool TUnorderedCollection<T>::is_empty() const noexcept
-{   //  bare bones - needs hardening pass
+{
     return m_slots.is_empty();
 }
 
 template<typename T>
 inline bool TUnorderedCollection<T>::is_ready() const noexcept
-{   //  bare bones - needs hardening pass
+{
     return m_slots.is_ready() && m_storage.is_ready();
 }
 
@@ -155,6 +170,51 @@ inline const T* TUnorderedCollection<T>::get_object(const std::int32_t slot_inde
 }
 
 template<typename T>
+slots::RankMap TUnorderedCollection<T>::build_rank_map() const noexcept
+{
+    return base_class::build_rank_map();
+}
+
+template<typename T>
+template<typename... TArgs>
+inline std::int32_t TUnorderedCollection<T>::emplace(TArgs&&... args) noexcept
+{
+    //  Acquire a slot index
+    const std::int32_t slot_index = base_class::reserve_and_acquire(-1);
+    if (slot_index < 0)
+    {
+        return -1;
+    }
+
+    //  Fetch or map backing storage
+    T* element = nullptr;
+    SlotData& slot = m_slots[static_cast<std::size_t>(slot_index)];
+    if (slot.state == SlotState::Unmapped)
+    {
+        element = m_storage.map_index(slot.storage_index);
+        if (element != nullptr)
+        {
+            slot.state = SlotState::Mapped;
+        }
+    }
+    else if (slot.state == SlotState::Mapped)
+    {
+        element = m_storage.index_ptr(slot.storage_index);
+    }
+    if (element == nullptr)
+    {
+        (void)base_class::erase(slot_index);
+        MV_HARD_ASSERT(false);
+        return -1;
+    }
+
+    //  Construct the object
+    new (element) T(std::forward<TArgs>(args)...);
+    slot.state = SlotState::Constructed;
+    return slot_index;
+}
+
+template<typename T>
 inline bool TUnorderedCollection<T>::erase(const std::int32_t slot_index) noexcept
 {
     const std::size_t element_index = static_cast<std::size_t>(slot_index);
@@ -174,6 +234,12 @@ inline bool TUnorderedCollection<T>::erase(const std::int32_t slot_index) noexce
         }
     }
     return false;
+}
+
+template<typename T>
+inline void TUnorderedCollection<T>::pack() noexcept
+{
+    base_class::pack();
 }
 
 template<typename T>
@@ -207,6 +273,82 @@ inline void TUnorderedCollection<T>::deallocate() noexcept
     base_class::shutdown();
     m_storage.deallocate();
     m_slots.deallocate();
+}
+
+template<typename T>
+inline bool TUnorderedCollection<T>::check_integrity() const noexcept
+{
+    //  basic structural integrity check
+    if (!is_valid())
+    {
+        return failed_integrity_check();
+    }
+
+    //  base class integrity check
+    if (!base_class::check_integrity())
+    {   //  no need to catch the error here as the base class will have already caught it
+        return false;
+    }
+
+    //  metadata coherence check
+    const std::size_t element_count = m_slots.size();
+    for (std::size_t element_index = 0u; element_index < element_count; ++element_index)
+    {
+        const std::int32_t slot_index = static_cast<std::int32_t>(element_index);
+        const SlotData& slot = m_slots[element_index];
+        if (slot.storage_index >= element_count)
+        {
+            return failed_integrity_check();
+        }
+        switch (slot.state)
+        {
+            case(SlotState::Unmapped):
+            {
+                if (!base_class::is_empty_slot(slot_index))
+                {
+                    return failed_integrity_check();
+                }
+                break;
+            }
+            case(SlotState::Mapped):
+            {
+                if (!base_class::is_empty_slot(slot_index))
+                {
+                    return failed_integrity_check();
+                }
+                if (m_storage.index_ptr(slot.storage_index) == nullptr)
+                {
+                    return failed_integrity_check();
+                }
+                break;
+            }
+            case(SlotState::Constructed):
+            {
+                if (!base_class::is_loose_slot(slot_index))
+                {
+                    return failed_integrity_check();
+                }
+                if (m_storage.index_ptr(slot.storage_index) == nullptr)
+                {
+                    return failed_integrity_check();
+                }
+                break;
+            }
+            default:
+            {
+                return failed_integrity_check();
+            }
+        }
+    }
+
+    //  storage mapping permutation check
+    if (!algo::validate_extracted_permutation(m_slots.data(), m_slots.size(),
+        [](const SlotData& slot) noexcept { return slot.storage_index; }))
+    {
+        return failed_integrity_check();
+    }
+
+    return true;
 }
 
 template<typename T>
@@ -252,6 +394,13 @@ inline void TUnorderedCollection<T>::deconstruct_payload() noexcept
             }
         }
     }
+}
+
+template<typename T>
+inline bool TUnorderedCollection<T>::failed_integrity_check() noexcept
+{
+    MV_HARD_ASSERT(false);
+    return false;
 }
 
 #endif  //  TUNORDERED_COLLECTION_HPP_INCLUDED

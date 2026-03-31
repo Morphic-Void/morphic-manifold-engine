@@ -611,11 +611,13 @@ private:
     //  Private lock state.
     mutable LockState m_lock = LockState::none;
 
-    //  The maximum supported index is the highest positive signed value. *** DO NOT INCREASE THIS ***
-    static constexpr std::int32_t k_index_limit = static_cast<std::int32_t>(std::numeric_limits<TIndex>::max());
+    //  Constants
+    static constexpr std::uint32_t k_capacity_limit =
+        static_cast<std::uint32_t>(std::min(
+            memory::t_max_elements<Slot>(),
+            static_cast<std::size_t>(std::numeric_limits<TIndex>::max() + 1u)));
 
-    //  The maximum supported capacity is the maximum supported index + 1. *** DO NOT INCREASE THIS ***
-    static constexpr std::uint32_t k_capacity_limit = static_cast<std::uint32_t>(k_index_limit) + 1u;
+    static constexpr std::int32_t k_index_limit = static_cast<std::int32_t>(k_capacity_limit - 1u);
 
 private:
 

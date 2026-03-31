@@ -215,7 +215,7 @@ public:
             return r;
         }
 
-        r.tree = Base::validate_tree(false);
+        r.tree = Base::validate_tree(Base::LexCheck::None);
 
         if (!r.tree)
         {
@@ -223,7 +223,7 @@ public:
             return r;
         }
 
-        r.order = check_lex_order ? Base::validate_tree(true) : true;
+        r.order = check_lex_order ? Base::validate_tree(Base::LexCheck::InOrder) : true;
         return r;
     }
 

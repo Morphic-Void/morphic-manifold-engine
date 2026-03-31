@@ -41,7 +41,7 @@ struct TOrderedConfig
 
     // General harness options
     uint32_t initial_capacity = 32;           // will be max(initial_capacity, N+4)
-    bool check_lex_order_in_validate = true;  // validate_tree(true)
+    bool check_lex_order_in_validate = true;  // validate_tree(Base::CheckLex::InOrder)
     bool stop_on_fail = true;
 
     // Fuzz (deterministic)

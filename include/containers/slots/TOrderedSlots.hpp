@@ -417,7 +417,8 @@ protected:
     //  validate_tree(check_lex_order) verifies AVL structure and balance.
     //  If check_lex_order is true, in-order ordering is validated via
     //  on_compare_keys() (nondecreasing, with stable order among equals).
-    [[nodiscard]] bool validate_tree(const bool check_lex_order = false) const noexcept;
+    enum class LexCheck : std::int32_t { InOrder = 0, Unique = 1, None = 2 };
+    [[nodiscard]] bool validate_tree(const LexCheck lex_check = LexCheck::None) const noexcept;
 
     //  check_integrity() validates metadata invariants, counts, list
     //  structure, tree balance, and index ranges. It does not validate
@@ -590,7 +591,7 @@ private:
     //  Tree validation functions.
     //  Returns height >= 0 on success; returns -1 on failure
     static inline [[nodiscard]] std::int32_t failed_validate_subtree() noexcept;
-    [[nodiscard]] std::int32_t private_validate_subtree(const std::int32_t slot_index, const bool check_lex_order = false) const noexcept;
+    [[nodiscard]] std::int32_t private_validate_subtree(const std::int32_t slot_index, const LexCheck lex_check = LexCheck::None) const noexcept;
 
     //  Integrity check functions.
     static inline [[nodiscard]] bool failed_integrity_check() noexcept;
@@ -718,11 +719,13 @@ private:
     //  Private lock state.
     mutable LockState m_lock = LockState::none;
 
-    //  The maximum supported index is the highest positive signed value. *** DO NOT INCREASE THIS ***
-    static constexpr std::int32_t k_index_limit = static_cast<std::int32_t>(std::numeric_limits<TIndex>::max());
+    //  Constants
+    static constexpr std::uint32_t k_capacity_limit =
+        static_cast<std::uint32_t>(std::min(
+            memory::t_max_elements<Slot>(),
+            static_cast<std::size_t>(std::numeric_limits<TIndex>::max() + 1u)));
 
-    //  The maximum supported capacity is the maximum supported index + 1. *** DO NOT INCREASE THIS ***
-    static constexpr std::uint32_t k_capacity_limit = static_cast<std::uint32_t>(k_index_limit) + 1u;
+    static constexpr std::int32_t k_index_limit = static_cast<std::int32_t>(k_capacity_limit - 1u);
 
 private:
 
@@ -757,7 +760,7 @@ private:
 template<typename TIndex, typename TMeta>
 inline bool TOrderedSlots<TIndex, TMeta>::is_initialised() const noexcept
 {
-    return m_meta_slot_array != nullptr;
+    return m_meta_slot_array.data() != nullptr;
 }
 
 template<typename TIndex, typename TMeta>
@@ -1176,7 +1179,7 @@ template<typename TIndex, typename TMeta>
         {
             (void)rank_map.set_size(static_cast<std::size_t>(m_capacity));
             RankMapEntry* const map = rank_map.data();
-            const Slot* const meta = m_meta_slot_array;
+            const Slot* const meta = m_meta_slot_array.data();
             std::int32_t rank_index = 0;
             if (m_lexed_count != 0)
             {
@@ -1407,7 +1410,7 @@ inline std::uint32_t TOrderedSlots<TIndex, TMeta>::tree_weight() const noexcept
 }
 
 template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::validate_tree(const bool check_lex_order) const noexcept
+inline bool TOrderedSlots<TIndex, TMeta>::validate_tree(const LexCheck lex_check) const noexcept
 {
     bool valid = false;
     if (is_safe())
@@ -1416,17 +1419,17 @@ inline bool TOrderedSlots<TIndex, TMeta>::validate_tree(const bool check_lex_ord
         {
             valid = m_lexed_tree_root == -1;
         }
-        else if (check_lex_order)
+        else if (lex_check != LexCheck::None)
         {
             if (lock(LockState::on_compare_keys))
             {
-                valid = private_validate_subtree(m_lexed_tree_root, check_lex_order) > 0;
+                valid = private_validate_subtree(m_lexed_tree_root, lex_check) > 0;
                 unlock(LockState::on_compare_keys);
             }
         }
         else
         {
-            valid = private_validate_subtree(m_lexed_tree_root, check_lex_order) > 0;
+            valid = private_validate_subtree(m_lexed_tree_root, lex_check) > 0;
         }
     }
     return valid;
@@ -1918,7 +1921,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::failed_validate_subtree() noex
 }
 
 template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const std::int32_t slot_index, const bool check_lex_order) const noexcept
+inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const std::int32_t slot_index, const LexCheck lex_check) const noexcept
 {
     if (static_cast<std::uint32_t>(slot_index) >= m_capacity)
     {   //  early out on an invalid slot_index
@@ -1957,7 +1960,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
         {   //  early out on left child parent_index mismatch
             return failed_validate_subtree();
         }
-        height_l = private_validate_subtree(index_l, check_lex_order);
+        height_l = private_validate_subtree(index_l, lex_check);
         if (height_l < 0)
         {   //  propagate failure upwards
             return failed_validate_subtree();
@@ -1971,7 +1974,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
         {   //  early out on right child parent_index mismatch
             return failed_validate_subtree();
         }
-        height_r = private_validate_subtree(index_r, check_lex_order);
+        height_r = private_validate_subtree(index_r, lex_check);
         if (height_r < 0)
         {   //  propagate failure upwards
             return failed_validate_subtree();
@@ -1985,9 +1988,11 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
         return failed_validate_subtree();
     }
 
-    if (check_lex_order)
+    if (lex_check != LexCheck::None)
     {
         MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
+        const std::int32_t unique_bias = static_cast<std::int32_t>(lex_check);
+
         std::int32_t prev_index = private_prev_lexed(slot_index);
         if (prev_index >= 0)
         {
@@ -1995,7 +2000,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
             {
                 return failed_validate_subtree();
             }
-            if (on_compare_keys(slot_index, prev_index) < 0)
+            if ((on_compare_keys(slot_index, prev_index) - unique_bias) < 0)
             {
                 return failed_validate_subtree();
             }
@@ -2008,7 +2013,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
             {
                 return failed_validate_subtree();
             }
-            if (on_compare_keys(slot_index, next_index) > 0)
+            if ((on_compare_keys(slot_index, next_index) + unique_bias) > 0)
             {
                 return failed_validate_subtree();
             }
@@ -3348,7 +3353,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::min_occupied_index() const noe
     std::int32_t slot_index = 0;
     for (std::uint32_t slot_count = m_capacity; slot_count > 0; --slot_count)
     {
-        Slot& slot = meta[slot_index];
+        const Slot& slot = meta[slot_index];
         if (!slot.is_empty_slot())
         {
             return static_cast<std::int32_t>(slot_index);
@@ -3365,7 +3370,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::max_occupied_index() const noe
     std::int32_t slot_index = static_cast<std::int32_t>(m_capacity - 1u);
     for (std::uint32_t slot_count = m_capacity; slot_count > 0; --slot_count)
     {
-        Slot& slot = meta[slot_index];
+        const Slot& slot = meta[slot_index];
         if (!slot.is_empty_slot())
         {
             return static_cast<std::int32_t>(slot_index);
