@@ -235,11 +235,11 @@ public:
 
 protected:
 
-    //  Protected functions represent the derived class facing interface.
+    //  Protected functions form the derived-facing interface.
 
 private:
 
-    //  Private functions are implementation details of the template.
+    //  Private functions are implementation details.
 
 protected:
 
@@ -272,117 +272,169 @@ protected:
     [[nodiscard]] bool take(TOrderedSlots& src) noexcept;
     [[nodiscard]] bool clone(const TOrderedSlots& src) noexcept;
 
-    //  Reset the management data returning all slots to the empty list.
+    //  Reset all management state and return every slot to the empty category.
     [[nodiscard]] bool clear() noexcept;
 
-    //  Deallocate all management data and then set defaults.
+    //  Deallocate all management data and reset to the uninitialised state.
     [[nodiscard]] bool shutdown() noexcept;
 
-    //  Initialise or re-initialise.
-    //  Calls shutdown() then allocates and initialises all management data.
+    //  Initialise or re-initialise management data.
+    //
+    //  Calls shutdown() and then allocates and initialises the metadata domain.
     [[nodiscard]] bool initialise(const std::uint32_t capacity = 32) noexcept;
 
-    //  Capacity management functions.
+    //  Capacity management.
+    //
+    //  These functions preserve existing slot categories and do not reorder payload.
     [[nodiscard]] bool safe_resize(const std::uint32_t requested_capacity) noexcept;
     [[nodiscard]] bool reserve_empty(const std::uint32_t slot_count) noexcept;
     [[nodiscard]] bool shrink_to_fit() noexcept;
 
-    //  Acquire an empty slot as either loose or lexed.
-    //  If slot_index is -1, acquires the first slot from the empty list.
-    //  Returns the acquired slot index, or -1 on failure.
+    //  Acquire an empty slot into the requested occupied category.
+    //
+    //  slot_index == -1 selects the default empty slot.
+    //  acquire() does not grow capacity.
+    //  reserve_and_acquire() may grow capacity first.
+    //  Both return the acquired slot index, or -1 on failure.
     [[nodiscard]] std::int32_t acquire(const std::int32_t slot_index = -1, const bool lex = false, const bool require_unique = false) noexcept;
-
-    //  Reserve space to acquire the requested slot and then acquire it.
-    //  Returns the acquired slot index, or -1 on failure.
     [[nodiscard]] std::int32_t reserve_and_acquire(const std::int32_t slot_index = -1, const bool lex = false, const bool require_unique = false) noexcept;
 
-    //  Assign a slot to the empty list removing it from the lexed tree or loose list as appropriate.
-    //  The derived class is responsible for handling or discarding the payload item(s).
-    //  Returns false if the slot was invalid or empty.
+    //  Return an occupied slot to the empty category.
+    //
+    //  Payload handling is the responsibility of the derived class.
+    //  Returns false if slot_index is invalid or not occupied.
     bool erase(const std::int32_t slot_index) noexcept;
 
-    //  Slot categorisation functions.
+    //  Slot-category queries by slot index.
+    //
+    //  is_safe_slot() checks that the structure is safe and
+    //  slot_index is in [0, capacity()).
+    //
+    //  is_occupied(), is_lexed_slot(), is_loose_slot(), and is_empty_slot()
+    //  add the corresponding category check.
     [[nodiscard]] bool is_occupied(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] bool is_safe_slot(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] bool is_lexed_slot(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] bool is_loose_slot(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] bool is_empty_slot(const std::int32_t slot_index) const noexcept;
 
-    //  Traversal (in lex order) of lexed payload items using slot indices.
+    //  Lexed traversal by slot index.
+    //
+    //  These functions operate in lex order over the lexed subset only.
+    //
+    //  first_lexed()/last_lexed() return the first/last lexed slot, or -1 if there
+    //  are no lexed slots or the structure is not safe.
+    //
+    //  prev_lexed()/next_lexed() return the adjacent lexed slot in lex order,
+    //  or -1 if slot_index is invalid, not lexed, or at the end of traversal.
     [[nodiscard]] std::int32_t first_lexed() const noexcept;
     [[nodiscard]] std::int32_t last_lexed() const noexcept;
     [[nodiscard]] std::int32_t prev_lexed(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] std::int32_t next_lexed(const std::int32_t slot_index) const noexcept;
 
-    //  Traversal of loose payload items using slot indices.
+    //  Loose-list traversal by slot index.
+    //
+    //  These functions operate in loose-list order only.
+    //  Loose-list order is traversal order for loose slots, but not lex order.
+    //
+    //  first_loose()/last_loose() return the list head/tail, or -1 if there
+    //  are no loose slots or the structure is not safe.
+    //
+    //  prev_loose()/next_loose() return the adjacent loose slot in list order,
+    //  or -1 if slot_index is invalid, not loose, or at the end of the list.
     [[nodiscard]] std::int32_t first_loose() const noexcept;
     [[nodiscard]] std::int32_t last_loose() const noexcept;
     [[nodiscard]] std::int32_t prev_loose(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] std::int32_t next_loose(const std::int32_t slot_index) const noexcept;
 
-    //  Duplicate key checking.
+    //  Duplicate-key queries.
+    //
+    //  slot_index == -1 compares the currently staged query key.
+    //  Otherwise the specified slot key is used.
+    //
+    //  The category-specific variants restrict the search domain accordingly.
     [[nodiscard]] bool has_duplicate_key(const std::int32_t slot_index = -1) const noexcept;
     [[nodiscard]] bool has_duplicate_key_in_lexed(const std::int32_t slot_index = -1) const noexcept;
     [[nodiscard]] bool has_duplicate_key_in_loose(const std::int32_t slot_index = -1) const noexcept;
 
-    //  Transfer a slot from the loose list to the lexed tree.
-    //  Returns false if uninitialised or the slot is not in the loose list.
+    //  Move a loose slot into the lexed tree.
+    //
+    //  Returns false if slot_index is invalid or not loose.
     bool lex(const std::int32_t slot_index) noexcept;
 
-    //  Transfer a slot from the lexed tree to the loose list.
-    //  Returns false if uninitialised or the slot is not lexed.
+    //  Move a lexed slot into the loose list.
+    //
+    //  Returns false if slot_index is invalid or not lexed.
     bool unlex(const std::int32_t slot_index) noexcept;
 
-    //  Remove and re-insert a slot from/to the lexed tree.
-    //  Useful if a slot key has, or may have, changed.
-    //  Returns false if uninitialised or the slot is not lexed.
+    //  Remove and re-insert a lexed slot in the lexed tree.
+    //
+    //  Use this when a slot key has changed, or may have changed.
+    //  Returns false if slot_index is invalid or not lexed.
     bool relex(const std::int32_t slot_index) noexcept;
 
-    //  Transfer all slots from the loose list to the lexed tree.
+    //  Move all loose slots into the lexed tree.
     void lex_all() noexcept;
 
-    //  Transfer all slots from the lexed tree to the loose list.
+    //  Move all lexed slots into the loose list.
     void unlex_all() noexcept;
 
-    //  Remove and re-insert all slots from/to the lexed tree.
-    //  Useful if multiple slot keys have, or may have changed.
-    //  Can result in a marginally more balanced tree.
+    //  Remove and re-insert all lexed slots in the lexed tree.
+    //
+    //  Use this when multiple slot keys have changed, or may have changed.
+    //  This may also marginally improve tree shape.
     void relex_all() noexcept;
 
-    //  Build bidirectional rank/slot mapping for current slot state.
+    //  Build a full-domain rank/slot mapping for the current slot state.
+    //
     //  Traversal order is lexed, then loose, then empty.
+    //  RankMap size is capacity().
+    //  Both rank_to_slot and slot_to_rank are defined over the full domain.
+    //
+    //  On failure, or if no mapping can be built, the returned RankMap is empty.
     [[nodiscard]] RankMap build_rank_map() const noexcept;
 
-    //  Physically reorder payload items into canonical packed order.
+    //  Physically reorder payload into canonical packed order.
     //
     //  After completion:
-    //      - Lexed slots occupy [0, lexed_count) in lex order.
-    //      - Loose slots occupy [lexed_count, lexed_count + loose_count).
-    //      - Empty slots occupy [lexed_count + loose_count, capacity()).
+    //      - Lexed payload occupies slot indices [0, lexed_count()) in lex order.
+    //      - Loose payload occupies slot indices [lexed_count(), lexed_count() + loose_count()).
+    //      - Remaining slots are Empty.
     //      - Lexed metadata is rebuilt as a balanced AVL tree.
     //      - Loose and empty metadata are rebuilt as linear lists.
     //
-    //  Payload movement is performed via on_move_payload():
-    //      - In-place mode: uses cycle resolution (temporary slot index -1).
-    //      - External mode: performs a single pass to a complete external domain.
+    //  Uses on_move_payload() to coordinate derived payload movement.
+    //  In-place mode uses cycle resolution with derived temporary storage (-1).
+    //  External mode performs a single pass to a complete external payload domain.
     //
     //  See docs/TOrderedSlots.md for further detail.
     void sort_and_pack(const bool use_external_payload = false) noexcept;
 
-    //  Index order list rebuilding utilities.
-    //  For loose slots index order == rank_index order.
+    //  Rebuild list order in ascending slot index order.
+    //
+    //  For loose slots, index order and rank order are identical after rebuild.
     void rebuild_loose_in_index_order() noexcept;
     void rebuild_empty_in_index_order() noexcept;
 
-    //  Return the ranked index of a payload item by slot index, or -1 if the slot is empty.
+    //  Return the full-domain rank of a slot by slot index.
+    //
+    //  Rank is defined by traversal order: lexed, then loose, then empty.
+    //  Returns -1 if slot_index is invalid.
     [[nodiscard]] std::int32_t rank_index_of(const std::int32_t slot_index) const noexcept;
 
-    //  Return the slot index of a payload item by its ranked index, or -1 if the ranked index out of range.
+    //  Return the slot index by full-domain rank.
+    //
+    //  Valid rank domain is [0, capacity()).
+    //  Returns -1 if rank_index is out of range.
     [[nodiscard]] std::int32_t find_by_rank_index(const std::int32_t rank_index) const noexcept;
 
-    //  Find_* functions only search lexed slots.
-    //  Uses on_compare_keys(-1, slot_index), where -1 indicates the derived class's currently staged query key.
-    //  Returns the slot_index of a matching lexed slot, or -1 if there are no lexed matches.
+    //  Lexed search and bound queries.
+    //
+    //  These functions search the lexed subset only.
+    //  They use on_compare_keys(-1, slot_index), where -1 denotes the derived
+    //  class's currently staged query key.
+    //
+    //  They return a matching or bound slot index, or -1 if no such lexed slot exists.
     [[nodiscard]] std::int32_t find_any_equal() const noexcept;
     [[nodiscard]] std::int32_t find_first_equal() const noexcept;
     [[nodiscard]] std::int32_t find_first_greater() const noexcept;
@@ -391,7 +443,10 @@ protected:
     [[nodiscard]] std::int32_t find_last_less() const noexcept;
     [[nodiscard]] std::int32_t find_last_less_equal() const noexcept;
 
-    //  Aliases for find_first_greater_equal() and find_first_greater().
+    //  Bound-query aliases.
+    //
+    //  lower_bound_by_lex() aliases find_first_greater_equal().
+    //  upper_bound_by_lex() aliases find_first_greater().
     [[nodiscard]] std::int32_t lower_bound_by_lex() const noexcept;
     [[nodiscard]] std::int32_t upper_bound_by_lex() const noexcept;
 
@@ -399,30 +454,34 @@ protected:
     //
     //  For each visited slot, calls on_visit(slot_index, rank_index).
     //
-    //  For multi-category visits, the order is lexed, then loose, then empty as applicable.
+    //  visit_occupied() visits lexed then loose.
+    //  visit_all() visits lexed, then loose, then empty.
     //
-    //  For lexed slots, rank_index increases monotonically in the range [0 : lexed_count()).
-    //  For loose slots, rank_index increases monotonically in the range [lexed_count() : lexed_count() + loose_count()).
-    //  For empty slots, rank_index increases monotonically in the range [lexed_count() + loose_count(), capacity()).
+    //  For lexed slots, rank_index is in [0, lexed_count()).
+    //  For loose slots, rank_index is in [lexed_count(), lexed_count() + loose_count()).
+    //  For empty slots, rank_index is in [lexed_count() + loose_count(), capacity()).
     void visit_occupied() noexcept;
     void visit_lexed() noexcept;
     void visit_loose() noexcept;
     void visit_empty() noexcept;
     void visit_all() noexcept;
 
-    //  Tree shape queries.
+    //  Tree-shape diagnostics over the lexed AVL subset.
     [[nodiscard]] std::uint32_t tree_height() const noexcept;
     [[nodiscard]] std::uint32_t tree_weight() const noexcept;
 
-    //  validate_tree(check_lex_order) verifies AVL structure and balance.
-    //  If check_lex_order is true, in-order ordering is validated via
-    //  on_compare_keys() (nondecreasing, with stable order among equals).
+    //  Validate lexed-tree structure in stable state.
+    //
+    //  Validates AVL structure and balance.
+    //  If lex_check is not LexCheck::None, also validates comparator-defined
+    //  in-order semantics via on_compare_keys().
     enum class LexCheck : std::int32_t { InOrder = 0, Unique = 1, None = 2 };
     [[nodiscard]] bool validate_tree(const LexCheck lex_check = LexCheck::None) const noexcept;
 
-    //  check_integrity() validates metadata invariants, counts, list
-    //  structure, tree balance, and index ranges. It does not validate
-    //  lexical ordering.
+    //  Validate metadata integrity in stable state.
+    //
+    //  Validates metadata invariants, counts, list structure, tree balance,
+    //  and index ranges. Comparator-defined lex order is not checked here.
     [[nodiscard]] bool check_integrity() const noexcept;
 
 protected:
@@ -441,31 +500,35 @@ protected:
 
     /// Visit callback for category traversal.
     ///
-    /// For lexed slots the rank_index increases monotonically in the range [0 : lexed_count()).
-    /// For loose slots the rank_index increases monotonically in the range [lexed_count() : lexed_count() + loose_count()).
-    //  For empty slots the rank_index increases monotonically in the range [lexed_count() + loose_count(), capacity()).
+    /// rank_index is traversal-derived:
+    ///
+    ///     - lexed: [0, lexed_count())
+    ///     - loose: [lexed_count(), lexed_count() + loose_count())
+    ///     - empty: [lexed_count() + loose_count(), capacity())
     virtual void on_visit(const std::int32_t slot_index, const std::int32_t rank_index) noexcept
     {
         (void)slot_index;
         (void)rank_index;
     }
 
-    /// Move a payload item between slots.
+    /// Move derived payload during coordinated reordering.
     ///
     /// Contract:
-    ///   - source_index != target_index always
+    ///   - source_index != target_index
     ///   - exactly one of {source_index, target_index} may be -1
-    ///   - -1 indicates temporary storage owned by the derived class
+    ///   - -1 denotes derived temporary storage
     ///
-    /// This function is only called by sort_and_pack().
+    /// Called only by sort_and_pack().
     virtual void on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
     {
         (void)source_index;
         (void)target_index;
     }
 
-    /// Handshake with the derived class to approve and finalise reserve_empty() or reserve_and_acquire() growth.
-    /// Return an absolute capacity to apply; returned capacities < min_required_capacity will cause the caller to soft fail.
+    /// Approve and finalise growth for reserve_empty() or reserve_and_acquire().
+    ///
+    /// Returns the absolute capacity to apply.
+    /// Returning a value less than minimum_capacity causes the caller to fail.
     virtual [[nodiscard]] std::uint32_t on_reserve_empty(const std::uint32_t minimum_capacity, const std::uint32_t recommended_capacity) noexcept
     {
         (void)minimum_capacity;
@@ -480,7 +543,7 @@ protected:
     ///   > 0  if key(source_index) > key(target_index)
     ///
     /// Special case:
-    ///   source_index == -1 means "compare the current query/insert key against key(target_index)".
+    ///   source_index == -1 means "compare the current staged query/insert key against key(target_index)".
     virtual [[nodiscard]] std::int32_t on_compare_keys(const std::int32_t source_index, const std::int32_t target_index) const noexcept
     {
         (void)source_index;
@@ -499,10 +562,9 @@ private:
     inline void unlock(const LockState unlock) const noexcept;
 
     //  Private guarded virtual-call helpers.
-    //  safe_on_visit() computes identifier from the visited slot category.
-    //  safe_on_move_payload() is an available guarded wrapper but is not used by pack().
-    //  Neither safe_on_visit() or safe_on_move_payload() are currently used, they are
-    //  provided for symmetry and convenience only. Batched access is usually preferable.
+    //
+    //  safe_on_visit() and safe_on_move_payload() are available single-call wrappers.
+    //  Batched dispatch is usually preferable.
     void safe_on_visit(const std::int32_t slot_index, const std::int32_t rank_index) noexcept;
     void safe_on_visit_dispatcher(const bool visit_lexed, const bool visit_loose, const bool visit_empty) noexcept;
     void safe_on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept;
@@ -570,15 +632,16 @@ private:
 
     std::int32_t avl_double_rotate(const std::int32_t slot_index, const std::int32_t heavy_side) noexcept;
 
-    //  Insert a slot into the AVL tree (slot metadata only).
-    //  key_index is forwarded as the 'source_index' operand to on_compare_keys() (may be -1 or a slot index).
+    //  Insert a slot into the lexed AVL subset.
+    //
+    //  key_index is forwarded as the source operand to on_compare_keys().
+    //  It may be -1 or a slot index.
     void avl_insert(const std::int32_t slot_index, const std::int32_t key_index) noexcept;
 
-    //  Insert a slot into the AVL tree (slot metadata only).
-    //  key_index == slot_index.
+    //  Insert a slot into the lexed AVL subset using its own key.
     void avl_insert(const std::int32_t slot_index) noexcept;
 
-    //  Remove a slot from the AVL tree (slot metadata only).
+    //  Remove a slot from the lexed AVL subset.
     void avl_remove(const std::int32_t slot_index) noexcept;
 
 private:
@@ -588,72 +651,74 @@ private:
     //  Capacity growth recommendation.
     static inline std::uint32_t apply_growth_policy(const std::uint32_t capacity) noexcept;
 
-    //  Tree validation functions.
-    //  Returns height >= 0 on success; returns -1 on failure
+    //  Tree validation helpers.
+    //
+    //  Return subtree height on success, or -1 on failure.
     static inline [[nodiscard]] std::int32_t failed_validate_subtree() noexcept;
     [[nodiscard]] std::int32_t private_validate_subtree(const std::int32_t slot_index, const LexCheck lex_check = LexCheck::None) const noexcept;
 
-    //  Integrity check functions.
+    //  Integrity-check helpers.
     static inline [[nodiscard]] bool failed_integrity_check() noexcept;
     [[nodiscard]] bool private_integrity_check() const noexcept;
 
-    //  Dispatcher for batched on-visit calls.
+    //  Dispatch batched on_visit() calls for the selected categories.
     void private_on_visit_dispatcher(const bool visit_lexed, const bool visit_loose, const bool visit_empty) noexcept;
 
-    //  Resize the array capacity and apply any resulting required cleanup.
+    //  Resize implementation after precondition validation.
     [[nodiscard]] bool private_resize(const std::uint32_t requested_capacity) noexcept;
 
-    //  Acquire an empty slot as either loose or lexed.
-    //  Optionally reserve space to acquire the requested slot.
-    //  Optionally verify that the requested slot key is unique.
-    //  If slot_index is -1, acquires the first slot from the empty list.
-    //  Returns the acquired slot index, or -1 on failure.
+    //  Acquire implementation with optional reservation.
+    //
+    //  May optionally require key uniqueness and may optionally reserve capacity first.
     [[nodiscard]] std::int32_t private_acquire(const std::int32_t slot_index, const bool lex, const bool require_unique, const bool allow_reserve) noexcept;
 
-    //  Lexed index navigation.
+    //  Lexed in-order navigation helpers.
     [[nodiscard]] std::int32_t private_prev_lexed(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] std::int32_t private_next_lexed(const std::int32_t slot_index) const noexcept;
 
-    //  Duplicate key checking.
+    //  Duplicate-key helper queries.
     [[nodiscard]] bool private_has_duplicate_key(const std::int32_t slot_index = -1) const noexcept;
     [[nodiscard]] bool private_has_duplicate_key_in_lexed(const std::int32_t slot_index = -1) const noexcept;
     [[nodiscard]] bool private_has_duplicate_key_in_loose(const std::int32_t slot_index = -1) const noexcept;
 
     //  Implementation of sort_and_pack().
-    //  See the sort_and_pack() function prefix comments for details.
+    //
+    //  Reorders payload into canonical packed order and rebuilds metadata.
     void private_sort_and_compact(const bool use_external_payload = false) noexcept;
 
-    //  Build a balanced subtree over an inclusive range range of slot indices.
+    //  Build a balanced lexed subtree over an inclusive slot-index range.
     [[nodiscard]] std::int32_t build_balanced_subtree(const std::int32_t lower_index, const std::int32_t upper_index, const std::int32_t parent_index) noexcept;
 
-    //  Convert the lexed tree structure into a ordered circular bi-directional list.
-    //  using Slot::child_index[] as prev/next links. Returns the list head slot index.
-    //  Returns the index of the list head.
+    //  Convert the lexed tree into an ordered circular bi-directional list.
+    //
+    //  Uses Slot::child_index[] as prev/next links.
+    //  Returns the list head, or -1 if there are no lexed slots.
     [[nodiscard]] std::int32_t lexed_to_list() noexcept;
 
-    //  Scan the inclusive range of slot indices and create a a bi-directional index ordered list of the specified category members.
+    //  Scan an inclusive slot-index range and build a bi-directional list of slots
+    //  in the specified category.
     //  The caller is responsible for correcting any orphaned list members.
-    //  Returns the index of the list head.
+    //  Returns the list head, or -1 if no matching slots are found.
     [[nodiscard]] std::int32_t state_to_list(const std::int32_t lower_index, const std::int32_t upper_index, const SlotState state) noexcept;
 
-    //  Convert an inclusive range of slot indices to a bi-directional list.
-    //  The caller must ensure these slots are not currently actively managed.
-    //  Returns the index of the list head.
+    //  Convert an inclusive slot-index range to a bi-directional list.
+    //  The caller must ensure these slots are not currently managed.
+    //  Returns the list head, or -1 if the range is empty or invalid.
     [[nodiscard]] std::int32_t range_to_list(const std::int32_t lower_index, const std::int32_t upper_index, const SlotState state) noexcept;
 
-    //  Combine bi-directional lists by inserting list 2 at the end of list 1.
-    //  Returns the index of the list head.
+    //  Concatenate two bi-directional lists by appending list2 to list1.
+    //  Returns the head of the combined list.
     [[nodiscard]] std::int32_t combine_lists(const std::int32_t list1_head_index, const std::int32_t list2_head_index) noexcept;
 
-    //  Set the parent_index of slots in a list to be an ordinal index
+    //  Write sequential ordinals into parent_index over a list traversal.
     void set_list_ordinals(const std::int32_t list_index, const std::uint32_t list_count, const std::int32_t ordinal_start) noexcept;
 
-    //  Append a range of slot indices to the loose or empty list.
-    //  The caller must ensure these slots are not currently actively managed.
+    //  Append a slot-index range to the loose or empty list.
+    //  The caller must ensure these slots are not currently managed.
     void append_range_to_loose_list(const std::int32_t lower_index, const std::int32_t upper_index) noexcept;
     void append_range_to_empty_list(const std::int32_t lower_index, const std::int32_t upper_index) noexcept;
 
-    //  Internal helper functions for the move_to_* functions.
+    //  Internal helpers for the move_to_* functions.
     void attach_to_lexed(const std::int32_t slot_index, const std::int32_t key_index) noexcept;
     void attach_to_lexed(const std::int32_t slot_index) noexcept;
     void attach_to_loose(const std::int32_t slot_index) noexcept;
@@ -662,23 +727,28 @@ private:
     void remove_from_loose(const std::int32_t slot_index) noexcept;
     void remove_from_empty(const std::int32_t slot_index) noexcept;
 
-    //  Move a meta slot to a new meta category if not already a member of it.
+    //  Move a slot to the specified metadata category if not already a member.
     void move_to_lexed_tree(const std::int32_t slot_index, const std::int32_t key_index) noexcept;
     void move_to_lexed_tree(const std::int32_t slot_index) noexcept;
     void move_to_loose_list(const std::int32_t slot_index) noexcept;
     void move_to_empty_list(const std::int32_t slot_index) noexcept;
 
-    //  Convert a slot index to its rank index.
-    //  Returns the rank index for a slots.
+    //  Convert a slot index to full-domain rank.
+    //
+    //  Rank is defined by traversal order: lexed, then loose, then empty.
+    //  Returns -1 if the slot is invalid.
     [[nodiscard]] std::int32_t convert_to_rank_index(const std::int32_t slot_index) const noexcept;
 
-    //  Locate a slot index by its rank index.
-    //  Returns the slot index or -1 if rank_index out of range.
-    //  Valid ranks are in [0, capacity()).
+    //  Locate a slot by full-domain rank.
+    //
+    //  Valid rank domain is [0, capacity()).
+    //  Returns the corresponding slot index, or -1 if rank_index is out of range.
     [[nodiscard]] std::int32_t locate_by_rank_index(const std::int32_t rank_index) const noexcept;
 
-    //  Locate functions search the lexed tree using the current query key via on_compare_keys(-1, target).
-    //  They return a slot index or -1 if not found.
+    //  Search the lexed tree using the current staged query key via on_compare_keys().
+    //
+    //  key_index may be -1 to indicate the staged query key.
+    //  Returns a lexed slot index, or -1 if no matching/bound slot exists.
     [[nodiscard]] std::int32_t locate_any_equal(const std::int32_t key_index = -1) const noexcept;
     [[nodiscard]] std::int32_t locate_first_equal(const std::int32_t key_index = -1) const noexcept;
     [[nodiscard]] std::int32_t locate_first_greater(const std::int32_t key_index = -1) const noexcept;
@@ -687,15 +757,15 @@ private:
     [[nodiscard]] std::int32_t locate_last_less(const std::int32_t key_index = -1) const noexcept;
     [[nodiscard]] std::int32_t locate_last_less_equal(const std::int32_t key_index = -1) const noexcept;
 
-    //  Scan for lowest/highest occupied slot index in the slot metadata array.
+    //  Scan for the lowest/highest occupied slot index in the metadata array.
     [[nodiscard]] std::int32_t min_occupied_index() const noexcept;
     [[nodiscard]] std::int32_t max_occupied_index() const noexcept;
 
-    //  Diagnostics over slot metadata only.
+    //  Tree-shape diagnostics over metadata only.
     [[nodiscard]] std::uint32_t subtree_height(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] std::uint32_t subtree_weight(const std::int32_t slot_index) const noexcept;
 
-    //  These functions should only be called on construction or after a call to shutdown().
+    //  These functions should only be called on construction or after shutdown().
     bool move_from(TOrderedSlots& src) noexcept;
     bool copy_from(const TOrderedSlots& src) noexcept;
     void set_empty() noexcept;

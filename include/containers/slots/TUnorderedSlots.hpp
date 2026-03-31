@@ -258,14 +258,15 @@ protected:
     [[nodiscard]] bool take(TUnorderedSlots& src) noexcept;
     [[nodiscard]] bool clone(const TUnorderedSlots& src) noexcept;
 
-    //  Reset the management data returning all slots to the empty list.
+    //  Reset all management state and return every slot to the empty category.
     [[nodiscard]] bool clear() noexcept;
 
-    //  Deallocate all management data and then set defaults.
+    //  Deallocate all management data and reset to the uninitialised state.
     [[nodiscard]] bool shutdown() noexcept;
 
-    //  Initialise or re-initialise.
-    //  Calls shutdown() then allocates and initialises all management data.
+    //  Initialise or re-initialise management data.
+    //
+    //  Calls shutdown() and then allocates and initialises the metadata domain.
     [[nodiscard]] bool initialise(const std::uint32_t capacity = 32) noexcept;
 
     //  Capacity management.
@@ -309,7 +310,7 @@ protected:
     //  are no loose slots or the structure is not safe.
     //
     //  prev_loose()/next_loose() return the adjacent loose slot in list order,
-    //  or -1 if slot_index is invalid or the slot not loose or at the end of the list.
+    //  or -1 if slot_index is invalid, not loose, or at the end of the list.
     [[nodiscard]] std::int32_t first_loose() const noexcept;
     [[nodiscard]] std::int32_t last_loose() const noexcept;
     [[nodiscard]] std::int32_t prev_loose(const std::int32_t slot_index) const noexcept;
@@ -353,7 +354,7 @@ protected:
     //  Return the rank of a loose slot by slot index.
     //
     //  Rank is the number of loose slots with lower slot index.
-    //  Returns -1 if the slot is invalid or Empty.
+    //  Returns -1 if the slot is invalid or empty.
     [[nodiscard]] std::int32_t rank_index_of(const std::int32_t slot_index) const noexcept;
 
     //  Return the slot index of a loose slot by rank.
@@ -405,9 +406,7 @@ protected:
 
     /// Move derived payload during coordinated compaction.
     ///
-    /// Called only by pack().
-    ///
-    /// TUnorderedSlots contract:
+    /// Contract:
     ///   - source_index != target_index
     ///   - source_index and target_index are non-negative
     ///   - source_index references a loose slot
@@ -416,14 +415,10 @@ protected:
     ///
     /// Empty-slot payload preservation is not required.
     /// The derived class must implement overwrite-safe behaviour.
-    /// A preserving implementation may use swap-like movement, but the template
-    /// guarantees compaction only.
     ///
     /// Migration note:
     ///   - TOrderedSlots may use -1 to denote derived temporary storage.
     ///   - TUnorderedSlots does not use -1 here.
-    ///   - Code written for TOrderedSlots is usually safe here.
-    ///   - Code written only for TUnorderedSlots may be unsafe in TOrderedSlots.
     virtual void on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
     {
         (void)source_index;
@@ -451,7 +446,7 @@ private:
     inline void unlock(const LockState unlock) const noexcept;
 
     //  Private guarded virtual-call helpers.
-    //  safe_on_visit() computes identifier from the visited slot category.
+    //
     //  safe_on_visit() and safe_on_move_payload() are available single-call wrappers.
     //  Batched dispatch is usually preferable.
     void safe_on_visit(const std::int32_t slot_index) noexcept;
@@ -517,7 +512,7 @@ private:
     //  Capacity growth recommendation.
     static inline std::uint32_t apply_growth_policy(const std::uint32_t capacity) noexcept;
 
-    //  Integrity check functions.
+    //  Integrity-check helpers.
     static inline bool failed_integrity_check() noexcept;
     [[nodiscard]] bool private_integrity_check() const noexcept;
 
@@ -563,7 +558,7 @@ private:
     void append_range_to_loose_list(const std::int32_t lower_index, const std::int32_t upper_index) noexcept;
     void append_range_to_empty_list(const std::int32_t lower_index, const std::int32_t upper_index) noexcept;
 
-    //  Internal helper functions for the move_to_* functions.
+    //  Internal helpers for the move_to_* functions.
     void attach_to_loose(const std::int32_t slot_index) noexcept;
     void attach_to_empty(const std::int32_t slot_index) noexcept;
     void remove_from_loose(const std::int32_t slot_index) noexcept;
@@ -585,11 +580,11 @@ private:
     //  Returns the corresponding slot index, or -1 if rank_index is out of range.
     [[nodiscard]] std::int32_t locate_by_rank_index(const std::int32_t rank_index) const noexcept;
 
-    //  Scan for the lowest/highest non-empty slot index in the metadata array.
+    //  Scan for the lowest/highest occupied slot index in the metadata array.
     [[nodiscard]] std::int32_t min_occupied_index() const noexcept;
     [[nodiscard]] std::int32_t max_occupied_index() const noexcept;
 
-    //  These functions should only be called on construction or after a call to shutdown().
+    //  These functions should only be called on construction or after shutdown().
     bool move_from(TUnorderedSlots& src) noexcept;
     bool copy_from(const TUnorderedSlots& src) noexcept;
     void set_empty() noexcept;
@@ -646,7 +641,7 @@ private:
 template<typename TIndex>
 inline bool TUnorderedSlots<TIndex>::is_initialised() const noexcept
 {
-    return m_meta_slot_array != nullptr;
+    return m_meta_slot_array.data() != nullptr;
 }
 
 template<typename TIndex>
