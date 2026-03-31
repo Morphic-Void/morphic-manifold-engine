@@ -284,7 +284,7 @@ public:
             idx = Base::next_loose(idx);
         }
 
-        if (idx != head)
+        if (idx != -1)
             hard_fail_contract("slots_in_loose_index_order: did not return to head after loose_count() steps");
 
         return out;

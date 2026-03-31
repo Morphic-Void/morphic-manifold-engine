@@ -12,6 +12,55 @@
 //  - Requires C++17 or later.
 //  - No exceptions.
 //  - Indices, sizes, and capacities are in elements.
+//
+//  TUnorderedCollection<T>
+//
+//  Overview
+//  --------
+//  TUnorderedCollection is a move-only unordered collection wrapper over
+//  TUnorderedSlots and TStableStorage.
+//
+//  Public identity during the mutable phase is slot_index.
+//  Constructed objects have stable addresses in TStableStorage.
+//  pack() remaps slot metadata and slot-side payload, but does not relocate
+//  live T objects.
+//
+//  Pointers / references to live objects remain valid across pack().
+//
+//  State model
+//  -----------
+//  Per-slot collection state is:
+//
+//    Unmapped
+//      slot has a valid storage_index binding but backing has not been mapped
+//      for that slot
+//
+//    Mapped
+//      backing is mapped for the bound storage_index but no live T exists there
+//
+//    Constructed
+//      a live T exists at the bound storage_index
+//
+//  Only Constructed slots expose live objects.
+//  Empty slots may still retain valid hidden storage_index bindings.
+//
+//
+//  Semantic notes
+//  --------------
+//  - slot_index is the editable-phase handle
+//  - slot_index is not stable across pack()
+//  - storage_index is internal and not public identity
+//  - traversal order is unordered-slot traversal order
+//  - traversal order does not imply rank, sort order, or insertion order
+//  - slot remap does not imply object relocation
+// 
+// 
+//  Lifetime note
+//  -------------
+//  Object pointers returned by the collection are non-owning views into
+//  placement-constructed objects held in TStableStorage.
+//  Do not destroy returned pointers with delete.
+//  Object lifetime must be ended through the collection API.
 
 #pragma once
 
@@ -67,8 +116,15 @@ public:
     T* get_object(const std::int32_t slot_index) noexcept;
     const T* get_object(const std::int32_t slot_index) const noexcept;
 
+    //  Traversal
+    [[nodiscard]] std::int32_t first_live() const noexcept;
+    [[nodiscard]] std::int32_t last_live() const noexcept;
+    [[nodiscard]] std::int32_t prev_live(const std::int32_t slot_index) const noexcept;
+    [[nodiscard]] std::int32_t next_live(const std::int32_t slot_index) const noexcept;
+
     //  Utility
     [[nodiscard]] slots::RankMap build_rank_map() const noexcept;
+    [[nodiscard]] std::int32_t reverse_lookup_slot_index_scan(const T* const object) const noexcept;
 
     //  Content management
     template<typename... TArgs> std::int32_t emplace(TArgs&&... args) noexcept;
@@ -170,9 +226,51 @@ inline const T* TUnorderedCollection<T>::get_object(const std::int32_t slot_inde
 }
 
 template<typename T>
-slots::RankMap TUnorderedCollection<T>::build_rank_map() const noexcept
+inline std::int32_t TUnorderedCollection<T>::first_live() const noexcept
+{
+    return base_class::first_loose();
+}
+
+template<typename T>
+inline std::int32_t TUnorderedCollection<T>::last_live() const noexcept
+{
+    return base_class::last_loose();
+}
+
+template<typename T>
+inline std::int32_t TUnorderedCollection<T>::prev_live(const std::int32_t slot_index) const noexcept
+{
+    return base_class::prev_loose(slot_index);
+}
+
+template<typename T>
+inline std::int32_t TUnorderedCollection<T>::next_live(const std::int32_t slot_index) const noexcept
+{
+    return base_class::next_loose(slot_index);
+}
+
+template<typename T>
+inline slots::RankMap TUnorderedCollection<T>::build_rank_map() const noexcept
 {
     return base_class::build_rank_map();
+}
+
+template<typename T>
+inline std::int32_t TUnorderedCollection<T>::reverse_lookup_slot_index_scan(const T* const object) const noexcept
+{
+    const std::size_t element_count = m_slots.size();
+    for (std::size_t element_index = 0u; element_index < element_count; ++element_index)
+    {
+        const SlotData& slot = m_slots[element_index];
+        if (slot.state == SlotState::Constructed)
+        {
+            if (object == m_storage.index_ptr(slot.storage_index))
+            {
+                return static_cast<std::int32_t>(element_index);
+            }
+        }
+    }
+    return -1;
 }
 
 template<typename T>

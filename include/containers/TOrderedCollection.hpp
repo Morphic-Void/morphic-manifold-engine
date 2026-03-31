@@ -12,6 +12,61 @@
 //  - Requires C++17 or later.
 //  - No exceptions.
 //  - Indices, sizes, and capacities are in elements.
+//
+//  TOrderedCollection<TKey, T>
+//
+//  Overview
+//  --------
+//  TOrderedCollection is a move-only ordered collection wrapper over
+//  TOrderedSlots and TStableStorage.
+//
+//  Public identity during the mutable phase is slot_index.
+//  Constructed objects have stable addresses in TStableStorage.
+//  sort_and_pack() remaps slot metadata, slot-side payload, and keys in
+//  lock-step, but does not relocate live T objects.
+// 
+//  Pointers / references to live objects remain valid across sort_and_pack().
+//
+//  Requirements
+//  ------------
+//  - TKey must be trivially copyable
+//  - live keys are unique
+//
+//
+//  State model
+//  -----------
+//  Per-slot collection state is:
+//
+//    Unmapped
+//      slot has a valid storage_index binding but backing has not been mapped
+//      for that slot
+//
+//    Mapped
+//      backing is mapped for the bound storage_index but no live T exists there
+//
+//    Constructed
+//      a live T exists at the bound storage_index and the slot carries a live
+//      key participating in ordered lookup
+//
+//  Only Constructed slots expose live objects or live keys.
+//  Empty slots may still retain valid hidden storage_index bindings.
+//
+//
+//  Semantic notes
+//  --------------
+//  - slot_index is the editable-phase handle
+//  - slot_index is not stable across sort_and_pack()
+//  - storage_index is internal and not public identity
+//  - ordered lookup/traversal is defined over live keyed slots
+//  - ordered slot/key remap does not imply object relocation
+// 
+// 
+//  Lifetime note
+//  -------------
+//  Object pointers returned by the collection are non-owning views into
+//  placement-constructed objects held in TStableStorage.
+//  Do not destroy returned pointers with delete.
+//  Object lifetime must be ended through the collection API.
 
 #pragma once
 
@@ -71,9 +126,16 @@ public:
     const T* get_object(const TKey& key) const noexcept;
     const T* get_object(const std::int32_t slot_index) const noexcept;
 
+    //  Traversal
+    [[nodiscard]] std::int32_t first_live() const noexcept;
+    [[nodiscard]] std::int32_t last_live() const noexcept;
+    [[nodiscard]] std::int32_t prev_live(const std::int32_t slot_index) const noexcept;
+    [[nodiscard]] std::int32_t next_live(const std::int32_t slot_index) const noexcept;
+
     //  Utility
     [[nodiscard]] slots::RankMap build_rank_map() const noexcept;
-    std::int32_t find_slot(const TKey& key) const noexcept;
+    [[nodiscard]] std::int32_t reverse_lookup_slot_index_scan(const T* const object) const noexcept;
+    [[nodiscard]] std::int32_t find_slot(const TKey& key) const noexcept;
 
     //  Content management
     template<typename... TArgs> std::int32_t emplace(const TKey& key, TArgs&&... args) noexcept;
@@ -204,9 +266,51 @@ inline std::int32_t TOrderedCollection<T, TKey>::find_slot(const TKey& key) cons
 }
 
 template<typename T, typename TKey>
-slots::RankMap TOrderedCollection<T, TKey>::build_rank_map() const noexcept
+inline std::int32_t TOrderedCollection<T, TKey>::first_live() const noexcept
+{
+    return base_class::first_lexed();
+}
+
+template<typename T, typename TKey>
+inline std::int32_t TOrderedCollection<T, TKey>::last_live() const noexcept
+{
+    return base_class::last_lexed();
+}
+
+template<typename T, typename TKey>
+inline std::int32_t TOrderedCollection<T, TKey>::prev_live(const std::int32_t slot_index) const noexcept
+{
+    return base_class::prev_lexed(slot_index);
+}
+
+template<typename T, typename TKey>
+inline std::int32_t TOrderedCollection<T, TKey>::next_live(const std::int32_t slot_index) const noexcept
+{
+    return base_class::next_lexed(slot_index);
+}
+
+template<typename T, typename TKey>
+inline slots::RankMap TOrderedCollection<T, TKey>::build_rank_map() const noexcept
 {
     return base_class::build_rank_map();
+}
+
+template<typename T, typename TKey>
+inline std::int32_t TOrderedCollection<T, TKey>::reverse_lookup_slot_index_scan(const T* const object) const noexcept
+{
+    const std::size_t element_count = m_slots.size();
+    for (std::size_t element_index = 0u; element_index < element_count; ++element_index)
+    {
+        const SlotData& slot = m_slots[element_index];
+        if (slot.state == SlotState::Constructed)
+        {
+            if (object == m_storage.index_ptr(slot.storage_index))
+            {
+                return static_cast<std::int32_t>(element_index);
+            }
+        }
+    }
+    return -1;
 }
 
 template<typename T, typename TKey>

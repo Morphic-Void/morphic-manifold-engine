@@ -1036,13 +1036,25 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::last_loose() const noexcept
 template<typename TIndex, typename TMeta>
 inline std::int32_t TOrderedSlots<TIndex, TMeta>::prev_loose(const std::int32_t slot_index) const noexcept
 {
-    return is_loose_slot(slot_index) ? m_meta_slot_array.data()[slot_index].child_index[0] : -1;
+    if (is_loose_slot(slot_index) && (slot_index != m_loose_list_head))
+    {
+        return m_meta_slot_array.data()[slot_index].child_index[0];
+    }
+    return -1;
 }
 
 template<typename TIndex, typename TMeta>
 inline std::int32_t TOrderedSlots<TIndex, TMeta>::next_loose(const std::int32_t slot_index) const noexcept
 {
-    return is_loose_slot(slot_index) ? m_meta_slot_array.data()[slot_index].child_index[1] : -1;
+    if (is_loose_slot(slot_index))
+    {
+        const std::int32_t next_index = m_meta_slot_array.data()[slot_index].child_index[1];
+        if (next_index != m_loose_list_head)
+        {
+            return next_index;
+        }
+    }
+    return -1;
 }
 
 template<typename TIndex, typename TMeta>

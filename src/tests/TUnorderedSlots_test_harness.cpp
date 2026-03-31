@@ -311,7 +311,7 @@ public:
         }
 
         // Must return to head after exactly n steps
-        if (idx != head) hard_fail_contract("loose_slots_by_count_checked: did not return to head after loose_count() steps");
+        if (idx != -1) hard_fail_contract("loose_slots_by_count_checked: did not return to head after loose_count() steps");
 
         return out;
     }

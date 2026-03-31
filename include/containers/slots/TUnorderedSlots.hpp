@@ -309,7 +309,7 @@ protected:
     //  are no loose slots or the structure is not safe.
     //
     //  prev_loose()/next_loose() return the adjacent loose slot in list order,
-    //  or -1 if slot_index is invalid or not loose.
+    //  or -1 if slot_index is invalid or the slot not loose or at the end of the list.
     [[nodiscard]] std::int32_t first_loose() const noexcept;
     [[nodiscard]] std::int32_t last_loose() const noexcept;
     [[nodiscard]] std::int32_t prev_loose(const std::int32_t slot_index) const noexcept;
@@ -857,16 +857,29 @@ inline std::int32_t TUnorderedSlots<TIndex>::last_loose() const noexcept
     return (is_safe() && (m_loose_list_head != -1)) ? m_meta_slot_array.data()[m_loose_list_head].get_prev_index() : -1;
 }
 
+
 template<typename TIndex>
 inline std::int32_t TUnorderedSlots<TIndex>::prev_loose(const std::int32_t slot_index) const noexcept
 {
-    return is_loose_slot(slot_index) ? m_meta_slot_array.data()[slot_index].get_prev_index() : -1;
+    if (is_loose_slot(slot_index) && (slot_index != m_loose_list_head))
+    {
+        return m_meta_slot_array.data()[slot_index].get_prev_index();
+    }
+    return -1;
 }
 
 template<typename TIndex>
 inline std::int32_t TUnorderedSlots<TIndex>::next_loose(const std::int32_t slot_index) const noexcept
 {
-    return is_loose_slot(slot_index) ? m_meta_slot_array.data()[slot_index].get_next_index() : -1;
+    if (is_loose_slot(slot_index))
+    {
+        const std::int32_t next_index = m_meta_slot_array.data()[slot_index].get_next_index();
+        if (next_index != m_loose_list_head)
+        {
+            return next_index;
+        }
+    }
+    return -1;
 }
 
 template<typename TIndex>
