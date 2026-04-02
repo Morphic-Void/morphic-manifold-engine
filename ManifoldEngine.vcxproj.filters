@@ -135,7 +135,7 @@
     <ClInclude Include="include\containers\TUnorderedCollection.hpp">
       <Filter>include\containers</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\TObjectOwner.hpp">
+    <ClInclude Include="include\containers\TInstance.hpp">
       <Filter>include\containers</Filter>
     </ClInclude>
     <ClInclude Include="include\types\fp16data_t.hpp">

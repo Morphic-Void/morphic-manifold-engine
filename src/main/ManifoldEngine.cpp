@@ -15,7 +15,7 @@
 #include "containers/slots/TUnorderedSlots.hpp"
 #include "containers/ByteBuffers.hpp"
 #include "containers/StringBuffers.hpp"
-#include "containers/TObjectOwner.hpp"
+#include "containers/TInstance.hpp"
 #include "containers/TPodVector.hpp"
 #include "containers/TStableStorage.hpp"
 #include "containers/TOrderedCollection.hpp"
