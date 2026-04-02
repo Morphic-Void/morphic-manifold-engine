@@ -169,25 +169,18 @@ inline bool TObjectOwner<T>::emplace(TArgs&&... args) noexcept
         "TObjectOwner<T>::emplace(...) requires T to be nothrow constructible.");
 
     T* ptr = m_token.data();
-    if (ptr == nullptr)
+    if (ptr != nullptr)
+    {   //  existing storage - preserve owner identity, deconstruct and reconstruct in-place
+        ptr->~T();
+    }
+    else if (m_token.allocate(1u))
+    {   //  storage allocated
+        ptr = m_token.data();
+    }
+    else
     {
-        memory::TMemoryToken<T> token;
-        if (token.allocate(1u))
-        {
-            ptr = token.data();
-            if (ptr != nullptr)
-            {
-                ::new (static_cast<void*>(ptr)) T(std::forward<TArgs>(args)...);
-                m_token = std::move(token);
-                return true;
-            }
-        }
         return false;
     }
-
-    // Existing storage already owns one live T.
-    // Preserve owner identity and reconstruct in-place.
-    ptr->~T();
     ::new (static_cast<void*>(ptr)) T(std::forward<TArgs>(args)...);
     return true;
 }
