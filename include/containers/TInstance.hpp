@@ -8,6 +8,9 @@
 //
 //  Move-only owning single-object wrapper over TMemoryToken<T>.
 //
+//  TInstance<T> is the unique owning wrapper for a single constructed T.
+//  Non-empty state implies exactly one live object.
+//
 //  Overview:
 //  - TInstance<T> owns storage for exactly one T.
 //  - Non-empty state always implies that exactly one live T object is present.
