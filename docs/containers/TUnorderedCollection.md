@@ -103,9 +103,8 @@ map produced after pack() is only the post-pack identity mapping.
 
 Remap semantics follow the underlying TUnorderedSlots contract:
 
-- mapping is defined over the occupied domain
-- non-participating entries may contain -1 sentinels
-- empty slots do not participate in rank identity
+- mapping is only defined over the occupied domain
+- empty slots do not participate in rank identity and will contain -1 sentinels
 
 ## Lifetime model
 
