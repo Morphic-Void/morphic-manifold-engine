@@ -1,9 +1,9 @@
-Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
-License: MIT (see LICENSE file in repository root)
+Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited  
+License: MIT (see LICENSE file in repository root)  
 
-File:   TOrderedSlots.md
-Author: Ritchie Brannan
-Date:   1 Apr 26
+File:   TOrderedSlots.md  
+Author: Ritchie Brannan  
+Date:   1 Apr 26  
 
 # TOrderedSlots<TIndex, TMeta>
 

@@ -1,9 +1,9 @@
-Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
-License: MIT (see LICENSE file in repository root)
+Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited  
+License: MIT (see LICENSE file in repository root)  
 
-File:   TUnorderedSlots.md
-Author: Ritchie Brannan
-Date:   1 Apr 26
+File:   TUnorderedSlots.md  
+Author: Ritchie Brannan  
+Date:   1 Apr 26  
 
 # TUnorderedSlots<TIndex>
 
