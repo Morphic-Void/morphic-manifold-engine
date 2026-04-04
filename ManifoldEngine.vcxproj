@@ -180,6 +180,9 @@
     <ClInclude Include="include\memory\memory_primitives.hpp" />
     <ClInclude Include="include\tests\TOrderedSlots_test_harness.hpp" />
     <ClInclude Include="include\tests\TUnorderedSlots_test_harness.hpp" />
+    <ClInclude Include="include\threading\transports\TBatchedJobClaim.hpp" />
+    <ClInclude Include="include\threading\transports\TRingTransport.hpp" />
+    <ClInclude Include="include\threading\transports\TSequentialTransport.hpp" />
     <ClInclude Include="include\types\fp16data_t.hpp" />
   </ItemGroup>
   <ItemGroup>

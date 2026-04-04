@@ -20,6 +20,7 @@
 #include "containers/TStableStorage.hpp"
 #include "containers/TOrderedCollection.hpp"
 #include "containers/TUnorderedCollection.hpp"
+#include "threading/transports/TSequentialTransport.hpp"
 #include "types/fp16data_t.hpp"
 #include "io/file/file.hpp"
 #include "io/file/log.hpp"

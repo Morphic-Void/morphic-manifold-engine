@@ -67,6 +67,12 @@
     <Filter Include="src\types">
       <UniqueIdentifier>{6214bdff-f503-41da-b5fa-d82a3e83633a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\threading">
+      <UniqueIdentifier>{ecd0ee80-064c-434e-809a-a0db8a0bf1ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\threading\transports">
+      <UniqueIdentifier>{fd324114-fc8b-4af8-8b56-8769d1cc3513}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -140,6 +146,15 @@
     </ClInclude>
     <ClInclude Include="include\types\fp16data_t.hpp">
       <Filter>include\types</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\transports\TBatchedJobClaim.hpp">
+      <Filter>include\threading\transports</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\transports\TRingTransport.hpp">
+      <Filter>include\threading\transports</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\transports\TSequentialTransport.hpp">
+      <Filter>include\threading\transports</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

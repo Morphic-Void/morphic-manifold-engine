@@ -105,8 +105,8 @@ template<typename T>
 class TPodVector
 {
 private:
-    static_assert(std::is_trivially_copyable_v<T>, "TPodVector<T> requires trivially copyable T.");
     static_assert(!std::is_const_v<T>, "TPodVector<T> requires non-const T.");
+    static_assert(std::is_trivially_copyable_v<T>, "TPodVector<T> requires trivially copyable T.");
 
 public:
 
