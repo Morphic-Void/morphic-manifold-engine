@@ -6,181 +6,219 @@
 //  Author: Ritchie Brannan
 //  Date:   01 Apr 26
 
-#include <atomic>
+#pragma once
+
+#ifndef TRING_TRANSPORT_HPP_INCLUDED
+#define TRING_TRANSPORT_HPP_INCLUDED
+
+#include <algorithm>    //  std::max
+#include <atomic>       //  std::atomic
 #include <cstddef>      //  std::size_t
-#include <cstdint>      //  std::uint8_t
-#include <cstring>      //  std::memcpy, std::memset
-#include <utility>      //  std::move
+#include <cstdint>      //  std::uint32_t
+#include <cstring>      //  std::memcpy
+#include <type_traits>  //  std::is_const_v, std::is_trivially_copyable_v
+
+#include "memory/memory_allocation.hpp"
+#include "memory/memory_primitives.hpp"
+#include "bit_utils/bit_ops.hpp"
+
+namespace threading::transports
+{
 
 //==============================================================================
-//  TRingTransport<T>
-//  Single Producer, Single Consumer (SPSC) message transport
+//  TRing<T>
+//  Single Producer, Single Consumer (SPSC) transport
 //==============================================================================
 
 template<typename T>
-class TRingTransport
+class TRing
 {
 private:
-    static_assert(!std::is_const_v<T>, "TRingTransport<T> requires non-const T.");
-    static_assert(std::is_trivially_copyable_v<T>, "TRingTransport<T> requires trivially copyable T.");
+    static_assert(!std::is_const_v<T>, "TRing<T> requires non-const T.");
+    static_assert(std::is_trivially_copyable_v<T>, "TRing<T> requires trivially copyable T.");
 
 public:
-    TRingTransport() noexcept = default;
-    TRingTransport(const TRingTransport&) = delete;
-    TRingTransport& operator=(const TRingTransport&) = delete;
-    TRingTransport(TRingTransport&&) noexcept = delete;
-    TRingTransport& operator=(TRingTransport&&) noexcept = delete;
-    ~TRingTransport() noexcept { (void)deallocate(true); };
+    static constexpr std::uint32_t k_max_capacity = 0x00100000u;    //  approximately 1 million elements
+    static constexpr std::uint32_t k_min_capacity = 32u;
 
-    //  Initialisation and destruction
-    bool initialise(const std::uint32_t initial_capacity, const std::uint32_t maximum_capacity, const bool allow_discard) noexcept;
-    bool deallocate(const bool force = false) noexcept;
+public:
+    TRing() noexcept = default;
+    TRing(const TRing&) = delete;
+    TRing& operator=(const TRing&) = delete;
+    TRing(TRing&&) noexcept = delete;
+    TRing& operator=(TRing&&) noexcept = delete;
+    ~TRing() noexcept { (void)deallocate(); }
 
-    //  User interface
-    bool producer_send(const T& packet) noexcept;
-    bool consumer_read(T& packet) noexcept;
+    //  Status
+    [[nodiscard]] bool producer_is_valid() const noexcept;
+    [[nodiscard]] bool consumer_is_valid() const noexcept;
+    [[nodiscard]] bool is_valid() const noexcept;
+    [[nodiscard]] bool is_ready() const noexcept;
 
-    //  Constants
-    static constexpr std::uint32_t k_max_elements = static_cast<std::uint32_t>(memory::t_max_elements<T>());
+    //  Producer operations
+    bool post(const T& src) noexcept { return post(&src, 1u); }
+    bool post(const T* const src, const std::uint32_t count = 1u) noexcept;
+    bool post(const TPodConstView<T>& src) noexcept { return post(src.data(), src.size()); }
+    [[nodiscard]] std::uint32_t writable_count() const noexcept;
+
+    //  Consumer operations
+    bool read(T& dst) noexcept { return read(&dst, 1u); }
+    bool read(T* const dst, const std::uint32_t count = 1u) noexcept;
+    bool read(const TPodView<T>& dst) noexcept { return read(dst.data(), dst.size()); }
+    [[nodiscard]] std::uint32_t readable_count() const noexcept;
+
+    //  Setup and teardown
+    [[nodiscard]] bool initialise(const std::uint32_t capacity) noexcept;
+    void deallocate() noexcept;
 
 private:
-
-    class Handshake
-    {
-    public:
-        Handshake() noexcept = default;
-        explicit Handshake(const std::uint32_t handshake) noexcept : m_handshake(handshake) {}
-
-        //  Raw access (ready for the atomic exchange)
-        std::uint32_t raw() const noexcept { return m_handshake; }
-
-        //  Interrogation
-        bool originator_is_producer() const noexcept { return (m_handshake & 0x80000000u) != 0u; }
-        bool originator_is_consumer() const noexcept { return (m_handshake & 0x80000000u) == 0u; }
-        bool ack_parity() const noexcept { return (m_handshake & 0x40000000u) != 0u; }
-        std::uint32_t buffer_index() const noexcept { return (m_handshake >> 28) & 0x00000003u; }
-        std::uint32_t consumer_index() const noexcept { return m_handshake & 0x0fffffffu; }
-
-        //  Configuration
-        void set_originator_is_producer() noexcept { m_handshake |= 0x80000000u; }
-        void set_originator_is_consumer() noexcept { m_handshake &= 0x7fffffffu; }
-        void set_ack_parity(const bool ack_parity) noexcept { m_handshake &= 0xbfffffff; if (ack_parity) m_handshake |= 0x40000000u; }
-        void set_buffer_index(const std::uint32_t v) noexcept { m_handshake = (m_handshake & 0xcfffffffu) | ((v & 0x00000003u) << 28); }
-        void set_consumer_index(const std::uint32_t v) noexcept { m_handshake = (m_handshake & 0xf0000000u) | (v & 0x0fffffffu); }
-
-    private:
-        std::uint32_t m_handshake = 0u;
-    };
-
-    struct BufferState
-    {
-        memory::TMemoryToken<T> buffer;
-        std::uint32_t capacity = 0u;
-        std::uint32_t size = 0u;
-    };
-
-    //  Transport buffers
-    BufferState m_buffer_states[3];
-
-    //  Producer state
-    bool m_producer_ack_parity = false;
-    std::uint32_t m_producer_buffer_index = 0u;
-
-    //  Consumer state
-    bool m_consumer_ack_parity = false;
-    std::uint32_t m_consumer_buffer_index = 1u;
-    std::uint32_t m_consumer_read_index = 0u;
-
-    //  Staged state
-    std::uint32_t m_staged_buffer_index = 2u;
-
-    //  Configuration
-    std::uint32_t m_current_capacity = 0u;
-    std::uint32_t m_maximum_capacity = 0u;
-    bool m_allow_discard = false;
-
-    //  Atomic handshake
-    std::atomic<std::uint32_t> m_handshake{ 0 };
+    memory::TMemoryToken<T> m_ring;
+    std::uint32_t m_capacity = 0u;
+    std::uint32_t m_read_index = 0u;
+    std::uint32_t m_write_index = 0u;
+    std::atomic<std::int32_t> m_occupied_count{ 0 };
 };
 
 //==============================================================================
-//  TRingTransport<T> out of class function bodies
+//  TRing<T> out of class function bodies
 //==============================================================================
 
 template<typename T>
-inline bool TRingTransport<T>::initialise(const std::uint32_t initial_capacity, const std::uint32_t maximum_capacity, const bool allow_discard) noexcept
+inline bool TRing<T>::producer_is_valid() const noexcept
 {
-    if (m_current_capacity != 0u)
-    {   //  re-initialisation is not allowed
-        return false;
+    return is_valid() ? ((m_capacity != 0u) ? (m_write_index < m_capacity) : (m_write_index == 0u)) : false;
+}
+
+template<typename T>
+inline bool TRing<T>::consumer_is_valid() const noexcept
+{
+    return is_valid() ? ((m_capacity != 0u) ? (m_read_index < m_capacity) : (m_read_index == 0u)) : false;
+}
+
+template<typename T>
+inline bool TRing<T>::is_valid() const noexcept
+{
+    if (m_capacity == 0u)
+    {   //  uninitialised, safe to check both the read and the write indices
+        if ((m_ring.data() != nullptr) || ((m_read_index | m_write_index) != 0u))
+        {
+            return false;
+        }
     }
-    if ((initial_capacity > k_max_elements) || (maximum_capacity > k_max_elements))
+    else if (m_ring.data() == nullptr)
     {
         return false;
     }
-    const std::uint32_t current_capacity = std::max(initial_capacity, std::uint32_t{ 32 });
-    memory::TMemoryToken<T> buffers[3];
-    if (!buffers[0].allocate(current_capacity, false) || !buffers[1].allocate(current_capacity, false) || !buffers[2].allocate(current_capacity, false))
-    {   //  buffer allocation failed
+    const std::uint32_t count = static_cast<std::uint32_t>(m_occupied_count.load(std::memory_order_acquire));
+    return count <= m_capacity;
+}
+
+template<typename T>
+inline bool TRing<T>::is_ready() const noexcept
+{
+    return (m_capacity != 0u) && (m_ring.data() != nullptr);
+}
+
+template<typename T>
+inline bool TRing<T>::post(const T* const src, const std::uint32_t count) noexcept
+{
+    if (!is_ready() || (count > writable_count()) || ((src == nullptr) && (count != 0u)))
+    {
         return false;
     }
-    deallocate();
-    m_current_capacity = current_capacity;
-    m_maximum_capacity = std::max(maximum_capacity, m_current_capacity);
-    m_allow_discard = allow_discard;
-    for (int i = 0; i < 3; ++i)
+    if (count != 0u)
     {
-        m_buffer_states[i].buffer = std::move(buffers[i]);
-        m_buffer_states[i].capacity = m_current_capacity;
-        m_buffer_states[i].size = 0u;
+        const std::uint32_t tail_size = m_capacity - m_write_index;
+        if (count <= tail_size)
+        {
+            std::memcpy((m_ring.data() + m_write_index), src, (static_cast<std::size_t>(count) * sizeof(T)));
+            m_write_index = (m_write_index + count) & (m_capacity - 1u);
+        }
+        else
+        {
+            std::memcpy((m_ring.data() + m_write_index), src, (static_cast<std::size_t>(tail_size) * sizeof(T)));
+            m_write_index = count - tail_size;
+            std::memcpy(m_ring.data(), (src + tail_size), (static_cast<std::size_t>(m_write_index) * sizeof(T)));
+        }
+        m_occupied_count.fetch_add(static_cast<std::int32_t>(count), std::memory_order_release);
     }
     return true;
 }
 
 template<typename T>
-inline bool TRingTransport<T>::deallocate(const bool force) noexcept
+inline std::uint32_t TRing<T>::writable_count() const noexcept
 {
-    (void)force;
+    const std::uint32_t count = static_cast<std::uint32_t>(m_occupied_count.load(std::memory_order_acquire));
+    return (count <= m_capacity ) ? (m_capacity - count) : 0u;
+}
 
-    //  need to check that nothing is in flight before destruction
-    //  assert if there is and force is false
-
-    for (int i = 0; i < 3; ++i)
+template<typename T>
+inline bool TRing<T>::read(T* const dst, const std::uint32_t count) noexcept
+{
+    if (!is_ready() || (count > readable_count()) || ((dst == nullptr) && (count != 0u)))
     {
-        m_buffer_states[i].buffer.deallocate();
-        m_buffer_states[i].capacity = 0u;
-        m_buffer_states[i].size = 0u;
+        return false;
     }
-    m_producer_ack_parity = false;
-    m_producer_buffer_index = 0u;
-    m_consumer_ack_parity = false;
-    m_consumer_buffer_index = 1u;
-    m_consumer_read_index = 0u;
-    m_staged_buffer_index = 2u;
-    m_current_capacity = 0u;
-    m_maximum_capacity = 0u;
-    m_handshake.store(0u, std::memory_order_release);
+    if (count != 0u)
+    {
+        const std::uint32_t tail_size = m_capacity - m_read_index;
+        if (count <= tail_size)
+        {
+            std::memcpy(dst, (m_ring.data() + m_read_index), (static_cast<std::size_t>(count) * sizeof(T)));
+            m_read_index = (m_read_index + count) & (m_capacity - 1u);
+        }
+        else
+        {
+            std::memcpy(dst, (m_ring.data() + m_read_index), (static_cast<std::size_t>(tail_size) * sizeof(T)));
+            m_read_index = count - tail_size;
+            std::memcpy((dst + tail_size), m_ring.data(), (static_cast<std::size_t>(m_read_index) * sizeof(T)));
+        }
+        m_occupied_count.fetch_add(-static_cast<std::int32_t>(count), std::memory_order_release);
+    }
     return true;
 }
 
 template<typename T>
-inline bool TRingTransport<T>::producer_send(const T& packet) noexcept
+inline std::uint32_t TRing<T>::readable_count() const noexcept
 {
-    (void)packet;
-    return false;
+    const std::uint32_t count = static_cast<std::uint32_t>(m_occupied_count.load(std::memory_order_acquire));
+    return (count <= m_capacity) ? count : 0u;
 }
 
 template<typename T>
-inline bool TRingTransport<T>::consumer_read(T& packet) noexcept
+inline bool TRing<T>::initialise(const std::uint32_t capacity) noexcept
 {
-    BufferState& buffer_state = m_buffer_states[m_consumer_buffer_index];
-    if (m_consumer_read_index == buffer_state.size)
-    {   //  the buffer is exhausted, see if there is another
-        Handshake handshake;
-        handshake.originator_is_consumer();
-        handshake.set_ack_parity();
-        handshake.set_buffer_index(m_consumer_buffer_index);
+    if (capacity > k_max_capacity)
+    {   //  requested capacity not supported
+        return false;
     }
-    packet = buffer_state.buffer.data[m_consumer_read_index++];
+    if (m_capacity != 0u)
+    {   //  re-initialisation is not allowed without deallocation
+        return false;
+    }
+    const std::uint32_t conditioned_capacity = std::max(std::min(bit_ops::round_up_to_pow2(capacity), k_max_capacity), k_min_capacity);
+    if (!m_ring.allocate(conditioned_capacity))
+    {   //  allocation failed
+        return false;
+    }
+    m_capacity = conditioned_capacity;
+    m_read_index = 0u;
+    m_write_index = 0u;
+    m_occupied_count.store(0, std::memory_order_release);
     return true;
 }
+
+template<typename T>
+inline void TRing<T>::deallocate() noexcept
+{
+    m_ring.deallocate();
+    m_capacity = 0u;
+    m_read_index = 0u;
+    m_write_index = 0u;
+    m_occupied_count.store(0, std::memory_order_release);
+}
+
+}   //  namespace threading::transports
+
+#endif  //  #ifndef TRING_TRANSPORT_HPP_INCLUDED
+

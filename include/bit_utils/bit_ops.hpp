@@ -61,7 +61,7 @@ constexpr std::uint32_t lo_bit_mask(const std::uint32_t u) noexcept;
 constexpr std::int32_t hi_bit_index(const std::uint32_t u) noexcept;
 constexpr std::int32_t lo_bit_index(const std::uint32_t u) noexcept;
 
-constexpr std::uint32_t parity(const std::uint32_t u) noexcept;		//	0 or 1
+constexpr std::uint32_t parity(const std::uint32_t u) noexcept;		//	0 == even, 1 == odd
 constexpr std::uint32_t count_set_bits(const std::uint32_t u) noexcept;
 
 constexpr bool is_pow2(const std::uint32_t u) noexcept;
@@ -119,7 +119,7 @@ constexpr std::uint64_t lo_bit_mask(const std::uint64_t u) noexcept;
 constexpr std::int32_t hi_bit_index(const std::uint64_t u) noexcept;
 constexpr std::int32_t lo_bit_index(const std::uint64_t u) noexcept;
 
-constexpr std::uint64_t parity(const std::uint64_t u) noexcept; //	0 or 1
+constexpr std::uint64_t parity(const std::uint64_t u) noexcept; //	0 == even, 1 == odd
 constexpr std::uint64_t count_set_bits(const std::uint64_t u) noexcept;
 
 constexpr bool is_pow2(const std::uint64_t u) noexcept;

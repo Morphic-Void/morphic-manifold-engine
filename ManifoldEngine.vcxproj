@@ -180,9 +180,8 @@
     <ClInclude Include="include\memory\memory_primitives.hpp" />
     <ClInclude Include="include\tests\TOrderedSlots_test_harness.hpp" />
     <ClInclude Include="include\tests\TUnorderedSlots_test_harness.hpp" />
-    <ClInclude Include="include\threading\transports\TBatchedJobClaim.hpp" />
     <ClInclude Include="include\threading\transports\TRingTransport.hpp" />
-    <ClInclude Include="include\threading\transports\TSequentialTransport.hpp" />
+    <ClInclude Include="include\threading\transports\TQueueTransport.hpp" />
     <ClInclude Include="include\types\fp16data_t.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -195,6 +194,8 @@
     <None Include="docs\containers\TPodVector.md" />
     <None Include="docs\containers\TStableStorage.md" />
     <None Include="docs\containers\TUnorderedCollection.md" />
+    <None Include="docs\threading\transports\TQueueTransport.md" />
+    <None Include="docs\threading\transports\TRingTransport.md" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>

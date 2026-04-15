@@ -73,6 +73,12 @@
     <Filter Include="include\threading\transports">
       <UniqueIdentifier>{fd324114-fc8b-4af8-8b56-8769d1cc3513}</UniqueIdentifier>
     </Filter>
+    <Filter Include="docs\threading">
+      <UniqueIdentifier>{713caa0b-56e9-4126-87ae-0552121dfce4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\threading\transports">
+      <UniqueIdentifier>{f26bb3bd-a035-419d-a3b4-f32085f70750}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -147,13 +153,10 @@
     <ClInclude Include="include\types\fp16data_t.hpp">
       <Filter>include\types</Filter>
     </ClInclude>
-    <ClInclude Include="include\threading\transports\TBatchedJobClaim.hpp">
-      <Filter>include\threading\transports</Filter>
-    </ClInclude>
     <ClInclude Include="include\threading\transports\TRingTransport.hpp">
       <Filter>include\threading\transports</Filter>
     </ClInclude>
-    <ClInclude Include="include\threading\transports\TSequentialTransport.hpp">
+    <ClInclude Include="include\threading\transports\TQueueTransport.hpp">
       <Filter>include\threading\transports</Filter>
     </ClInclude>
   </ItemGroup>
@@ -209,6 +212,12 @@
     </None>
     <None Include="docs\containers\TPodVector.md">
       <Filter>docs\containers</Filter>
+    </None>
+    <None Include="docs\threading\transports\TQueueTransport.md">
+      <Filter>docs\threading\transports</Filter>
+    </None>
+    <None Include="docs\threading\transports\TRingTransport.md">
+      <Filter>docs\threading\transports</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

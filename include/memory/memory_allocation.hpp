@@ -140,19 +140,27 @@ inline std::size_t capped_growth_rate_curve(const std::size_t required, const st
     return std::min(base_growth_curve(required), base_stepped_growth(required, pow2_stepping));
 }
 
+constexpr std::size_t k_buffer_growth_policy_capped_rate{ 65536u };
+constexpr std::size_t k_buffer_growth_policy_min_capacity{ 4096u };
+
 inline std::size_t buffer_growth_policy(const std::size_t required) noexcept
 {   //  default policy when additional capacity is required for automatic buffer growth
-    return std::max(capped_growth_rate_curve(required, std::size_t{ 65536 }), std::size_t{ 4096 });
+    return std::max(capped_growth_rate_curve(required, k_buffer_growth_policy_min_capacity), k_buffer_growth_policy_min_capacity);
 }
+
+constexpr std::size_t k_vector_growth_policy_capped_rate{ 1024u };
+constexpr std::size_t k_vector_growth_policy_min_capacity{ 32u };
 
 inline std::size_t vector_growth_policy(const std::size_t required) noexcept
 {   //  default policy when additional capacity is required for automatic vector growth
-    return std::max(capped_growth_rate_curve(required, std::size_t{ 1024 }), std::size_t{ 32 });
+    return std::max(capped_growth_rate_curve(required, k_vector_growth_policy_capped_rate), k_vector_growth_policy_min_capacity);
 }
+
+constexpr std::size_t k_default_growth_policy_min_capacity{ 32u };
 
 inline std::size_t default_growth_policy(const std::size_t required) noexcept
 {   //  default policy when additional capacity is required with no capped growth rate
-    return std::max(base_growth_curve(required), std::size_t{ 32 });
+    return std::max(base_growth_curve(required), k_default_growth_policy_min_capacity);
 }
 
 //==============================================================================
