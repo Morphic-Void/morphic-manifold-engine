@@ -79,6 +79,12 @@
     <Filter Include="docs\threading\transports">
       <UniqueIdentifier>{f26bb3bd-a035-419d-a3b4-f32085f70750}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\memory">
+      <UniqueIdentifier>{50c125e8-48c5-43f7-81eb-0bbb96127d0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\debug">
+      <UniqueIdentifier>{0489083b-4649-4805-b4af-339674c8de2e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -184,6 +190,12 @@
     </ClCompile>
     <ClCompile Include="src\types\fp16data_t.cpp">
       <Filter>src\types</Filter>
+    </ClCompile>
+    <ClCompile Include="src\memory\memory_allocation.cpp">
+      <Filter>src\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="src\debug\debug.cpp">
+      <Filter>src\debug</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

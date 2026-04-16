@@ -10,18 +10,20 @@
 //
 //  Purpose
 //  -------
-//  Provides the foundational memory layer shared by the POD container family.
+//  Provides the shared foundational memory layer.
 //
 //  This header contains:
 //
 //      - Shared limits and limit helpers
 //      - Growth policies and default growth policy
 //      - Allocation alignment policy
+//      - Allocation configuration (nothrow)
 //      - Aligned allocation / deallocation (nothrow)
+//      - Allocator interface definition
 //
 //  Scope
 //  -----
-//  This file is strictly mechanical. It defines no container semantics.
+//  This file is strictly mechanical. It defines no semantics.
 //
 //  Design Constraints
 //  ------------------
@@ -178,26 +180,45 @@ constexpr std::align_val_t alignment_policy(const std::size_t align) noexcept
 }
 
 //==============================================================================
-//  Byte memory allocation and deallocation
-//
-//  Note:
-//
-//      These allocators will become wrappers for a memory service
-//      shared between all DLLs.
+//  Allocation configuration
+//  - thread-safe at the substrate level
+//  - allocator replacement is rejected while allocations remain live
+//  - allocation disabling affects allocation only; deallocation remains enabled
+//  - allocation enable/disable is intended primarily for test/debug control
 //==============================================================================
 
-inline void* byte_allocate(const std::size_t bytes, const std::size_t align) noexcept
+class IAllocator
 {
-    return (bytes != 0u) ? ::operator new[](bytes, alignment_policy(align), std::nothrow) : nullptr;
+public:
+    virtual void* byte_allocate(const std::size_t bytes, const std::size_t align) noexcept = 0;
+    virtual void byte_deallocate(void* const ptr, const std::size_t align) noexcept = 0;
+};
+
+//  Installs the active allocator.
+//  Returns false if allocator replacement is currently disallowed.
+bool set_allocator(IAllocator* allocator) noexcept;
+
+//  Sets allocation enable state and returns the previous state.
+bool enable_allocation(const bool enable = true) noexcept;
+
+inline bool disable_allocation() noexcept
+{
+    return enable_allocation(false);
 }
 
-inline void byte_deallocate(void* const ptr, const std::size_t align) noexcept
-{
-    if (ptr != nullptr)
-    {   //  note: the null check is not strictly required
-        ::operator delete[](ptr, alignment_policy(align));
-    }
-}
+//==============================================================================
+//  Byte memory allocation and deallocation
+//  - thread-safe at the substrate level
+//  - supports DLL-spanning allocation routing when a shared allocator is installed
+//==============================================================================
+
+//  Allocates a byte block using the active allocator.
+//  Zero-size allocation requests are rejected and return nullptr.
+void* byte_allocate(const std::size_t bytes, const std::size_t align) noexcept;
+
+//  Deallocates a byte block using the active allocator.
+//  Null pointers are accepted and ignored.
+void byte_deallocate(void* const ptr, const std::size_t align) noexcept;
 
 inline void byte_deallocate(const void* const ptr, const std::size_t align) noexcept
 {
@@ -253,6 +274,11 @@ inline void t_deallocate(T* const ptr) noexcept
 
     byte_deallocate(static_cast<void*>(ptr), t_default_align<T>());
 }
+
+//==============================================================================
+//  Allocator interface definition
+//==============================================================================
+
 
 }   //  namespace memory
 

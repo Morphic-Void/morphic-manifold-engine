@@ -4,7 +4,7 @@
 // 
 //  File:   debug.hpp
 //  Author: Ritchie Brannan
-//  Date:   17 Feb 26
+//  Date:   16 Apr 26
 //
 //  Barebones debugging utilities
 
@@ -13,11 +13,8 @@
 #ifndef DEBUG_HPP_INCLUDED
 #define DEBUG_HPP_INCLUDED
 
-#if defined(_MSC_VER)
-#include <intrin.h> // __debugbreak
-#elif !defined(__clang__) && !defined(__GNUC__)
-#include <cstdlib>  // std::abort
-#endif
+namespace debug_utils
+{
 
 //==============================================================================
 //  Debug enabling definition
@@ -32,37 +29,22 @@
 #endif  //  #ifndef MV_DEBUG_BUILD
 
 //==============================================================================
-//  Debug trap
+//  Debug configuration
 //==============================================================================
 
-#if MV_DEBUG_BUILD 
+bool enable_asserts(const bool enable = true) noexcept;
 
-namespace debug_utils
+inline bool disable_asserts() noexcept
 {
-
-inline void hard_fail() noexcept
-{
-#if defined(_MSC_VER)
-    __debugbreak();
-#elif defined(__clang__) || defined(__GNUC__)
-    __builtin_trap();
-#else
-    std::abort();
-#endif
+    return enable_asserts(false);
 }
 
-inline bool fail_safe(const bool ok) noexcept
-{
-    if (!ok)
-    {
-        hard_fail();
-    }
-    return ok;
-}
+//==============================================================================
+//  Debug trapping
+//==============================================================================
 
-}   //  namespace debug_utils
-
-#endif  //  #endif MV_DEBUG_BUILD 
+void hard_fail() noexcept;
+bool fail_safe(const bool success) noexcept;
 
 //==============================================================================
 //  Debug macros
@@ -83,5 +65,7 @@ inline bool fail_safe(const bool ok) noexcept
 #define MV_FAIL_SAFE_ASSERT(x) ((x))
 
 #endif
+
+}   //  namespace debug_utils
 
 #endif  //  #ifndef DEBUG_HPP_INCLUDED

@@ -4,7 +4,7 @@
 //
 //  File:   TRingTransport.hpp
 //  Author: Ritchie Brannan
-//  Date:   01 Apr 26
+//  Date:   15 Apr 26
 
 #pragma once
 
@@ -84,7 +84,7 @@ private:
     std::uint32_t m_capacity = 0u;
     std::uint32_t m_read_index = 0u;
     std::uint32_t m_write_index = 0u;
-    std::atomic<std::int32_t> m_occupied_count{ 0 };
+    std::atomic<std::uint32_t> m_occupied_count{ 0u };
 };
 
 //==============================================================================
@@ -117,8 +117,7 @@ inline bool TRing<T>::is_valid() const noexcept
     {
         return false;
     }
-    const std::uint32_t count = static_cast<std::uint32_t>(m_occupied_count.load(std::memory_order_acquire));
-    return count <= m_capacity;
+    return m_occupied_count.load(std::memory_order_acquire) <= m_capacity;
 }
 
 template<typename T>
@@ -148,7 +147,7 @@ inline bool TRing<T>::post(const T* const src, const std::uint32_t count) noexce
             m_write_index = count - tail_size;
             std::memcpy(m_ring.data(), (src + tail_size), (static_cast<std::size_t>(m_write_index) * sizeof(T)));
         }
-        m_occupied_count.fetch_add(static_cast<std::int32_t>(count), std::memory_order_release);
+        m_occupied_count.fetch_add(count, std::memory_order_release);
     }
     return true;
 }
@@ -156,7 +155,7 @@ inline bool TRing<T>::post(const T* const src, const std::uint32_t count) noexce
 template<typename T>
 inline std::uint32_t TRing<T>::writable_count() const noexcept
 {
-    const std::uint32_t count = static_cast<std::uint32_t>(m_occupied_count.load(std::memory_order_acquire));
+    const std::uint32_t count = m_occupied_count.load(std::memory_order_acquire);
     return (count <= m_capacity ) ? (m_capacity - count) : 0u;
 }
 
@@ -181,7 +180,7 @@ inline bool TRing<T>::read(T* const dst, const std::uint32_t count) noexcept
             m_read_index = count - tail_size;
             std::memcpy((dst + tail_size), m_ring.data(), (static_cast<std::size_t>(m_read_index) * sizeof(T)));
         }
-        m_occupied_count.fetch_add(-static_cast<std::int32_t>(count), std::memory_order_release);
+        m_occupied_count.fetch_sub(count, std::memory_order_release);
     }
     return true;
 }
@@ -189,7 +188,7 @@ inline bool TRing<T>::read(T* const dst, const std::uint32_t count) noexcept
 template<typename T>
 inline std::uint32_t TRing<T>::readable_count() const noexcept
 {
-    const std::uint32_t count = static_cast<std::uint32_t>(m_occupied_count.load(std::memory_order_acquire));
+    const std::uint32_t count = m_occupied_count.load(std::memory_order_acquire);
     return (count <= m_capacity) ? count : 0u;
 }
 
@@ -212,7 +211,7 @@ inline bool TRing<T>::initialise(const std::uint32_t capacity) noexcept
     m_capacity = conditioned_capacity;
     m_read_index = 0u;
     m_write_index = 0u;
-    m_occupied_count.store(0, std::memory_order_release);
+    m_occupied_count.store(0u, std::memory_order_release);
     return true;
 }
 
@@ -223,7 +222,7 @@ inline void TRing<T>::deallocate() noexcept
     m_capacity = 0u;
     m_read_index = 0u;
     m_write_index = 0u;
-    m_occupied_count.store(0, std::memory_order_release);
+    m_occupied_count.store(0u, std::memory_order_release);
 }
 
 }   //  namespace threading::transports

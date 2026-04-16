@@ -31,7 +31,7 @@ CByteBuffer loadFile(const char* const utf8_path, const std::size_t pad) noexcep
             std::size_t size = getFileSize(handle, pad);
             if (size != 0u)
             {
-                if (buffer.allocate(size))
+                if (buffer.allocate(size, 16u))
                 {
                     uint8_t* data = buffer.data();
                     std::size_t file_size = size - pad;

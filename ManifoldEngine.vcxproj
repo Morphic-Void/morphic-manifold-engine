@@ -147,11 +147,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\debug\debug.cpp" />
     <ClCompile Include="src\io\file\file.cpp" />
     <ClCompile Include="src\io\file\internal\file_utils.cpp" />
     <ClCompile Include="src\io\file\internal\native_path.cpp" />
     <ClCompile Include="src\io\file\log.cpp" />
     <ClCompile Include="src\main\ManifoldEngine.cpp" />
+    <ClCompile Include="src\memory\memory_allocation.cpp" />
     <ClCompile Include="src\tests\TOrderedSlots_test_harness.cpp" />
     <ClCompile Include="src\tests\TUnorderedSlots_test_harness.cpp" />
     <ClCompile Include="src\types\fp16data_t.cpp" />

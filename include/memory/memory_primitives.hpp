@@ -13,8 +13,7 @@
 //  Raw memory ownership and view primitives for byte and typed storage.
 //
 //  Models address, alignment, and reinterpretation only.
-//  Does not track extent, perform bounds checking, or manage element
-//  lifetime.
+//  Does not track extent, perform bounds checking, or manage element lifetime.
 //
 //  IMPORTANT SEMANTIC NOTES
 //  ------------------------
