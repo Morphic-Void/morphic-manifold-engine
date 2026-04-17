@@ -13,12 +13,14 @@
 
 #include "io/file/file.hpp"
 #include "io/file/internal/file_utils.hpp"
+#include "bit_utils/bit_ops.hpp"
 
 namespace io::file
 {
 
 CByteBuffer loadFile(const char* const utf8_path, const std::size_t pad) noexcept
 {
+    static const std::size_t k_align = 16u;
     CByteBuffer buffer;
     void* data = nullptr;
     NativePath std_path = stdPath(utf8_path);
@@ -31,15 +33,17 @@ CByteBuffer loadFile(const char* const utf8_path, const std::size_t pad) noexcep
             std::size_t size = getFileSize(handle, pad);
             if (size != 0u)
             {
-                if (buffer.allocate(size, 16u))
+                const std::size_t aligned_size = bit_ops::round_up_to_pow2_multiple(size, k_align);
+                if (buffer.allocate(aligned_size, k_align))
                 {
                     uint8_t* data = buffer.data();
                     std::size_t file_size = size - pad;
                     if (std::fread(data, 1, file_size, handle) == file_size)
                     {
-                        if (pad != 0u)
+                        const std::size_t clear_size = aligned_size - file_size;
+                        if (clear_size != 0u)
                         {
-                            std::memset((data + file_size), 0, pad);
+                            std::memset((data + file_size), 0, clear_size);
                         }
                         success = true;
                     }
