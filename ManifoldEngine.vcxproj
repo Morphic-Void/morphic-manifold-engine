@@ -206,6 +206,7 @@
     <None Include="docs\containers\slots\TUnorderedSlots.md" />
     <None Include="docs\containers\StringBuffers.md" />
     <None Include="docs\containers\TOrderedCollection.md" />
+    <None Include="docs\containers\TPodFifo.md" />
     <None Include="docs\containers\TPodVector.md" />
     <None Include="docs\containers\TStableStorage.md" />
     <None Include="docs\containers\TUnorderedCollection.md" />

@@ -288,6 +288,9 @@
     <None Include="docs\codebase-model.md">
       <Filter>docs</Filter>
     </None>
+    <None Include="docs\containers\TPodFifo.md">
+      <Filter>docs\containers</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE.txt" />
