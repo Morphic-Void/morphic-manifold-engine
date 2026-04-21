@@ -169,6 +169,9 @@ public:
     [[nodiscard]] bool is_empty() const noexcept { return util::is_empty(m_data, m_align); }
     [[nodiscard]] bool is_ready() const noexcept { return util::is_ready(m_data, m_align); }
 
+    //  Adoption
+    template<typename T> void steal(TMemoryToken<T>& token) noexcept;
+
     //  Views
     [[nodiscard]] CMemoryView view() const noexcept;
     [[nodiscard]] CMemoryConstView const_view() const noexcept;
@@ -185,6 +188,10 @@ public:
 private:
     std::uint8_t* m_data = nullptr;
     std::size_t m_align = 0u;
+
+private:
+    template<typename T>
+    friend class TMemoryToken;
 };
 
 //==============================================================================
@@ -310,6 +317,10 @@ public:
     [[nodiscard]] bool is_ready() const noexcept { return m_data != nullptr; }
     [[nodiscard]] explicit operator bool() const noexcept { return m_data != nullptr; }
 
+    //  Adoption
+    [[nodiscard]] static bool can_steal(const CMemoryToken& token) noexcept;
+    [[nodiscard]] bool steal(CMemoryToken& token) noexcept;
+
     //  Views
     [[nodiscard]] TMemoryView<T> view() const noexcept { return TMemoryView<T>{ m_data }; }
     [[nodiscard]] TMemoryConstView<T> const_view() const noexcept { return TMemoryConstView<T>{ m_data }; }
@@ -330,6 +341,9 @@ public:
 
 private:
     T* m_data = nullptr;
+
+private:
+    friend class CMemoryToken;
 };
 
 //==============================================================================
@@ -471,6 +485,15 @@ inline CMemoryToken& CMemoryToken::operator=(CMemoryToken&& other) noexcept
         other.m_align = 0u;
     }
     return *this;
+}
+
+template<typename T>  
+inline void CMemoryToken::steal(TMemoryToken<T>& token) noexcept
+{
+    deallocate();
+    m_data = token.m_data;
+    m_align = TMemoryToken<T>::k_align;
+    token.m_data = nullptr;
 }
 
 inline CMemoryView CMemoryToken::view() const noexcept
@@ -716,6 +739,26 @@ inline TMemoryToken<T>& TMemoryToken<T>::operator=(TMemoryToken<T>&& other) noex
         other.m_data = nullptr;
     }
     return *this;
+}
+
+template<typename T>
+inline bool TMemoryToken<T>::can_steal(const CMemoryToken& token) noexcept
+{
+    return (token.m_data == nullptr) || (token.m_align == k_align);
+}
+
+template<typename T>
+inline bool TMemoryToken<T>::steal(CMemoryToken& token) noexcept
+{
+    if ((token.m_data != nullptr) && (token.m_align != k_align))
+    {
+        return false;
+    }
+    deallocate();
+    m_data = token.m_data;
+    token.m_data = nullptr;
+    token.m_align = 0u;
+    return true;
 }
 
 template<typename T>
