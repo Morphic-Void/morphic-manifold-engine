@@ -411,8 +411,10 @@ The DLL boundary is an internal modular isolation seam, not a stable external pl
 
 Across module boundaries:
 
-- data exchange is POD-only except for declared interfaces
-- interfaces are explicitly bounded by module lifetime
+- POD exchange is the default and preferred form
+- declared interfaces may cross where explicitly bounded by module lifetime
+- explicitly designed framework-native ownership carriers may cross where their allocation, lifetime, and failure semantics are controlled and documented
+- arbitrary non-trivial engine ownership types must not casually cross the boundary
 - no exceptions may cross the boundary
 - allocator policy remains host-owned
 - production code does not rely on STL across the boundary because production code does not use STL

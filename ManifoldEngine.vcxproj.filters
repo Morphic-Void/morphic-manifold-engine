@@ -97,6 +97,9 @@
     <Filter Include="include\threading\transports\bundles">
       <UniqueIdentifier>{e9c9d0ab-1069-4670-84e7-9f61c1f3039a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="docs\memory">
+      <UniqueIdentifier>{7a8e6360-4b25-4640-9e3d-24a60c29d301}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -219,6 +222,9 @@
     <ClInclude Include="include\threading\transports\bundles\TOwningBundle.hpp">
       <Filter>include\threading\transports\bundles</Filter>
     </ClInclude>
+    <ClInclude Include="include\memory\memory_typeless.hpp">
+      <Filter>include\memory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\io\file\file.cpp">
@@ -311,6 +317,12 @@
     </None>
     <None Include="docs\threading\transports\TOwningTransport.md">
       <Filter>docs\threading\transports</Filter>
+    </None>
+    <None Include="docs\codebase-ethos-primer.md">
+      <Filter>docs</Filter>
+    </None>
+    <None Include="docs\memory\memory_typeless.md">
+      <Filter>docs\memory</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

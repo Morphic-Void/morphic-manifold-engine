@@ -184,6 +184,7 @@
     <ClInclude Include="include\io\file\log.hpp" />
     <ClInclude Include="include\memory\memory_allocation.hpp" />
     <ClInclude Include="include\memory\memory_primitives.hpp" />
+    <ClInclude Include="include\memory\memory_typeless.hpp" />
     <ClInclude Include="include\tests\TOrderedSlots_test_harness.hpp" />
     <ClInclude Include="include\tests\TOwningTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TQueueTransport_test_suite.hpp" />
@@ -206,6 +207,7 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="docs\architectural-principles.md" />
+    <None Include="docs\codebase-ethos-primer.md" />
     <None Include="docs\codebase-model.md" />
     <None Include="docs\containers\ByteBuffers.md" />
     <None Include="docs\containers\slots\TOrderedSlots.md" />
@@ -218,6 +220,7 @@
     <None Include="docs\containers\TUnorderedCollection.md" />
     <None Include="docs\engineering-aphorisms.md" />
     <None Include="docs\engineering-principles.md" />
+    <None Include="docs\memory\memory_typeless.md" />
     <None Include="docs\threading\transports\TOwningTransport.md" />
     <None Include="docs\threading\transports\TQueueTransport.md" />
     <None Include="docs\threading\transports\TRingTransport.md" />
