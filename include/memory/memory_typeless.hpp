@@ -91,6 +91,9 @@ private:
 private:
     template<typename T, std::size_t type_id>
     friend T* typeless_cast(CTypeless&) noexcept;
+
+    template<typename T, std::size_t type_id>
+    friend const T* typeless_cast(const CTypeless&) noexcept;
 };
 
 //==============================================================================
