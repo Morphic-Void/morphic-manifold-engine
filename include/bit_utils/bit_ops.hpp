@@ -14,8 +14,7 @@
 #define BIT_OPS_HPP_INCLUDED
 
 #include <algorithm>    //  std::max
-#include <cstddef>      //  std::size_t
-#include <cstdint>      //  fixed-width integer types
+#include <cstdint>      //  std::int32_t, std::uint32_t, std::int64_t, std::uint64_t
 #include <cstring>      //  std::memcpy
 
 namespace bit_ops
@@ -53,6 +52,12 @@ constexpr std::int32_t  sign_3way(const std::int32_t u) noexcept;   //  1, 0 or 
 
 constexpr std::uint32_t smear(const std::uint32_t u) noexcept;
 constexpr std::uint32_t bit_width(const std::uint32_t u) noexcept;
+
+constexpr std::uint32_t spread_to_even_bits(const std::uint32_t u) noexcept;
+constexpr std::uint32_t pack_from_even_bits(const std::uint32_t u) noexcept;
+
+constexpr std::uint32_t spread_to_odd_bits(const std::uint32_t u) noexcept;
+constexpr std::uint32_t pack_from_odd_bits(const std::uint32_t u) noexcept;
 
 constexpr std::uint32_t hi_bit_mask(const std::uint32_t u) noexcept;
 constexpr std::uint32_t lo_bit_mask(const std::uint32_t u) noexcept;
@@ -111,6 +116,12 @@ constexpr std::int64_t  sign_3way(const std::int64_t u) noexcept;   //  1, 0 or 
 
 constexpr std::uint64_t smear(const std::uint64_t u) noexcept;
 constexpr std::uint64_t bit_width(const std::uint64_t u) noexcept;
+
+constexpr std::uint64_t spread_to_even_bits(const std::uint64_t u) noexcept;
+constexpr std::uint64_t pack_from_even_bits(const std::uint64_t u) noexcept;
+
+constexpr std::uint64_t spread_to_odd_bits(const std::uint64_t u) noexcept;
+constexpr std::uint64_t pack_from_odd_bits(const std::uint64_t u) noexcept;
 
 constexpr std::uint64_t hi_bit_mask(const std::uint64_t u) noexcept;
 constexpr std::uint64_t lo_bit_mask(const std::uint64_t u) noexcept;
@@ -249,6 +260,36 @@ constexpr std::uint32_t bit_width(const std::uint32_t u) noexcept
 	w += (~((u >> (w + 2u)) - 1u) >> 2) & 2u;
 	w += (~((u >> (w + 1u)) - 1u) >> 1) & 1u;
 	return w + (u >> w);
+}
+
+constexpr std::uint32_t spread_to_even_bits(const std::uint32_t u) noexcept
+{
+	std::uint32_t w = u & 0x0000ffffu;
+	w = ((w << 8) | w) & 0x00ff00ffu;
+	w = ((w << 4) | w) & 0x0f0f0f0fu;
+	w = ((w << 2) | w) & 0x33333333u;
+	w = ((w << 1) | w) & 0x55555555u;
+	return w;
+}
+
+constexpr std::uint32_t pack_from_even_bits(const std::uint32_t u) noexcept
+{
+	std::uint32_t w = u & 0x55555555u;
+	w = ((w >> 1) | w) & 0x33333333u;
+	w = ((w >> 2) | w) & 0x0f0f0f0fu;
+	w = ((w >> 4) | w) & 0x00ff00ffu;
+	w = ((w >> 8) | w) & 0x0000ffffu;
+	return w;
+}
+
+constexpr std::uint32_t spread_to_odd_bits(const std::uint32_t u) noexcept
+{
+	return spread_to_even_bits(u) << 1;
+}
+
+constexpr std::uint32_t pack_from_odd_bits(const std::uint32_t u) noexcept
+{
+	return pack_from_even_bits(u >> 1);
 }
 
 constexpr std::uint32_t hi_bit_mask(const std::uint32_t u) noexcept
@@ -442,6 +483,39 @@ constexpr std::uint64_t bit_width(const std::uint64_t u) noexcept
 	w += (~((u >> (w +  2u)) - 1u) >>  2) &  2u;
 	w += (~((u >> (w +  1u)) - 1u) >>  1) &  1u;
 	return w + (u >> w);
+}
+
+
+constexpr std::uint64_t spread_to_even_bits(const std::uint64_t u) noexcept
+{
+	std::uint64_t w = u & 0x00000000ffffffffu;
+	w = ((w << 16) | w) & 0x0000ffff0000ffffu;
+	w = ((w << 8) | w) & 0x00ff00ff00ff00ffu;
+	w = ((w << 4) | w) & 0x0f0f0f0f0f0f0f0fu;
+	w = ((w << 2) | w) & 0x3333333333333333u;
+	w = ((w << 1) | w) & 0x5555555555555555u;
+	return w;
+}
+
+constexpr std::uint64_t pack_from_even_bits(const std::uint64_t u) noexcept
+{
+	std::uint64_t w = u & 0x5555555555555555u;
+	w = ((w >> 1) | w) & 0x3333333333333333u;
+	w = ((w >> 2) | w) & 0x0f0f0f0f0f0f0f0fu;
+	w = ((w >> 4) | w) & 0x00ff00ff00ff00ffu;
+	w = ((w >> 8) | w) & 0x0000ffff0000ffffu;
+	w = ((w >> 16) | w) & 0x00000000ffffffffu;
+	return w;
+}
+
+constexpr std::uint64_t spread_to_odd_bits(const std::uint64_t u) noexcept
+{
+	return spread_to_even_bits(u) << 1;
+}
+
+constexpr std::uint64_t pack_from_odd_bits(const std::uint64_t u) noexcept
+{
+	return pack_from_even_bits(u >> 1);
 }
 
 constexpr std::uint64_t hi_bit_mask(const std::uint64_t u) noexcept

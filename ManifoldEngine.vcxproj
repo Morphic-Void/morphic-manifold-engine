@@ -185,6 +185,7 @@
     <ClInclude Include="include\memory\memory_allocation.hpp" />
     <ClInclude Include="include\memory\memory_primitives.hpp" />
     <ClInclude Include="include\memory\memory_typeless.hpp" />
+    <ClInclude Include="include\system\system_ids.hpp" />
     <ClInclude Include="include\tests\TOrderedSlots_test_harness.hpp" />
     <ClInclude Include="include\tests\TOwningTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TQueueTransport_test_suite.hpp" />
@@ -204,7 +205,6 @@
     <ClInclude Include="include\threading\transports\interfaces\TRingInterfaces.hpp" />
     <ClInclude Include="include\types\fp16data_t.hpp" />
     <ClInclude Include="include\types\typeless.hpp" />
-    <ClInclude Include="include\types\type_ids.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />

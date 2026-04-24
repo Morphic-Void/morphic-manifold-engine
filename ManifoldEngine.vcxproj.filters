@@ -100,6 +100,9 @@
     <Filter Include="docs\memory">
       <UniqueIdentifier>{7a8e6360-4b25-4640-9e3d-24a60c29d301}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\system">
+      <UniqueIdentifier>{1ef648dd-f950-48e9-8d06-f300e76e082f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -225,11 +228,11 @@
     <ClInclude Include="include\memory\memory_typeless.hpp">
       <Filter>include\memory</Filter>
     </ClInclude>
-    <ClInclude Include="include\types\type_ids.hpp">
-      <Filter>include\types</Filter>
-    </ClInclude>
     <ClInclude Include="include\types\typeless.hpp">
       <Filter>include\types</Filter>
+    </ClInclude>
+    <ClInclude Include="include\system\system_ids.hpp">
+      <Filter>include\system</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
