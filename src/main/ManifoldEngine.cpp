@@ -2,10 +2,15 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 // 
-//  ManifoldEngine.cpp
-// 
-//  This file contains the 'main' function. Program execution begins and ends there.
+//  File:   ManifoldEngine.cpp
+//  Author: Ritchie Brannan
+//  Date:   24 Apr 26
+//
+//  The main() function.
+//  This is the entry point for the host thread.
+//  Program execution begins and ends here.
 
+//  These includes are only here to check the compile state:
 #include <iostream>
 #include "algo/validate_permutations.hpp"
 #include "bit_utils/bit_ops.hpp"
@@ -28,28 +33,10 @@
 #include "io/file/log.hpp"
 #include "debug/debug.hpp"
 
-#include "tests/TOrderedSlots_test_harness.hpp"
-#include "tests/TUnorderedSlots_test_harness.hpp"
-#include "tests/TQueueTransport_test_suite.hpp"
-#include "tests/TRingTransport_test_suite.hpp"
-#include "tests/TOwningTransport_test_suite.hpp"
+#include "tests/run_tests.hpp"
 
 int main()
 {
-    int towning_test_result = run_owning_transport_tests();
-
-    int tqueue_test_result = run_queue_transport_tests();
-
-    int tring_test_result = run_ring_transport_tests();
-
-    TOrderedConfig tlex_cfg;
-    tlex_cfg.run_fuzz_lightweight = true;
-    int tlex_test_result = run_all_tests(tlex_cfg);
- 
-    TUnorderedConfig tun_cfg;
-    //tun_cfg.run_fuzz = true;
-    int tun_test_result = run_all_tests(tun_cfg);
-
-    return 0;
+    return run_tests();
 }
 

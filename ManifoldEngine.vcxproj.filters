@@ -234,6 +234,9 @@
     <ClInclude Include="include\system\system_ids.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
+    <ClInclude Include="include\tests\run_tests.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\io\file\file.cpp">
@@ -273,6 +276,9 @@
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\TOwningTransport_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\run_tests.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
   </ItemGroup>
