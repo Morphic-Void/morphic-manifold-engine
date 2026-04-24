@@ -36,6 +36,8 @@
 namespace system_id_util
 {
 
+//------------------------------------------------------------------------------
+
 template<std::size_t t_encoded_field>
 struct TField
 {
@@ -65,9 +67,14 @@ struct TField
     }
 };
 
+//------------------------------------------------------------------------------
+
+//  The encoding spaces
 using   type_ids_field = TField<0x55555555u>;
 using module_ids_field = TField<0xAAA00000u>;
 using thread_ids_field = TField<0x000AAAAAu>;
+
+//------------------------------------------------------------------------------
 
 }	//	namespace system_id_util
 
@@ -78,17 +85,25 @@ using thread_ids_field = TField<0x000AAAAAu>;
 namespace type_ids
 {
 
+//------------------------------------------------------------------------------
+
 using field = system_id_util::type_ids_field;
+
+//------------------------------------------------------------------------------
 
 constexpr bool is_valid_id(const std::size_t id) noexcept { return field::is_valid_id(id); }
 constexpr std::size_t encode_id(const std::size_t value) noexcept { return field::encode_id(value); }
 constexpr std::size_t decode_id(const std::size_t id) noexcept { return field::decode_id(id); }
+
+//------------------------------------------------------------------------------
 
 constexpr std::size_t byte_buffer = encode_id(1u);
 constexpr std::size_t byte_rect_buffer = encode_id(2u);
 constexpr std::size_t simple_string = encode_id(3u);
 constexpr std::size_t string_buffer = encode_id(4u);
 constexpr std::size_t stable_strings = encode_id(5u);
+
+//------------------------------------------------------------------------------
 
 }   //  namespace type_ids
 
@@ -99,14 +114,19 @@ constexpr std::size_t stable_strings = encode_id(5u);
 namespace module_ids
 {
 
+//------------------------------------------------------------------------------
+
 using field = system_id_util::module_ids_field;
+
+//------------------------------------------------------------------------------
 
 constexpr bool is_valid_id(const std::size_t id) noexcept { return field::is_valid_id(id); }
 constexpr std::size_t encode_id(const std::size_t value) noexcept { return field::encode_id(value); }
 constexpr std::size_t decode_id(const std::size_t id) noexcept { return field::decode_id(id); }
 
-constexpr std::size_t executable = encode_id(1u);
+//------------------------------------------------------------------------------
 
+constexpr std::size_t executable = encode_id(1u);
 constexpr std::size_t application = encode_id(2u);
 
 constexpr std::size_t platform_windows = encode_id(4u);
@@ -124,6 +144,8 @@ constexpr std::size_t rendering_vulkan_windows = encode_id(17u);
 constexpr std::size_t rendering_vulkan_linux = encode_id(18u);
 constexpr std::size_t rendering_vulkan_osx = encode_id(19u);
 
+//------------------------------------------------------------------------------
+
 }   //  namespace module_ids
 
 //==============================================================================
@@ -133,14 +155,19 @@ constexpr std::size_t rendering_vulkan_osx = encode_id(19u);
 namespace thread_ids
 {
 
+//------------------------------------------------------------------------------
+
 using field = system_id_util::thread_ids_field;
+
+//------------------------------------------------------------------------------
 
 constexpr bool is_valid_id(const std::size_t id) noexcept { return field::is_valid_id(id); }
 constexpr std::size_t encode_id(const std::size_t value) noexcept { return field::encode_id(value); }
 constexpr std::size_t decode_id(const std::size_t id) noexcept { return field::decode_id(id); }
 
-constexpr std::size_t host = encode_id(1u);
+//------------------------------------------------------------------------------
 
+constexpr std::size_t host = encode_id(1u);
 constexpr std::size_t application = encode_id(2u);
 
 constexpr std::size_t rendering = encode_id(4u);
@@ -184,6 +211,8 @@ constexpr std::size_t jobs_worker_29 = encode_id(61u);
 constexpr std::size_t jobs_worker_30 = encode_id(62u);
 constexpr std::size_t jobs_worker_31 = encode_id(63u);
 
+//------------------------------------------------------------------------------
+
 }   //  namespace thread_ids
 
 //==============================================================================
@@ -193,9 +222,13 @@ constexpr std::size_t jobs_worker_31 = encode_id(63u);
 namespace system_ids
 {
 
+//------------------------------------------------------------------------------
+
 constexpr std::size_t k_module_id_mask = system_id_util::module_ids_field::k_id_field_mask;
 constexpr std::size_t k_thread_id_mask = system_id_util::thread_ids_field::k_id_field_mask;
 constexpr std::size_t k_invalid_id_mask = ~(k_module_id_mask | k_thread_id_mask);
+
+//------------------------------------------------------------------------------
 
 constexpr bool is_valid_id(const std::size_t system_id) noexcept
 {
@@ -223,6 +256,8 @@ constexpr std::size_t get_thread_id(const std::size_t system_id) noexcept
 {
     return is_valid_id(system_id) ? (system_id & k_thread_id_mask) : std::size_t{ 0u };
 }
+
+//------------------------------------------------------------------------------
 
 }   //  namespace system_ids
 
