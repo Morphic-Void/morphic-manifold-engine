@@ -32,7 +32,7 @@
 namespace io::path
 {
 
-NativePath nativePath(const char* const utf8_path) noexcept
+NativePath makeNativePath(const char* const utf8_path) noexcept
 {
     NativePath std_path;
     if ((utf8_path != nullptr) && (utf8_path[0] != 0))
@@ -114,7 +114,7 @@ NativePath nativePath(const char* const utf8_path) noexcept
     return std_path;
 }
 
-NativePath tmpPath(const NativePath& std_path) noexcept
+NativePath makeTempNativePath(const NativePath& std_path) noexcept
 {
     NativePath tmp_path;
     if (!std_path.is_empty())

@@ -30,8 +30,8 @@ namespace io::path
 {
 
 using NativePath = TPodVector<native_char>;
-NativePath nativePath(const char* utf8_path) noexcept;      // UTF-8 -> native (with policy)
-NativePath tmpPath(const NativePath& std_path) noexcept;    // append ".tmp"
+NativePath makeNativePath(const char* utf8_path) noexcept;  // UTF-8 -> native (with policy)
+NativePath makeTempNativePath(const NativePath& std_path) noexcept; // append ".tmp"
 
 }   //  namespace io::path
 

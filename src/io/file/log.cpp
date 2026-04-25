@@ -20,7 +20,7 @@ bool Log::open(const char* utf8_path, const bool append) noexcept
     close();
     if (utf8_path != nullptr)
     {
-        path::NativePath std_path = path::nativePath(utf8_path);
+        path::NativePath std_path = path::makeNativePath(utf8_path);
         if (!std_path.is_empty())
         {
             m_stream = openFile(std_path, (append ? OpenMode::TextAppend : OpenMode::TextWrite));
