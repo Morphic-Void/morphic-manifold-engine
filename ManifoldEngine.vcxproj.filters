@@ -237,6 +237,18 @@
     <ClInclude Include="include\tests\run_tests.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
+    <ClInclude Include="include\threading\transports\core\TBulkTransport.hpp">
+      <Filter>include\threading\transports\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\transports\bundles\TBulkBundle.hpp">
+      <Filter>include\threading\transports\bundles</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\transports\endpoints\TBulkEndpoints.hpp">
+      <Filter>include\threading\transports\endpoints</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\transports\interfaces\TBulkInterfaces.hpp">
+      <Filter>include\threading\transports\interfaces</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\io\file\file.cpp">
