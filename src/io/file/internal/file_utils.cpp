@@ -24,8 +24,7 @@
     #include <Windows.h>
     #include <io.h>
     #include <fcntl.h>
-#else
-    //  default, assumes _POSIX_VERSION or __APPLE__ or__linux__ or similar
+#else   //  default, assumes _POSIX_VERSION or __APPLE__ or__linux__ or similar
     #include <sys/types.h>
     #include <unistd.h>
 #endif

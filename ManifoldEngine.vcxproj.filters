@@ -109,6 +109,12 @@
     <Filter Include="src\io\path">
       <UniqueIdentifier>{4c854f27-b06d-4ef6-bf3a-5a0d1df89e49}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\module">
+      <UniqueIdentifier>{722dd110-fedd-4a28-841a-02499b464eb7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\module">
+      <UniqueIdentifier>{7e3aa772-a336-49d7-a680-8de57fafa5a0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -255,6 +261,9 @@
     <ClInclude Include="include\io\path\native_path.hpp">
       <Filter>include\io\path</Filter>
     </ClInclude>
+    <ClInclude Include="include\module\module_binding.hpp">
+      <Filter>include\module</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\io\file\file.cpp">
@@ -298,6 +307,9 @@
     </ClCompile>
     <ClCompile Include="src\io\path\native_path.cpp">
       <Filter>src\io\path</Filter>
+    </ClCompile>
+    <ClCompile Include="src\module\module_binding.cpp">
+      <Filter>src\module</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
