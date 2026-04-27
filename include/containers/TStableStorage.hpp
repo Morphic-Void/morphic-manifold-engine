@@ -89,7 +89,7 @@ private:
     [[nodiscard]] std::size_t buffer_slots() const noexcept { return m_slot_mask + 1u; }
     [[nodiscard]] std::size_t buffer_index(const std::size_t slot_index) const noexcept { return slot_index >> m_buffer_shift; }
     [[nodiscard]] std::size_t buffer_slot(const std::size_t slot_index) const noexcept { return slot_index & m_slot_mask; }
-    void move_from(TStableStorage&& src) noexcept;
+    void move_from(TStableStorage& src) noexcept;
 
     memory::TMemoryToken<memory::TMemoryToken<T>> m_buffers = memory::TMemoryToken<memory::TMemoryToken<T>>{};
 
@@ -106,7 +106,7 @@ private:
 template<typename T>
 inline TStableStorage<T>::TStableStorage(TStableStorage&& src) noexcept
 {
-    take_from(src);
+    move_from(src);
 }
 
 template<typename T>
@@ -114,7 +114,7 @@ inline TStableStorage<T>& TStableStorage<T>::operator=(TStableStorage&& src) noe
 {
     if (this != &src)
     {
-        take_from(src);
+        move_from(src);
     }
     return *this;
 }
@@ -292,7 +292,7 @@ inline void TStableStorage<T>::deallocate() noexcept
 }
 
 template<typename T>
-inline void TStableStorage<T>::move_from(TStableStorage&& src) noexcept
+inline void TStableStorage<T>::move_from(TStableStorage& src) noexcept
 {
     m_buffers = std::move(src.m_buffers);
     m_buffer_capacity = src.m_buffer_capacity;
