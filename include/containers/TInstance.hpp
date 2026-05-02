@@ -64,7 +64,7 @@ public:
     TInstance& operator=(const TInstance&) = delete;
 
     //  Move lifetime
-    TInstance(TInstance&& other) noexcept : m_token(std::move(other.m_token)) {}
+    TInstance(TInstance&& src) noexcept : m_token(std::move(src.m_token)) {}
     TInstance& operator=(TInstance&&) noexcept;
 
     //  Destructor
