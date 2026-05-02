@@ -237,6 +237,7 @@
     <None Include="docs\engineering-aphorisms.md" />
     <None Include="docs\engineering-principles.md" />
     <None Include="docs\memory\memory_typeless.md" />
+    <None Include="docs\origins.md" />
     <None Include="docs\threading\transports\TOwningTransport.md" />
     <None Include="docs\threading\transports\TQueueTransport.md" />
     <None Include="docs\threading\transports\TRingTransport.md" />

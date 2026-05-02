@@ -381,6 +381,9 @@
     <None Include="docs\memory\memory_typeless.md">
       <Filter>docs\memory</Filter>
     </None>
+    <None Include="docs\origins.md">
+      <Filter>docs</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE.txt" />
