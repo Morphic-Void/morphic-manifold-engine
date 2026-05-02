@@ -31,6 +31,7 @@
 #include "threading/transports/bundles/TOwningBundle.hpp"
 #include "module/module_binding.hpp"
 #include "types/fp16data_t.hpp"
+#include "io/codec/tga.hpp"
 #include "io/path/native_path.hpp"
 #include "io/file/internal/file_utils.hpp"
 #include "io/file/file.hpp"
