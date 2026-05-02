@@ -35,6 +35,7 @@
 #include <cstddef>      //  std::size_t
 #include <cstring>      //  std::memcpy
 #include <type_traits>  //  std::is_const_v, std::is_trivially_copyable_v
+#include <utility>      //  std::move
 
 #include "containers/TPodVector.hpp"
 #include "memory/memory_allocation.hpp"
