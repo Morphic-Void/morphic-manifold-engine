@@ -121,6 +121,9 @@
     <Filter Include="include\io\codec">
       <UniqueIdentifier>{433123b7-735f-42cd-a5bc-adf98bc059e9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="docs\backlog">
+      <UniqueIdentifier>{b447aee3-3045-4d9c-972f-2c78246358dd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -383,6 +386,9 @@
     </None>
     <None Include="docs\origins.md">
       <Filter>docs</Filter>
+    </None>
+    <None Include="docs\backlog\manifold_engine_interim_backlog.md">
+      <Filter>docs\backlog</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
