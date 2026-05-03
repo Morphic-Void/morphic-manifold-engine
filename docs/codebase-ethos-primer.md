@@ -1,9 +1,9 @@
 Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 License: MIT (see LICENSE file in repository root)
 
-File:   codebase-ethos-primer.md
-Author: Ritchie Brannan
-Date:   22 Apr 26
+File:   codebase-ethos-primer.md  
+Author: Ritchie Brannan  
+Date:   22 Apr 26  
 
 # Codebase Ethos Primer
 

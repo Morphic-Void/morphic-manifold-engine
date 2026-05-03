@@ -1,7 +1,7 @@
 Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited  
 License: MIT (see LICENSE file in repository root)  
 
-File:   origins.md
+File:   origins.md  
 Author: Ritchie Brannan  
 Date:   2 May 26  
 

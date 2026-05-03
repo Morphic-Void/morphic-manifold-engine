@@ -1,7 +1,7 @@
 Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 License: MIT (see LICENSE file in repository root)
 
-File:   codebase-model.md
+File:   codebase-model.md  
 Author: Ritchie Brannan  
 Date:   17 Apr 26  
 

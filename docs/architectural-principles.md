@@ -1,7 +1,7 @@
 Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited  
 License: MIT (see LICENSE file in repository root)  
 
-File:   architectural-principles.md
+File:   architectural-principles.md  
 Author: Ritchie Brannan  
 Date:   17 Apr 26  
 
