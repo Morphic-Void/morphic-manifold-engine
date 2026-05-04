@@ -12,10 +12,15 @@
 //
 //  Layer 0 threading primitives.
 
-#include <cstdint>      //  std::uint8_t, std::uint32_t, std::uint64_t
+#include <atomic>       //  std::atomic
 #include <cstddef>      //  std::size_t
+#include <cstdint>      //  std::uint8_t, std::uint32_t, std::uint64_t
 
 #include "threading/platform/primitives.hpp"
+
+//==============================================================================
+//  Platform support defines
+//==============================================================================
 
 #if defined(_WIN32)
     #ifndef WIN32_LEAN_AND_MEAN
@@ -24,21 +29,58 @@
     #ifndef NOMINMAX
         #define NOMINMAX
     #endif
+    #define THREADING_PLATFORM_WINDOWS 1
+#endif
+
+#if (defined(__APPLE__) && defined(__MACH__))
+    #define THREADING_PLATFORM_APPLE 1
+#endif
+
+#if defined(__linux__) && !defined(__ANDROID__)
+    #define THREADING_PLATFORM_LINUX_ONLY 1
+#endif
+
+#if defined(__ANDROID__)
+    #define THREADING_PLATFORM_ANDROID_ONLY 1
+#endif
+
+#if defined(__linux__) || defined(__ANDROID__)
+    #define THREADING_PLATFORM_LINUX_ANDROID 1
+#endif
+
+#if defined(THREADING_PLATFORM_APPLE) || defined(THREADING_PLATFORM_LINUX_ANDROID)
+    #define THREADING_PLATFORM_PLATFORM_HAS_PTHREADS 1
+#endif
+
+//==============================================================================
+//  Platform includes
+//==============================================================================
+
+#if defined(THREADING_PLATFORM_WINDOWS)
     #include <windows.h>
-#elif defined(__APPLE__) && defined(__MACH__)
+#endif
+
+#if defined(THREADING_PLATFORM_APPLE)
     #include <stddef.h>
     #include <pthread.h>
     #include <sys/sysctl.h>
-#elif defined(__linux__) || defined(__ANDROID__)
+#endif
+
+#if defined(THREADING_PLATFORM_LINUX_ONLY)
+    #include <limits.h>
+    #include <linux/futex.h>
+#endif
+
+#if defined(THREADING_PLATFORM_LINUX_ANDROID)
     #include <pthread.h>
     #include <sched.h>
     #include <sys/syscall.h>
     #include <unistd.h>
 #endif
 
-#if (defined(__APPLE__) && defined(__MACH__)) || defined(__linux__) || defined(__ANDROID__)
-    #define THREADING_PLATFORM_HAS_PTHREADS 1
-#endif
+//==============================================================================
+//  Implementation
+//==============================================================================
 
 namespace threading::platform
 {
@@ -50,7 +92,7 @@ namespace internal
 //  Native supported thread count query implementation helpers
 //==============================================================================
 
-#if defined(_WIN32)
+#if defined(THREADING_PLATFORM_WINDOWS)
 
 std::uint32_t query_hardware_thread_count_windows() noexcept
 {
@@ -66,7 +108,7 @@ std::uint32_t query_hardware_thread_count_windows() noexcept
     return (dwCount != 0u) ? static_cast<std::uint32_t>(dwCount) : 1u;
 }
 
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(THREADING_PLATFORM_APPLE)
 
 std::uint32_t query_hardware_thread_count_macos() noexcept
 {
@@ -85,7 +127,7 @@ std::uint32_t query_hardware_thread_count_macos() noexcept
     return 1u;
 }
 
-#elif defined(__linux__) || defined(__ANDROID__)
+#elif defined(THREADING_PLATFORM_LINUX_ANDROID)
 
 std::uint32_t count_cpu_set(const cpu_set_t& set) noexcept
 {
@@ -127,7 +169,7 @@ std::uint32_t query_hardware_thread_count_linux_like() noexcept
 //  Native thread identifier query implementation helpers
 //==============================================================================
 
-#if defined(_WIN32)
+#if defined(THREADING_PLATFORM_WINDOWS)
 
 CPlatformThreadId query_current_thread_id_windows() noexcept
 {
@@ -136,7 +178,7 @@ CPlatformThreadId query_current_thread_id_windows() noexcept
     return CPlatformThreadId{ static_cast<std::uint64_t>(id) };
 }
 
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(THREADING_PLATFORM_APPLE)
 
 CPlatformThreadId query_current_thread_id_macos() noexcept
 {
@@ -152,11 +194,11 @@ CPlatformThreadId query_current_thread_id_macos() noexcept
     return CPlatformThreadId{ 0u };
 }
 
-#elif defined(__linux__) || defined(__ANDROID__)
+#elif defined(THREADING_PLATFORM_LINUX_ANDROID)
 
 CPlatformThreadId query_current_thread_id_linux_like() noexcept
 {
-    const long id = syscall(SYS_gettid);
+    const long id = ::syscall(SYS_gettid);
 
     if (id > 0)
     {
@@ -169,10 +211,73 @@ CPlatformThreadId query_current_thread_id_linux_like() noexcept
 #endif
 
 //==============================================================================
+//  Atomic wait word implementation helpers
+//==============================================================================
+
+#if defined(THREADING_PLATFORM_WINDOWS) || defined(THREADING_PLATFORM_LINUX_ONLY)
+
+static_assert((sizeof(std::atomic<std::uint32_t>) == sizeof(std::uint32_t)),
+    "std::atomic<std::uint32_t> must have the same storage size as std::uint32_t.");
+
+static_assert((alignof(std::atomic<std::uint32_t>) >= alignof(std::uint32_t)),
+    "std::atomic<std::uint32_t> must be naturally aligned for 32-bit waits.");
+
+static_assert((std::atomic<std::uint32_t>::is_always_lock_free),
+    "std::atomic<std::uint32_t> must be always lock-free.");
+
+#endif
+
+#if defined(THREADING_PLATFORM_WINDOWS)
+
+void* wait_address_from_word(const std::atomic<std::uint32_t>* const word) noexcept
+{
+    const void* const address = static_cast<const void*>(word);
+
+    return const_cast<void*>(address);
+}
+
+#elif defined(THREADING_PLATFORM_LINUX_ONLY)
+
+const std::uint32_t* futex_address_from_word(const std::atomic<std::uint32_t>* const word) noexcept
+{
+    return reinterpret_cast<const std::uint32_t*>(word);
+}
+
+long futex_wait_private(const std::uint32_t* const address, const std::uint32_t expected) noexcept
+{
+    return ::syscall(
+        SYS_futex, const_cast<std::uint32_t*>(address),
+        FUTEX_WAIT_PRIVATE, expected,
+        nullptr, nullptr, 0);
+}
+
+long futex_wake_private(const std::uint32_t* const address, const int waiter_count) noexcept
+{
+    return ::syscall(
+        SYS_futex, const_cast<std::uint32_t*>(address),
+        FUTEX_WAKE_PRIVATE, waiter_count,
+        nullptr, nullptr, 0);
+}
+
+#elif defined(THREADING_PLATFORM_APPLE)
+
+#error "threading::platform atomic wait word primitives are not implemented for macOS in phase 1."
+
+#elif defined(THREADING_PLATFORM_ANDROID_ONLY)
+
+#error "threading::platform atomic wait word primitives are not implemented for Android in phase 1."
+
+#else
+
+#error "threading::platform atomic wait word primitives are not implemented for this platform."
+
+#endif
+
+//==============================================================================
 //  Native exclusive locking implementation helpers
 //==============================================================================
 
-#if defined(_WIN32)
+#if defined(THREADING_PLATFORM_WINDOWS)
 
 using native_exclusive_lock_type = SRWLOCK;
 
@@ -187,7 +292,7 @@ native_exclusive_lock_type* native_exclusive_lock(CExclusiveLock* const lock) no
     return reinterpret_cast<native_exclusive_lock_type*>(lock->storage);
 }
 
-#elif defined(THREADING_PLATFORM_HAS_PTHREADS)
+#elif defined(THREADING_PLATFORM_PLATFORM_HAS_PTHREADS)
 
 using native_exclusive_lock_type = pthread_mutex_t;
 
@@ -230,15 +335,15 @@ static void clear_exclusive_lock(CExclusiveLock* const lock) noexcept
 
 std::uint32_t query_hardware_thread_count() noexcept
 {
-#if defined(_WIN32)
+#if defined(THREADING_PLATFORM_WINDOWS)
 
     return internal::query_hardware_thread_count_windows();
 
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(THREADING_PLATFORM_APPLE)
 
     return internal::query_hardware_thread_count_macos();
 
-#elif defined(__linux__) || defined(__ANDROID__)
+#elif defined(THREADING_PLATFORM_LINUX_ANDROID)
 
     return internal::query_hardware_thread_count_linux_like();
 
@@ -255,15 +360,15 @@ std::uint32_t query_hardware_thread_count() noexcept
 
 CPlatformThreadId query_current_thread_id() noexcept
 {
-#if defined(_WIN32)
+#if defined(THREADING_PLATFORM_WINDOWS)
 
     return internal::query_current_thread_id_windows();
 
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif defined(THREADING_PLATFORM_APPLE)
 
     return internal::query_current_thread_id_macos();
 
-#elif defined(__linux__) || defined(__ANDROID__)
+#elif defined(THREADING_PLATFORM_LINUX_ANDROID)
 
     return internal::query_current_thread_id_linux_like();
 
@@ -275,8 +380,73 @@ CPlatformThreadId query_current_thread_id() noexcept
 }
 
 //==============================================================================
+//  Atomic wait word implementation
+//==============================================================================
+
+#if defined(THREADING_PLATFORM_WINDOWS)
+
+void wait_while_equal(const std::atomic<std::uint32_t>* const word, const std::uint32_t expected) noexcept
+{
+    //  WaitOnAddress performs the compare-and-park operation. Failure,
+    //  mismatch, and spurious return are normal at this abstraction level.
+    (void)WaitOnAddress(
+        internal::wait_address_from_word(word),
+        static_cast<void*>(const_cast<std::uint32_t*>(&expected)),
+        sizeof(expected), INFINITE);
+}
+
+void wake_one_waiter(const std::atomic<std::uint32_t>* const word) noexcept
+{
+    WakeByAddressSingle(internal::wait_address_from_word(word));
+}
+
+void wake_all_waiters(const std::atomic<std::uint32_t>* const word) noexcept
+{
+    WakeByAddressAll(internal::wait_address_from_word(word));
+}
+
+#elif defined(THREADING_PLATFORM_LINUX_ONLY)
+
+void wait_while_equal(const std::atomic<std::uint32_t>* const word, const std::uint32_t expected) noexcept
+{
+    const std::uint32_t* const address = internal::futex_address_from_word(word);
+
+    (void)internal::futex_wait_private(address, expected);
+}
+
+void wake_one_waiter(const std::atomic<std::uint32_t>* const word) noexcept
+{
+    const std::uint32_t* const address = internal::futex_address_from_word(word);
+
+    (void)internal::futex_wake_private(address, 1);
+}
+
+void wake_all_waiters(const std::atomic<std::uint32_t>* const word) noexcept
+{
+    const std::uint32_t* const address = internal::futex_address_from_word(word);
+
+    (void)internal::futex_wake_private(address, INT_MAX);
+}
+
+#elif defined(THREADING_PLATFORM_APPLE)
+
+#error "threading::platform atomic wait word primitives are not implemented for macOS in phase 1."
+
+#elif defined(THREADING_PLATFORM_ANDROID_ONLY)
+
+#error "threading::platform atomic wait word primitives are not implemented for Android in phase 1."
+
+#else
+
+#error "threading::platform atomic wait word primitives are not implemented for this platform."
+
+#endif
+
+//==============================================================================
 //  Native exclusive locking implementation
 //==============================================================================
+
+#if defined(THREADING_PLATFORM_WINDOWS)
 
 bool initialise_exclusive_lock(CExclusiveLock* const lock) noexcept
 {
@@ -284,33 +454,10 @@ bool initialise_exclusive_lock(CExclusiveLock* const lock) noexcept
     {
         return false;
     }
-
     clear_exclusive_lock(lock);
-
-#if defined(_WIN32)
-
     InitializeSRWLock(internal::native_exclusive_lock(lock));
     lock->is_valid = true;
     return true;
-
-#elif defined(THREADING_PLATFORM_HAS_PTHREADS)
-
-    const int result = pthread_mutex_init(internal::native_exclusive_lock(lock), nullptr);
-
-    if (result != 0)
-    {
-        clear_exclusive_lock(lock);
-        return false;
-    }
-
-    lock->is_valid = true;
-    return true;
-
-#else
-
-    return false;
-
-#endif
 }
 
 void destroy_exclusive_lock(CExclusiveLock* const lock) noexcept
@@ -320,16 +467,57 @@ void destroy_exclusive_lock(CExclusiveLock* const lock) noexcept
         return;
     }
 
-#if defined(_WIN32)
-
     //  SRWLOCK has no explicit destruction operation.
 
-#elif defined(THREADING_PLATFORM_HAS_PTHREADS)
+    clear_exclusive_lock(lock);
+}
+
+void acquire_exclusive_lock(CExclusiveLock* const lock) noexcept
+{
+    if ((lock == nullptr) || !lock->is_valid)
+    {
+        return;
+    }
+    AcquireSRWLockExclusive(internal::native_exclusive_lock(lock));
+}
+
+void release_exclusive_lock(CExclusiveLock* const lock) noexcept
+{
+    if ((lock == nullptr) || !lock->is_valid)
+    {
+        return;
+    }
+    ReleaseSRWLockExclusive(internal::native_exclusive_lock(lock));
+}
+
+#elif defined(THREADING_PLATFORM_PLATFORM_HAS_PTHREADS)
+
+bool initialise_exclusive_lock(CExclusiveLock* const lock) noexcept
+{
+    if ((lock == nullptr) || lock->is_valid)
+    {
+        return false;
+    }
+    clear_exclusive_lock(lock);
+    const int result = ::pthread_mutex_init(internal::native_exclusive_lock(lock), nullptr);
+    if (result != 0)
+    {
+        clear_exclusive_lock(lock);
+        return false;
+    }
+    lock->is_valid = true;
+    return true;
+}
+
+void destroy_exclusive_lock(CExclusiveLock* const lock) noexcept
+{
+    if ((lock == nullptr) || !lock->is_valid)
+    {
+        return;
+    }
 
     //  Failure indicates misuse under this primitive's contract.
     (void)pthread_mutex_destroy(internal::native_exclusive_lock(lock));
-
-#endif
 
     clear_exclusive_lock(lock);
 }
@@ -341,16 +529,8 @@ void acquire_exclusive_lock(CExclusiveLock* const lock) noexcept
         return;
     }
 
-#if defined(_WIN32)
-
-    AcquireSRWLockExclusive(internal::native_exclusive_lock(lock));
-
-#elif defined(THREADING_PLATFORM_HAS_PTHREADS)
-
     //  Failure indicates misuse or platform failure under this contract.
     (void)pthread_mutex_lock(internal::native_exclusive_lock(lock));
-
-#endif
 }
 
 void release_exclusive_lock(CExclusiveLock* const lock) noexcept
@@ -360,16 +540,10 @@ void release_exclusive_lock(CExclusiveLock* const lock) noexcept
         return;
     }
 
-#if defined(_WIN32)
-
-    ReleaseSRWLockExclusive(internal::native_exclusive_lock(lock));
-
-#elif defined(THREADING_PLATFORM_HAS_PTHREADS)
-
     //  Failure indicates misuse under this contract.
     (void)pthread_mutex_unlock(internal::native_exclusive_lock(lock));
+}
 
 #endif
-}
 
 }   //  namespace threading::platform
