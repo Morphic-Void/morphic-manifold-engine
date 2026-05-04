@@ -124,6 +124,15 @@
     <Filter Include="docs\backlog">
       <UniqueIdentifier>{b447aee3-3045-4d9c-972f-2c78246358dd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\threading">
+      <UniqueIdentifier>{7d987152-6b93-4b7f-a705-e5e93914b562}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\threading\platform">
+      <UniqueIdentifier>{d1ad4df1-dc30-44e8-922b-101b8ed86a7c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\threading\platform">
+      <UniqueIdentifier>{a6927567-1e58-4012-acab-5294d26fd845}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -276,6 +285,9 @@
     <ClInclude Include="include\io\codec\tga.hpp">
       <Filter>include\io\codec</Filter>
     </ClInclude>
+    <ClInclude Include="include\threading\platform\primitives.hpp">
+      <Filter>include\threading\platform</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\io\file\file.cpp">
@@ -325,6 +337,9 @@
     </ClCompile>
     <ClCompile Include="src\io\codec\tga.cpp">
       <Filter>src\io\codec</Filter>
+    </ClCompile>
+    <ClCompile Include="src\threading\platform\primitives.cpp">
+      <Filter>src\threading\platform</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -388,6 +403,9 @@
       <Filter>docs</Filter>
     </None>
     <None Include="docs\backlog\manifold_engine_interim_backlog.md">
+      <Filter>docs\backlog</Filter>
+    </None>
+    <None Include="docs\backlog\current_scope_backlog.md">
       <Filter>docs\backlog</Filter>
     </None>
   </ItemGroup>

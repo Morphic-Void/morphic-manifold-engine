@@ -166,6 +166,7 @@
     <ClCompile Include="src\tests\TQueueTransport_test_suite.cpp" />
     <ClCompile Include="src\tests\TRingTransport_test_suite.cpp" />
     <ClCompile Include="src\tests\TUnorderedSlots_test_harness.cpp" />
+    <ClCompile Include="src\threading\platform\primitives.cpp" />
     <ClCompile Include="src\types\fp16data_t.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -201,6 +202,7 @@
     <ClInclude Include="include\tests\TQueueTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TRingTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TUnorderedSlots_test_harness.hpp" />
+    <ClInclude Include="include\threading\platform\primitives.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TBulkBundle.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TOwningBundle.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TQueueBundle.hpp" />
@@ -223,6 +225,7 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="docs\architectural-principles.md" />
+    <None Include="docs\backlog\current_scope_backlog.md" />
     <None Include="docs\backlog\manifold_engine_interim_backlog.md" />
     <None Include="docs\codebase-ethos-primer.md" />
     <None Include="docs\codebase-model.md" />
