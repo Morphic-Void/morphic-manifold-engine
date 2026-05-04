@@ -10,7 +10,7 @@
 //  - Requires C++17 or later.
 //  - No exceptions.
 //
-//  Layer 0 threading primitives.
+//  Base level platform threading support primitives.
 
 #include <atomic>       //  std::atomic
 #include <cstddef>      //  std::size_t

@@ -10,7 +10,7 @@
 //  - Requires C++17 or later.
 //  - No exceptions.
 //
-//  Layer 0 threading primitives.
+//  Base level platform threading support primitives.
 
 #pragma once
 
@@ -57,7 +57,6 @@ inline bool is_valid(CPlatformThreadId id) noexcept { return id.value != 0u; }
 inline bool are_equal(CPlatformThreadId lhs, CPlatformThreadId rhs) noexcept { return lhs.value == rhs.value; }
 inline bool operator==(CPlatformThreadId lhs, CPlatformThreadId rhs) noexcept { return are_equal(lhs, rhs); }
 inline bool operator!=(CPlatformThreadId lhs, CPlatformThreadId rhs) noexcept { return !are_equal(lhs, rhs); }
-
 
 //==============================================================================
 //  Atomic wait word primitives
