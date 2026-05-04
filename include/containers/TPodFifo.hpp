@@ -83,6 +83,7 @@ public:
     [[nodiscard]] bool pop_front(T& dst) noexcept { return pop_front(&dst, 1u); }
     [[nodiscard]] bool pop_front(T* const dst, const std::size_t count = 1u) noexcept;
     [[nodiscard]] bool pop_front(const TPodView<T>& dst) noexcept { return pop_front(dst.data(), dst.size()); }
+    [[nodiscard]] bool pop_front(const std::size_t count = 1u) noexcept;
 
     //  Allocation and capacity management
     [[nodiscard]] bool allocate(const std::size_t capacity) noexcept;
@@ -195,6 +196,25 @@ inline bool TPodFifo<T>::pop_front(T* const dst, const std::size_t count) noexce
             std::memcpy(dst, (m_token.data() + m_read_index), (tail_size * sizeof(T)));
             m_read_index = count - tail_size;
             std::memcpy((dst + tail_size), m_token.data(), (m_read_index * sizeof(T)));
+        }
+        m_size -= count;
+    }
+    return true;
+}
+
+template<typename T>
+inline bool TPodFifo<T>::pop_front(const std::size_t count) noexcept
+{
+    if (!is_ready() || (count > size()))
+    {
+        return false;
+    }
+    if (count != 0u)
+    {
+        m_read_index += count;
+        if (m_read_index >= m_capacity)
+        {
+            m_read_index -= capacity;
         }
         m_size -= count;
     }
