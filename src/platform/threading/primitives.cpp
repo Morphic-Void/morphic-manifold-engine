@@ -105,26 +105,7 @@ std::uint32_t query_hardware_thread_count_windows() noexcept
         dwCount = info.dwNumberOfProcessors;
     }
 
-    return (dwCount != 0u) ? static_cast<std::uint32_t>(dwCount) : 1u;
-}
-
-#elif defined(THREADING_PLATFORM_APPLE)
-
-std::uint32_t query_hardware_thread_count_macos() noexcept
-{
-    static const char* const k_query_names[3] = { "hw.activecpu", "hw.logicalcpu", "hw.ncpu" };
-
-    for (int i = 0; i < 3; ++i)
-    {   //  only supporting 32-bit return values
-        std::uint32_t count = 0u;
-        std::size_t size = sizeof(count);
-        if ((sysctlbyname(k_query_names[i], &count, &size, nullptr, 0) == 0) && (size == sizeof(count)) && (count != 0u))
-        {
-            return count;
-        }
-    }
-
-    return 1u;
+    return (dwCount > 0u) ? static_cast<std::uint32_t>(dwCount) : 1u;
 }
 
 #elif defined(THREADING_PLATFORM_LINUX_ANDROID)
@@ -152,7 +133,7 @@ std::uint32_t query_hardware_thread_count_linux_like() noexcept
     if (sched_getaffinity(0, sizeof(set), &set) == 0)
     {
         const std::uint32_t affinity_count = count_cpu_set(set);
-        if (affinity_count != 0u)
+        if (affinity_count > 0u)
         {
             return affinity_count;
         }
@@ -161,6 +142,25 @@ std::uint32_t query_hardware_thread_count_linux_like() noexcept
     const long online_count = sysconf(_SC_NPROCESSORS_ONLN);
 
     return (online_count > 0) ? static_cast<std::uint32_t>(online_count) : 1u;
+}
+
+#elif defined(THREADING_PLATFORM_APPLE)
+
+std::uint32_t query_hardware_thread_count_macos() noexcept
+{
+    static const char* const k_query_names[3] = { "hw.activecpu", "hw.logicalcpu", "hw.ncpu" };
+
+    for (int i = 0; i < 3; ++i)
+    {   //  only supporting 32-bit return values
+        std::uint32_t count = 0u;
+        std::size_t size = sizeof(count);
+        if ((sysctlbyname(k_query_names[i], &count, &size, nullptr, 0) == 0) && (size == sizeof(count)) && (count != 0u))
+        {
+            return count;
+        }
+    }
+
+    return 1u;
 }
 
 #endif
@@ -178,6 +178,20 @@ CPlatformThreadId query_current_thread_id_windows() noexcept
     return CPlatformThreadId{ static_cast<std::uint64_t>(id) };
 }
 
+#elif defined(THREADING_PLATFORM_LINUX_ANDROID)
+
+CPlatformThreadId query_current_thread_id_linux_like() noexcept
+{
+    const long id = ::syscall(SYS_gettid);
+
+    if (id > 0)
+    {
+        return CPlatformThreadId{ static_cast<std::uint64_t>(id) };
+    }
+
+    return CPlatformThreadId{ 0u };
+}
+
 #elif defined(THREADING_PLATFORM_APPLE)
 
 CPlatformThreadId query_current_thread_id_macos() noexcept
@@ -189,20 +203,6 @@ CPlatformThreadId query_current_thread_id_macos() noexcept
     if ((result == 0) && (id != 0u))
     {
         return CPlatformThreadId{ id };
-    }
-
-    return CPlatformThreadId{ 0u };
-}
-
-#elif defined(THREADING_PLATFORM_LINUX_ANDROID)
-
-CPlatformThreadId query_current_thread_id_linux_like() noexcept
-{
-    const long id = ::syscall(SYS_gettid);
-
-    if (id > 0)
-    {
-        return CPlatformThreadId{ static_cast<std::uint64_t>(id) };
     }
 
     return CPlatformThreadId{ 0u };
@@ -339,17 +339,19 @@ std::uint32_t query_hardware_thread_count() noexcept
 
     return internal::query_hardware_thread_count_windows();
 
-#elif defined(THREADING_PLATFORM_APPLE)
-
-    return internal::query_hardware_thread_count_macos();
-
 #elif defined(THREADING_PLATFORM_LINUX_ANDROID)
 
     return internal::query_hardware_thread_count_linux_like();
 
-#else
+#elif defined(THREADING_PLATFORM_APPLE)
+
+    return internal::query_hardware_thread_count_macos();
+
+#else   //  placeholder dummy stub for unsupported platforms
 
     return 1u;
+
+#error "threading::platform query_hardware_thread_count() is not implemented for this platform."
 
 #endif
 }
@@ -364,17 +366,19 @@ CPlatformThreadId query_current_thread_id() noexcept
 
     return internal::query_current_thread_id_windows();
 
-#elif defined(THREADING_PLATFORM_APPLE)
-
-    return internal::query_current_thread_id_macos();
-
 #elif defined(THREADING_PLATFORM_LINUX_ANDROID)
 
     return internal::query_current_thread_id_linux_like();
 
-#else
+#elif defined(THREADING_PLATFORM_APPLE)
+
+    return internal::query_current_thread_id_macos();
+
+#else   //  placeholder dummy stub for unsupported platforms
 
     return CPlatformThreadId{ 0u };
+
+#error "threading::platform query_current_thread_id() is not implemented for this platform."
 
 #endif
 }
@@ -428,17 +432,37 @@ void wake_all_waiters(const std::atomic<std::uint32_t>* const word) noexcept
     (void)internal::futex_wake_private(address, INT_MAX);
 }
 
-#elif defined(THREADING_PLATFORM_APPLE)
+#else   //  placeholder dummy stubs for unsupported platforms
 
-#error "threading::platform atomic wait word primitives are not implemented for macOS in phase 1."
+void wait_while_equal(const std::atomic<std::uint32_t>* const word, const std::uint32_t expected) noexcept
+{
+    (void)word;
+    (void)expected;
+}
+
+void wake_one_waiter(const std::atomic<std::uint32_t>* const word) noexcept
+{
+    (void)word;
+}
+
+void wake_all_waiters(const std::atomic<std::uint32_t>* const word) noexcept
+{
+    (void)word;
+}
+
+#if defined(THREADING_PLATFORM_APPLE)
+
+#error "threading::platform atomic wait/wake is not implemented for macOS in phase 1."
 
 #elif defined(THREADING_PLATFORM_ANDROID_ONLY)
 
-#error "threading::platform atomic wait word primitives are not implemented for Android in phase 1."
+#error "threading::platform atomic wait/wake is not implemented for Android in phase 1."
 
 #else
 
-#error "threading::platform atomic wait word primitives are not implemented for this platform."
+#error "threading::platform atomic wait/wake is not implemented for this platform."
+
+#endif
 
 #endif
 
@@ -543,6 +567,30 @@ void release_exclusive_lock(CExclusiveLock* const lock) noexcept
     //  Failure indicates misuse under this contract.
     (void)pthread_mutex_unlock(internal::native_exclusive_lock(lock));
 }
+
+#else   //  placeholder dummy stubs for unsupported platforms
+
+bool initialise_exclusive_lock(CExclusiveLock* const lock) noexcept
+{
+	(void)lock;
+}
+
+void destroy_exclusive_lock(CExclusiveLock* const lock) noexcept
+{
+	(void)lock;
+}
+
+void acquire_exclusive_lock(CExclusiveLock* const lock) noexcept
+{
+	(void)lock;
+}
+
+void release_exclusive_lock(CExclusiveLock* const lock) noexcept
+{
+	(void)lock;
+}
+
+#error "threading::platform exclusive lock is not implemented for this platform."
 
 #endif
 
