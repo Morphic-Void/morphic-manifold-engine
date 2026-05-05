@@ -294,6 +294,9 @@
     <ClInclude Include="include\platform\threading\primitives.hpp">
       <Filter>include\platform\threading</Filter>
     </ClInclude>
+    <ClInclude Include="include\threading\predicate_wait_helpers.hpp">
+      <Filter>include\threading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main\ManifoldEngine.cpp">
