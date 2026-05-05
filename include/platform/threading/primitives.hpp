@@ -94,6 +94,21 @@ void wake_one_waiter(const std::atomic<std::uint32_t>* word) noexcept;
 void wake_all_waiters(const std::atomic<std::uint32_t>* word) noexcept;
 
 //==============================================================================
+//  Native processor relax
+//==============================================================================
+
+//  Issues a processor-local spin-wait hint.
+//
+//  This function is for short bounded spin loops before falling back to a
+//  real blocking primitive. It may reduce power use, pipeline pressure, or
+//  sibling-thread contention on some architectures.
+//
+//  This is not a scheduler yield, sleep, wait, or synchronization operation.
+//  It does not make another thread run, does not block the calling thread,
+//  and does not provide ordering or progress guarantees.
+void processor_relax() noexcept;
+
+//==============================================================================
 //  Native exclusive locking
 //==============================================================================
 

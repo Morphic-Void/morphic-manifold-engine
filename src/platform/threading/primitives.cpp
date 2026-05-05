@@ -467,6 +467,33 @@ void wake_all_waiters(const std::atomic<std::uint32_t>* const word) noexcept
 #endif
 
 //==============================================================================
+//  Native processor relax implementation
+//==============================================================================
+
+void processor_relax() noexcept
+{
+#if defined(THREADING_PLATFORM_WINDOWS)
+
+    YieldProcessor();
+
+#elif defined(__i386__) || defined(__x86_64__)
+
+#if defined(__clang__) || defined(__GNUC__)
+    __asm__ __volatile__("pause");
+#endif
+
+#elif defined(__aarch64__) || defined(__arm__)
+
+#if defined(__clang__) || defined(__GNUC__)
+    __asm__ __volatile__("yield");
+#endif
+
+#endif
+
+//  No-op fallback.
+}
+
+//==============================================================================
 //  Native exclusive locking implementation
 //==============================================================================
 
