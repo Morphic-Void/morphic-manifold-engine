@@ -14,6 +14,9 @@
 
 #pragma once
 
+#ifndef THREADING_PRIMITIVES_HPP_INCLUDED
+#define THREADING_PRIMITIVES_HPP_INCLUDED
+
 #include <atomic>       //  std::atomic
 #include <cstdint>      //  std::uint8_t, std::uint32_t, std::uint64_t
 
@@ -134,3 +137,5 @@ void release_exclusive_lock(CExclusiveLock* const lock) noexcept;
 inline bool is_valid_exclusive_lock(const CExclusiveLock* const lock) noexcept { return (lock != nullptr) && lock->is_valid; }
 
 }   //  namespace platform::threading
+
+#endif  //  #ifndef THREADING_PRIMITIVES_HPP_INCLUDED
