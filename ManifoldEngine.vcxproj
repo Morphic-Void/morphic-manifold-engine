@@ -99,6 +99,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Synchronization.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -116,6 +117,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Synchronization.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -131,6 +133,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Synchronization.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -148,25 +151,26 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Synchronization.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\debug\debug.cpp" />
-    <ClCompile Include="src\io\codec\tga.cpp" />
-    <ClCompile Include="src\io\file\file.cpp" />
-    <ClCompile Include="src\io\file\internal\file_utils.cpp" />
-    <ClCompile Include="src\io\file\log.cpp" />
-    <ClCompile Include="src\io\path\native_path.cpp" />
+    <ClCompile Include="src\image\codec\tga.cpp" />
     <ClCompile Include="src\main\ManifoldEngine.cpp" />
     <ClCompile Include="src\memory\memory_allocation.cpp" />
-    <ClCompile Include="src\module\module_binding.cpp" />
+    <ClCompile Include="src\platform\filesystem\file.cpp" />
+    <ClCompile Include="src\platform\filesystem\internal\file_utils.cpp" />
+    <ClCompile Include="src\platform\filesystem\log.cpp" />
+    <ClCompile Include="src\platform\module\binding.cpp" />
+    <ClCompile Include="src\platform\path\native_path.cpp" />
+    <ClCompile Include="src\platform\threading\primitives.cpp" />
     <ClCompile Include="src\tests\run_tests.cpp" />
     <ClCompile Include="src\tests\TOrderedSlots_test_harness.cpp" />
     <ClCompile Include="src\tests\TOwningTransport_test_suite.cpp" />
     <ClCompile Include="src\tests\TQueueTransport_test_suite.cpp" />
     <ClCompile Include="src\tests\TRingTransport_test_suite.cpp" />
     <ClCompile Include="src\tests\TUnorderedSlots_test_harness.cpp" />
-    <ClCompile Include="src\threading\platform\primitives.cpp" />
     <ClCompile Include="src\types\fp16data_t.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -186,15 +190,16 @@
     <ClInclude Include="include\containers\TStableStorage.hpp" />
     <ClInclude Include="include\containers\TUnorderedCollection.hpp" />
     <ClInclude Include="include\debug\debug.hpp" />
-    <ClInclude Include="include\io\codec\tga.hpp" />
-    <ClInclude Include="include\io\file\file.hpp" />
-    <ClInclude Include="include\io\file\internal\file_utils.hpp" />
-    <ClInclude Include="include\io\file\log.hpp" />
-    <ClInclude Include="include\io\path\native_path.hpp" />
+    <ClInclude Include="include\image\codec\tga.hpp" />
     <ClInclude Include="include\memory\memory_allocation.hpp" />
     <ClInclude Include="include\memory\memory_primitives.hpp" />
     <ClInclude Include="include\memory\memory_typeless.hpp" />
-    <ClInclude Include="include\module\module_binding.hpp" />
+    <ClInclude Include="include\platform\filesystem\file.hpp" />
+    <ClInclude Include="include\platform\filesystem\internal\file_utils.hpp" />
+    <ClInclude Include="include\platform\filesystem\log.hpp" />
+    <ClInclude Include="include\platform\module\binding.hpp" />
+    <ClInclude Include="include\platform\path\native_path.hpp" />
+    <ClInclude Include="include\platform\threading\primitives.hpp" />
     <ClInclude Include="include\system\system_ids.hpp" />
     <ClInclude Include="include\tests\run_tests.hpp" />
     <ClInclude Include="include\tests\TOrderedSlots_test_harness.hpp" />
@@ -202,7 +207,6 @@
     <ClInclude Include="include\tests\TQueueTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TRingTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TUnorderedSlots_test_harness.hpp" />
-    <ClInclude Include="include\threading\platform\primitives.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TBulkBundle.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TOwningBundle.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TQueueBundle.hpp" />

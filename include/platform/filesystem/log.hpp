@@ -16,7 +16,7 @@
 #include <cstdarg>
 #include <cstdio>
 
-namespace io::file
+namespace platform::filesystem
 {
 
 class Log
@@ -63,6 +63,6 @@ private:
     std::FILE* m_stream = nullptr;
 };
 
-}   //  namespace io::file
+}   //  namespace platform::filesystem
 
 #endif  //  #ifndef LOG_HPP_INCLUDED

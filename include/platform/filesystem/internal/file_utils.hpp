@@ -18,9 +18,9 @@
 #define FILE_UTILS_HPP_INCLUDED
 
 #include <cstddef>      //  std::size_t
-#include "io/path/native_path.hpp"
+#include "platform/path/native_path.hpp"
 
-namespace io::file
+namespace platform::filesystem
 {
 
 enum class OpenMode : std::uint8_t { BinaryRead = 0u, BinaryWrite, BinaryAppend, TextWrite, TextAppend };
@@ -31,6 +31,6 @@ bool renameFile(const path::NativePath& src_path, const path::NativePath& dst_pa
 bool flushToDisk(std::FILE* const handle) noexcept;
 std::size_t getFileSize(std::FILE* const handle, const std::size_t pad = 0) noexcept;
 
-}   //  namespace io::file
+}   //  namespace platform::filesystem
 
 #endif  //  #ifndef FILE_UTILS_HPP_INCLUDED

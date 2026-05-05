@@ -2,7 +2,7 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   module_binding.cpp
+//  File:   binding.cpp
 //  Author: Ritchie Brannan
 //  Date:   25 Apr 26
 //
@@ -12,7 +12,7 @@
 //
 //  Module (DLL/SO/DYLIB) binding (load/query/unload)
 
-#include "module/module_binding.hpp"
+#include "platform/module/binding.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
     #ifndef WIN32_LEAN_AND_MEAN
@@ -26,7 +26,7 @@
     #include <dlfcn.h>
 #endif
 
-namespace module_binding
+namespace platform::module
 {
 
 const char* getModulesStdExt() noexcept
@@ -41,7 +41,7 @@ const char* getModulesStdExt() noexcept
     return k_ext;
 }
 
-CPlatformModule bindModule(const io::path::NativePath& path) noexcept
+CPlatformModule bindModule(const platform::path::NativePath& path) noexcept
 {
     CPlatformModule module;
 
@@ -107,4 +107,4 @@ bool unbindModule(CPlatformModule& module) noexcept
     return success;
 }
 
-}   //  namespace module_binding
+}   //  namespace platform::module

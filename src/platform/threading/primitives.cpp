@@ -16,7 +16,7 @@
 #include <cstddef>      //  std::size_t
 #include <cstdint>      //  std::uint8_t, std::uint32_t, std::uint64_t
 
-#include "threading/platform/primitives.hpp"
+#include "platform/threading/primitives.hpp"
 
 //==============================================================================
 //  Platform support defines
@@ -82,7 +82,7 @@
 //  Implementation
 //==============================================================================
 
-namespace threading::platform
+namespace platform::threading
 {
 
 namespace internal
@@ -546,4 +546,4 @@ void release_exclusive_lock(CExclusiveLock* const lock) noexcept
 
 #endif
 
-}   //  namespace threading::platform
+}   //  namespace platform::threading

@@ -2,7 +2,7 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   module_binding.hpp
+//  File:   binding.hpp
 //  Author: Ritchie Brannan
 //  Date:   25 Apr 26
 //
@@ -19,18 +19,18 @@
 #ifndef MODULE_BINDING_HPP_INCLUDED
 #define MODULE_BINDING_HPP_INCLUDED
 
-#include "io/path/native_path.hpp"
+#include "platform/path/native_path.hpp"
 
-namespace module_binding
+namespace platform::module
 {
 
 struct CPlatformModule { void* native_handle = nullptr; };
 
 const char* getModulesStdExt() noexcept;
-CPlatformModule bindModule(const io::path::NativePath& path) noexcept;
+CPlatformModule bindModule(const platform::path::NativePath& path) noexcept;
 void* findModuleSymbol(const CPlatformModule& module, const char* const symbol_name) noexcept;
 bool unbindModule(CPlatformModule& module) noexcept;
 
-}   //  namespace module_binding
+}   //  namespace platform::module
 
 #endif  //  #ifndef MODULE_BINDING_HPP_INCLUDED

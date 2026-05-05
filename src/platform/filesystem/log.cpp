@@ -8,11 +8,11 @@
 //
 //  Basic log file class
 
-#include "io/file/log.hpp"
-#include "io/file/internal/file_utils.hpp"
-#include "io/path/native_path.hpp"
+#include "platform/filesystem/log.hpp"
+#include "platform/filesystem/internal/file_utils.hpp"
+#include "platform/path/native_path.hpp"
 
-namespace io::file
+namespace platform::filesystem
 {
 
 bool Log::open(const char* utf8_path, const bool append) noexcept
@@ -72,4 +72,4 @@ void Log::close() noexcept
     }
 }
 
-}	//	namespace io::file
+}	//	namespace platform::filesystem

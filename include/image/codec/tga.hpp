@@ -83,7 +83,7 @@
 
 #include "containers/ByteBuffers.hpp"
 
-namespace io::codec::tga
+namespace image::codec::tga
 {
 
 //==============================================================================
@@ -120,6 +120,6 @@ struct EncodeOptions
 CByteBuffer encode(const CByteRectConstView& view, const EncodeOptions& options) noexcept;
 CByteRectBuffer decode(const CByteConstView& view, decoded_image_desc& desc, const bool vflip = false) noexcept;
 
-}   //  namespace io::codec::tga
+}   //  namespace image::codec::tga
 
 #endif  //  TGA_HPP_INCLUDED

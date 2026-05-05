@@ -12,7 +12,7 @@
 //  - Requires C++ 17 or greater
 //  - No exceptions.
 
-#include "io/file/internal/file_utils.hpp"
+#include "platform/filesystem/internal/file_utils.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
     #ifndef WIN32_LEAN_AND_MEAN
@@ -29,7 +29,7 @@
     #include <unistd.h>
 #endif
 
-namespace io::file
+namespace platform::filesystem
 {
 
 std::FILE* openFile(const path::NativePath& file_path, const OpenMode mode) noexcept
@@ -154,4 +154,4 @@ std::size_t getFileSize(std::FILE* const handle, const std::size_t pad) noexcept
     return size;
 }
 
-}   //  namespace io::file
+}   //  namespace platform::filesystem

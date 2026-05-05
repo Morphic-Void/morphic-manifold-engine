@@ -13,3 +13,8 @@ Threading support primitives:
 9. Implement native thread creation wrapper
 10. Implement minimal thread start trampoline
 11. Add smoke/stress tests around each layer
+
+Random tasks:
+Reorganise all the cross-platform support into the platform directories
+Move the tga support into image/codec/
+Add the tga testing

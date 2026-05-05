@@ -17,7 +17,7 @@
 #include <atomic>       //  std::atomic
 #include <cstdint>      //  std::uint8_t, std::uint32_t, std::uint64_t
 
-namespace threading::platform
+namespace platform::threading
 {
 
 //==============================================================================
@@ -133,4 +133,4 @@ void release_exclusive_lock(CExclusiveLock* const lock) noexcept;
 // Returns whether the wrapper currently contains a live native lock.
 inline bool is_valid_exclusive_lock(const CExclusiveLock* const lock) noexcept { return (lock != nullptr) && lock->is_valid; }
 
-}   //  namespace threading::platform
+}   //  namespace platform::threading

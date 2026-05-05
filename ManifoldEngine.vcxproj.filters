@@ -13,24 +13,6 @@
     <Filter Include="include\containers">
       <UniqueIdentifier>{621c4ddc-2685-4e96-b055-e90cdee67db0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="include\io">
-      <UniqueIdentifier>{e7144ddc-7e64-411e-8bd0-700dafe833f7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="include\io\file">
-      <UniqueIdentifier>{cd3dcbef-d844-4cb2-80cb-ce341b31bba6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\io">
-      <UniqueIdentifier>{fde9a859-61d6-47b3-a46c-549158324836}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\io\file">
-      <UniqueIdentifier>{aa97284b-8652-46d0-82bd-5e4af3a8ad10}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="include\io\file\internal">
-      <UniqueIdentifier>{eafcc249-7c8f-4344-b519-e3c765de7470}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\io\file\internal">
-      <UniqueIdentifier>{3f3507d4-df81-4755-beac-b6a631d6dda6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="include\bit_utils">
       <UniqueIdentifier>{c6f38f64-0acf-4464-b13e-ca94463c8f32}</UniqueIdentifier>
     </Filter>
@@ -103,49 +85,64 @@
     <Filter Include="include\system">
       <UniqueIdentifier>{1ef648dd-f950-48e9-8d06-f300e76e082f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="include\io\path">
-      <UniqueIdentifier>{bfc0838c-3bda-4900-8a15-7ef695805ca5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\io\path">
-      <UniqueIdentifier>{4c854f27-b06d-4ef6-bf3a-5a0d1df89e49}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\module">
-      <UniqueIdentifier>{722dd110-fedd-4a28-841a-02499b464eb7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="include\module">
-      <UniqueIdentifier>{7e3aa772-a336-49d7-a680-8de57fafa5a0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\io\codec">
-      <UniqueIdentifier>{c5f3c8eb-73ae-4308-a18c-991bc41e3915}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="include\io\codec">
-      <UniqueIdentifier>{433123b7-735f-42cd-a5bc-adf98bc059e9}</UniqueIdentifier>
-    </Filter>
     <Filter Include="docs\backlog">
       <UniqueIdentifier>{b447aee3-3045-4d9c-972f-2c78246358dd}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\threading">
       <UniqueIdentifier>{7d987152-6b93-4b7f-a705-e5e93914b562}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\threading\platform">
-      <UniqueIdentifier>{d1ad4df1-dc30-44e8-922b-101b8ed86a7c}</UniqueIdentifier>
+    <Filter Include="src\image">
+      <UniqueIdentifier>{92eab3c4-d162-4293-b08a-761241bf0548}</UniqueIdentifier>
     </Filter>
-    <Filter Include="include\threading\platform">
-      <UniqueIdentifier>{a6927567-1e58-4012-acab-5294d26fd845}</UniqueIdentifier>
+    <Filter Include="src\platform">
+      <UniqueIdentifier>{e170ffde-74b5-47ae-a7b0-5734f2efc907}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\image">
+      <UniqueIdentifier>{74ff738d-b7f7-4824-b0c4-64cc2a866da6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\platform">
+      <UniqueIdentifier>{1b4031da-8dd3-445f-b38b-774f39f02328}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\platform\filesystem">
+      <UniqueIdentifier>{7f2810d9-f2f3-423c-984c-270c7a795cd4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\platform\module">
+      <UniqueIdentifier>{30c15861-1357-4103-a49d-d6295353b694}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\platform\path">
+      <UniqueIdentifier>{312fa471-6649-488a-96d7-bbc7012fe7a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\platform\threading">
+      <UniqueIdentifier>{b10002b2-944e-4428-a3d1-df0903df0cf7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\platform\filesystem">
+      <UniqueIdentifier>{c20c021f-794f-4012-acf1-e37b7b62e3cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\platform\module">
+      <UniqueIdentifier>{0878217d-2704-420f-acc1-88c4cddf610c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\platform\path">
+      <UniqueIdentifier>{fbd5805a-7ab3-4394-a078-e34601d27f9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\platform\threading">
+      <UniqueIdentifier>{2337dde8-84d9-4262-b828-e0581a5f45f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\image\codec">
+      <UniqueIdentifier>{121b3879-e13a-43c9-a464-bcc7ac943515}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\image\codec">
+      <UniqueIdentifier>{e139fc41-d966-4f77-8cb9-f55a68168302}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\platform\filesystem\internal">
+      <UniqueIdentifier>{e4ced4a1-2dfd-4fb0-bbbd-29bb8012f70a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\platform\filesystem\internal">
+      <UniqueIdentifier>{7abcd676-9572-48ed-86e1-5292f0cfc232}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
       <Filter>include\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="include\io\file\file.hpp">
-      <Filter>include\io\file</Filter>
-    </ClInclude>
-    <ClInclude Include="include\io\file\internal\file_utils.hpp">
-      <Filter>include\io\file\internal</Filter>
-    </ClInclude>
-    <ClInclude Include="include\io\file\log.hpp">
-      <Filter>include\io\file</Filter>
     </ClInclude>
     <ClInclude Include="include\containers\StringBuffers.hpp">
       <Filter>include\containers</Filter>
@@ -276,29 +273,29 @@
     <ClInclude Include="include\threading\transports\interfaces\TBulkInterfaces.hpp">
       <Filter>include\threading\transports\interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="include\io\path\native_path.hpp">
-      <Filter>include\io\path</Filter>
+    <ClInclude Include="include\image\codec\tga.hpp">
+      <Filter>include\image\codec</Filter>
     </ClInclude>
-    <ClInclude Include="include\module\module_binding.hpp">
-      <Filter>include\module</Filter>
+    <ClInclude Include="include\platform\filesystem\file.hpp">
+      <Filter>include\platform\filesystem</Filter>
     </ClInclude>
-    <ClInclude Include="include\io\codec\tga.hpp">
-      <Filter>include\io\codec</Filter>
+    <ClInclude Include="include\platform\filesystem\log.hpp">
+      <Filter>include\platform\filesystem</Filter>
     </ClInclude>
-    <ClInclude Include="include\threading\platform\primitives.hpp">
-      <Filter>include\threading\platform</Filter>
+    <ClInclude Include="include\platform\filesystem\internal\file_utils.hpp">
+      <Filter>include\platform\filesystem\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="include\platform\module\binding.hpp">
+      <Filter>include\platform\module</Filter>
+    </ClInclude>
+    <ClInclude Include="include\platform\path\native_path.hpp">
+      <Filter>include\platform\path</Filter>
+    </ClInclude>
+    <ClInclude Include="include\platform\threading\primitives.hpp">
+      <Filter>include\platform\threading</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\io\file\file.cpp">
-      <Filter>src\io\file</Filter>
-    </ClCompile>
-    <ClCompile Include="src\io\file\internal\file_utils.cpp">
-      <Filter>src\io\file\internal</Filter>
-    </ClCompile>
-    <ClCompile Include="src\io\file\log.cpp">
-      <Filter>src\io\file</Filter>
-    </ClCompile>
     <ClCompile Include="src\main\ManifoldEngine.cpp">
       <Filter>src\main</Filter>
     </ClCompile>
@@ -329,17 +326,26 @@
     <ClCompile Include="src\tests\run_tests.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
-    <ClCompile Include="src\io\path\native_path.cpp">
-      <Filter>src\io\path</Filter>
+    <ClCompile Include="src\image\codec\tga.cpp">
+      <Filter>src\image\codec</Filter>
     </ClCompile>
-    <ClCompile Include="src\module\module_binding.cpp">
-      <Filter>src\module</Filter>
+    <ClCompile Include="src\platform\filesystem\file.cpp">
+      <Filter>src\platform\filesystem</Filter>
     </ClCompile>
-    <ClCompile Include="src\io\codec\tga.cpp">
-      <Filter>src\io\codec</Filter>
+    <ClCompile Include="src\platform\filesystem\log.cpp">
+      <Filter>src\platform\filesystem</Filter>
     </ClCompile>
-    <ClCompile Include="src\threading\platform\primitives.cpp">
-      <Filter>src\threading\platform</Filter>
+    <ClCompile Include="src\platform\filesystem\internal\file_utils.cpp">
+      <Filter>src\platform\filesystem\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\module\binding.cpp">
+      <Filter>src\platform\module</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\path\native_path.cpp">
+      <Filter>src\platform\path</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\threading\primitives.cpp">
+      <Filter>src\platform\threading</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

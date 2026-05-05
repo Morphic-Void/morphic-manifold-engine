@@ -12,7 +12,7 @@
 //  - Requires C++ 17 or greater
 //  - No exceptions.
 
-#include "io/path/native_path.hpp"
+#include "platform/path/native_path.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -29,7 +29,7 @@
 
 #include <cctype>
 
-namespace io::path
+namespace platform::path
 {
 
 NativePath makeNativePath(const char* const utf8_path) noexcept
@@ -139,4 +139,4 @@ NativePath makeTempNativePath(const NativePath& std_path) noexcept
     return tmp_path;
 }
 
-}   //  namespace io::path
+}   //  namespace platform::path

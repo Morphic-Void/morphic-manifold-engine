@@ -26,13 +26,13 @@ using native_char = wchar_t;
 using native_char = char;
 #endif
 
-namespace io::path
+namespace platform::path
 {
 
 using NativePath = TPodVector<native_char>;
 NativePath makeNativePath(const char* utf8_path) noexcept;  // UTF-8 -> native (with policy)
 NativePath makeTempNativePath(const NativePath& std_path) noexcept; // append ".tmp"
 
-}   //  namespace io::path
+}   //  namespace platform::path
 
 #endif  //  #ifndef NATIVE_PATH_HPP_INCLUDED

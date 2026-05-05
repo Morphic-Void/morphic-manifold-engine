@@ -19,7 +19,7 @@
 #include <stddef.h>
 #include "containers/ByteBuffers.hpp"
 
-namespace io::file
+namespace platform::filesystem
 {
 
 //  utf8_path is expected to be UTF-8 encoded.
@@ -34,6 +34,6 @@ CByteBuffer loadFile(const char* const utf8_path, const size_t pad = 0) noexcept
 //  On failure, best effort is made clean up partial writes.
 bool saveFile(const char* const utf8_path, const CByteView& view) noexcept;
 
-}   //  namespace io::file
+}   //  namespace platform::filesystem
 
 #endif  //  #ifndef FILE_HPP_INCLUDED

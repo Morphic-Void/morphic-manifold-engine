@@ -11,12 +11,12 @@
 //  Multi-threaded usage assumes that multiple threads will not be saving
 //  files with the same name.
 
-#include "io/file/file.hpp"
-#include "io/file/internal/file_utils.hpp"
-#include "io/path/native_path.hpp"
+#include "platform/filesystem/file.hpp"
+#include "platform/filesystem/internal/file_utils.hpp"
+#include "platform/path/native_path.hpp"
 #include "bit_utils/bit_ops.hpp"
 
-namespace io::file
+namespace platform::filesystem
 {
 
 CByteBuffer loadFile(const char* const utf8_path, const std::size_t pad) noexcept
@@ -100,4 +100,4 @@ bool saveFile(const char* const utf8_path, const CByteView& view) noexcept
     return success;
 }
 
-}	//	namespace io::file
+}	//	namespace platform::filesystem

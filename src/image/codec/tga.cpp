@@ -212,12 +212,12 @@
 #include <type_traits>  //  std::is_const_v, std::is_trivially_copyable_v
 #include <utility>      //  std::move
 
-#include "io/codec/tga.hpp"
+#include "image/codec/tga.hpp"
 #include "memory/memory_allocation.hpp"
 #include "containers/ByteBuffers.hpp"
 #include "debug/debug.hpp"
 
-namespace io::codec::tga
+namespace image::codec::tga
 {
 
 struct TGAHeader
@@ -1089,4 +1089,4 @@ CByteRectBuffer decode(const CByteConstView& view, decoded_image_desc& desc, con
     return buffer;
 }
 
-}	//	namespace io::codec
+}	//	namespace image::codec::tga
