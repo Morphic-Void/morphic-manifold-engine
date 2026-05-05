@@ -316,17 +316,15 @@ static_assert((offsetof(CExclusiveLock, storage) == 0u),
 
 static void clear_exclusive_lock(CExclusiveLock* const lock) noexcept
 {
-    if (lock == nullptr)
+    if (lock != nullptr)
     {
-        return;
-    }
+        for (std::uint8_t& clear : lock->storage)
+        {
+            clear = 0u;
+        }
 
-    for (std::uint8_t& byte : lock->storage)
-    {
-        byte = 0u;
+        lock->is_valid = false;
     }
-
-    lock->is_valid = false;
 }
 
 //==============================================================================
