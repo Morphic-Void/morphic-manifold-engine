@@ -198,6 +198,12 @@ public:
 //  Returns false if allocator replacement is currently disallowed.
 bool set_allocator(IAllocator* allocator) noexcept;
 
+//  Installs the system allocator.
+//  Modules *MUST NOT* use this function.
+//  A non-authorised system_id will fail.
+//  In a future update the system_id will be recovered directly from TLS.
+bool install_system_allocator(const std::size_t system_id) noexcept;
+
 //  Sets allocation enable state and returns the previous state.
 bool enable_allocation(const bool enable = true) noexcept;
 

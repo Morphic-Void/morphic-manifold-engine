@@ -35,6 +35,7 @@
 #include "platform/module/binding.hpp"
 #include "platform/path/native_path.hpp"
 #include "platform/threading/primitives.hpp"
+#include "system/system_ids.hpp"
 #include "image/codec/tga.hpp"
 #include "types/fp16data_t.hpp"
 #include "debug/debug.hpp"
@@ -43,6 +44,12 @@
 
 int main()
 {
-    return run_tests();
+    int ret = 0;
+    constexpr std::size_t executable_host_system_id = system_ids::make_system_id(module_ids::executable, thread_ids::host);
+    if (MV_FAIL_SAFE_ASSERT(memory::install_system_allocator(executable_host_system_id)))
+    {
+        ret = run_tests();
+    }
+    return ret;
 }
 

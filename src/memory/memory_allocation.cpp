@@ -33,6 +33,8 @@
 #include <thread>       //  std::this_thread::yield
 
 #include "memory/memory_allocation.hpp"
+#include "system/system_ids.hpp"
+#include "debug/debug.hpp"
 
 namespace memory
 {
@@ -163,12 +165,8 @@ void* byte_allocate(const std::size_t bytes, const std::size_t align) noexcept
 
     void* ptr = nullptr;
 
-    if (allocator == nullptr)
-    {   //  default allocator
-        ptr = ::operator new[](bytes, alignment_policy(align), std::nothrow);
-    }
-    else
-    {   //  custom allocator
+    if (MV_FAIL_SAFE_ASSERT(allocator != nullptr))
+    {
         ptr = allocator->byte_allocate(bytes, align);
     }
 
@@ -191,16 +189,49 @@ void byte_deallocate(void* const ptr, const std::size_t align) noexcept
 
     IAllocator* allocator = s_allocator.load(std::memory_order_acquire);
 
-    if (allocator == nullptr)
-    {   //  default allocator
-        ::operator delete[](ptr, alignment_policy(align));
-    }
-    else
-    {   //  custom allocator
+    if (MV_FAIL_SAFE_ASSERT(allocator != nullptr))
+    {
         allocator->byte_deallocate(ptr, align);
     }
 
     s_live_allocations.fetch_sub(1u, std::memory_order_acq_rel);
+}
+
+//==============================================================================
+//  Default system allocator
+//==============================================================================
+
+class CSystemAllocator : public IAllocator
+{
+public:
+    CSystemAllocator() = default;
+    ~CSystemAllocator() = default;
+
+    virtual void* byte_allocate(const std::size_t bytes, const std::size_t align) noexcept override final
+    {
+        return ::operator new[](bytes, alignment_policy(align), std::nothrow);
+    }
+
+    virtual void byte_deallocate(void* const ptr, const std::size_t align) noexcept override final
+    {
+        if (ptr != nullptr)
+        {
+            ::operator delete[](ptr, alignment_policy(align));
+        }
+    }
+};
+
+bool install_system_allocator(const std::size_t system_id) noexcept
+{
+    static CSystemAllocator allocator;
+    bool success = false;
+    if ((system_ids::get_module_id(system_id) == module_ids::executable) &&
+        (system_ids::get_thread_id(system_id) == thread_ids::host))
+    {
+        success = set_allocator(&allocator);
+    }
+    MV_HARD_ASSERT(success);
+    return success;
 }
 
 }   //  namespace memory
