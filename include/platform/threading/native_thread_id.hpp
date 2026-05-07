@@ -39,8 +39,7 @@ public:
 
     constexpr CPlatformThreadId() noexcept = default;
 
-    explicit constexpr CPlatformThreadId(const std::uint64_t value) noexcept
-        : m_value(value)
+    explicit constexpr CPlatformThreadId(const std::uint64_t value) noexcept : m_value(value)
     {
     }
 
