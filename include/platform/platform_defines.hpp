@@ -103,8 +103,7 @@
 
 #define MV_PLATFORM_APPLE_MACOS
 
-#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
-    (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140400)
+#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140400)
 #define MV_PLATFORM_APPLE_SUPPORTED
 #else
 #error "Unsupported macOS target. Requires macOS 14.4 or later."
