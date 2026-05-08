@@ -10,8 +10,9 @@
 //  This is the entry point for the host thread.
 //  Program execution begins and ends here.
 
-//  These includes are only here to check the compile state:
 #include <iostream>
+
+//  These includes are only here to check the compile state:
 #include "algo/validate_permutations.hpp"
 #include "bit_utils/bit_ops.hpp"
 #include "bit_utils/spatial_codes.hpp"
@@ -25,12 +26,12 @@
 #include "containers/TStableStorage.hpp"
 #include "containers/TOrderedCollection.hpp"
 #include "containers/TUnorderedCollection.hpp"
-#include "threading/transports/bundles/TBulkBundle.hpp"
-#include "threading/transports/bundles/TRingBundle.hpp"
-#include "threading/transports/bundles/TQueueBundle.hpp"
-#include "threading/transports/bundles/TOwningBundle.hpp"
+#include "debug/debug.hpp"
+#include "image/codec/tga.hpp"
 #include "memory/host_allocator.hpp"
 #include "memory/memory_allocation.hpp"
+#include "memory/memory_primitives.hpp"
+#include "memory/memory_typeless.hpp"
 #include "platform/filesystem/internal/file_utils.hpp"
 #include "platform/filesystem/file.hpp"
 #include "platform/filesystem/log.hpp"
@@ -38,9 +39,11 @@
 #include "platform/path/native_path.hpp"
 #include "platform/threading/platform_threading.hpp"
 #include "system/system_ids.hpp"
-#include "image/codec/tga.hpp"
+#include "threading/transports/bundles/TBulkBundle.hpp"
+#include "threading/transports/bundles/TRingBundle.hpp"
+#include "threading/transports/bundles/TQueueBundle.hpp"
+#include "threading/transports/bundles/TOwningBundle.hpp"
 #include "types/fp16data_t.hpp"
-#include "debug/debug.hpp"
 
 #include "tests/run_tests.hpp"
 
