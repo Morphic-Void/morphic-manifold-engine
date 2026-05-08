@@ -318,6 +318,9 @@
     <ClInclude Include="include\platform\threading\counting_semaphore.hpp">
       <Filter>include\platform\threading</Filter>
     </ClInclude>
+    <ClInclude Include="include\platform\threading\thread_lifetime.hpp">
+      <Filter>include\platform\threading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main\ManifoldEngine.cpp">
@@ -384,6 +387,9 @@
       <Filter>src\platform\threading</Filter>
     </ClCompile>
     <ClCompile Include="src\platform\threading\counting_semaphore.cpp">
+      <Filter>src\platform\threading</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\threading\thread_lifetime.cpp">
       <Filter>src\platform\threading</Filter>
     </ClCompile>
   </ItemGroup>

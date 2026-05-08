@@ -25,6 +25,7 @@
 #include "platform/threading/hw_thread_count.hpp"
 #include "platform/threading/native_thread_id.hpp"
 #include "platform/threading/processor_relax.hpp"
+#include "platform/threading/thread_lifetime.hpp"
 
 #if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)
 #include "platform/threading/counting_semaphore.hpp"

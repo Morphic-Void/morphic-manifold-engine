@@ -169,6 +169,7 @@
     <ClCompile Include="src\platform\threading\hw_thread_count.cpp" />
     <ClCompile Include="src\platform\threading\native_thread_id.cpp" />
     <ClCompile Include="src\platform\threading\processor_relax.cpp" />
+    <ClCompile Include="src\platform\threading\thread_lifetime.cpp" />
     <ClCompile Include="src\platform\threading\wait_word.cpp" />
     <ClCompile Include="src\tests\run_tests.cpp" />
     <ClCompile Include="src\tests\TOrderedSlots_test_harness.cpp" />
@@ -211,6 +212,7 @@
     <ClInclude Include="include\platform\threading\native_thread_id.hpp" />
     <ClInclude Include="include\platform\threading\platform_threading.hpp" />
     <ClInclude Include="include\platform\threading\processor_relax.hpp" />
+    <ClInclude Include="include\platform\threading\thread_lifetime.hpp" />
     <ClInclude Include="include\platform\threading\wait_word.hpp" />
     <ClInclude Include="include\platform\windows_include.hpp" />
     <ClInclude Include="include\system\system_ids.hpp" />
