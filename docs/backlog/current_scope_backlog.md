@@ -28,7 +28,7 @@ cleanup the platform defines
 
 wrapped phase gate, wait predicates and counter semaphore
 
-add affinity/priority and numa identity
+add affinity, priority and numa identity
 
 CStaticLookup for provisioning and other data uintptr_t based
 - then start on the initialisation and structures
