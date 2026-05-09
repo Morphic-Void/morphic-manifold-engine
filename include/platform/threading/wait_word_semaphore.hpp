@@ -43,7 +43,7 @@ namespace threading
 {
 
 //==============================================================================
-//  Counting semaphore
+//  Wait word based counting semaphore
 //==============================================================================
 
 class CWaitWordSemaphore
