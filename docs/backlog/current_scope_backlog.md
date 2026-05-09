@@ -11,15 +11,13 @@ Threading support primitives:
 9. DONE: Implement native thread creation wrapper
 10. DONE: Implement minimal thread start trampoline
 
-11. DEFERRED UNTIL PROJECT TESTABLE ON ALL SUPPORTED PLATFORMS: Add smoke/stress tests around each layer
-
 DONE: Reorganise all the cross-platform support into the platform directories
 DONE: Move the tga support into image/codec/
 DONE: convert module binding to class
 
 DONE: cleanup the platform defines
 DONE: stop leakage of platform defines
-DONE: use Linux path for Android wait word but add additional defines
+DONE: use Linux path for Android wait word but add additional defines and warnings
 
 DONE: CStaticLookup for provisioning and other data uintptr_t based
 
@@ -37,3 +35,6 @@ IN PROGRESS: Wrapped phase gate (done), wait predicates and counter semaphore
 Thread provisioning and other data access structures
 
 TLS definition
+
+11. DEFERRED UNTIL PROJECT TESTABLE ON ALL SUPPORTED PLATFORMS: Add smoke/stress tests around each layer
+
