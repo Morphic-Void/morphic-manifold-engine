@@ -39,6 +39,7 @@
 #include "platform/path/native_path.hpp"
 #include "platform/threading/platform_threading.hpp"
 #include "system/system_ids.hpp"
+#include "system/TStaticLookup.hpp"
 #include "threading/transports/bundles/TBulkBundle.hpp"
 #include "threading/transports/bundles/TRingBundle.hpp"
 #include "threading/transports/bundles/TQueueBundle.hpp"
