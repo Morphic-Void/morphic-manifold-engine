@@ -11,9 +11,6 @@
 //
 //  Low-level atomic wait/wake primitives for 32-bit wait words.
 //
-//  This header is available only when the platform provides native wait-word
-//  support.
-//
 //  The primitive functions expose platform wait-on-address style blocking over
 //  an externally owned atomic word. Wakeups are not remembered. A single wait
 //  may return spuriously or after the observed word has changed.
