@@ -12,6 +12,11 @@ Threading support primitives:
 
 DONE: Reorganise all the cross-platform support into the platform directories
 DONE: Move the tga support into image/codec/
+DONE: convert module binding to class
+
+DONE: cleanup the platform defines
+DONE: stop leakage of platform defines
+DONE: use Linux path for Android wait word but add additional defines
 
 4. IN PROGRESS - (CONSIDERING ANDROID OPTIONS): Implement wait/wake wrapper or fallback-compatible wait primitive
 6. IN PROGRESS - (IT IS NEEDED AS FALLBACK): Implement semaphore wrapper if needed
@@ -22,13 +27,9 @@ Random tasks:
 
 Add the tga testing
 
-use Linux path for Android wait word but add additional defines
-stop leakage of platform defines
-cleanup the platform defines
-
 wrapped phase gate, wait predicates and counter semaphore
 
 add affinity, priority and numa identity
 
-CStaticLookup for provisioning and other data uintptr_t based
-- then start on the initialisation and structures
+DONE: CStaticLookup for provisioning and other data uintptr_t based
+TODO: - then start on the initialisation and structures
