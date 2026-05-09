@@ -36,10 +36,6 @@
 #ifndef COUNTING_SEMAPHORE_HPP_INCLUDED
 #define COUNTING_SEMAPHORE_HPP_INCLUDED
 
-#include "platform/platform_defines.hpp"
-
-#if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)
-
 #include <atomic>       //  std::atomic
 #include <cstdint>      //  std::uint32_t
 
@@ -85,7 +81,5 @@ private:
 };
 
 }   //  namespace threading
-
-#endif  //  #if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)
 
 #endif  //  #ifndef COUNTING_SEMAPHORE_HPP_INCLUDED

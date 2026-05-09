@@ -12,22 +12,16 @@
 //  - Requires C++ 17 or greater
 //  - No exceptions.
 
-#include "platform/path/native_path.hpp"
-
-#if defined(_WIN32) || defined(_WIN64)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <Windows.h>
-#else
-//  default, assumes _POSIX_VERSION or __APPLE__ or__linux__ or similar
-#include <sys/types.h>
-#endif
-
 #include <cctype>
+
+#include "platform/path/native_path.hpp"
+#include "platform/platform_defines.hpp"
+
+#if MV_PLATFORM_WINDOWS
+    #include "platform/windows_include.hpp"
+#else   //  default, assumes _POSIX_VERSION or __APPLE__ or__linux__ or similar
+    #include <sys/types.h>
+#endif
 
 namespace platform::path
 {
@@ -70,7 +64,7 @@ NativePath makeNativePath(const char* const utf8_path) noexcept
                 {   //  directory navigation only
                     path_is_valid = false;
                 }
-#if defined(_WIN32) || defined(_WIN64)
+#if MV_PLATFORM_WINDOWS
                 else if (path_length >= 2)
                 {
                     const char path_byte0 = cpath[0];
@@ -86,7 +80,7 @@ NativePath makeNativePath(const char* const utf8_path) noexcept
                 }
 #endif
             }
-#if defined(_WIN32) || defined(_WIN64)
+#if MV_PLATFORM_WINDOWS
             if (path_is_valid)
             {
                 const int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, cpath.data(), -1, nullptr, 0);
@@ -119,14 +113,14 @@ NativePath makeTempNativePath(const NativePath& std_path) noexcept
     NativePath tmp_path;
     if (!std_path.is_empty())
     {
-#if defined(_WIN32) || defined(_WIN64)
+#if MV_PLATFORM_WINDOWS
         std::size_t tmp_length = wcslen(std_path.data()) + 5u;
 #else
         std::size_t tmp_length = strlen(std_path.data()) + 5u;
 #endif
         if (tmp_path.allocate(tmp_length))
         {
-#if defined(_WIN32) || defined(_WIN64)
+#if MV_PLATFORM_WINDOWS
             if (_snwprintf_s(tmp_path.data(), tmp_length, (tmp_length - 1), L"%s.tmp", std_path.data()) < 0)
 #else
             if (std::snprintf(tmp_path.data(), tmp_length, "%s.tmp", std_path.data()) < 0)

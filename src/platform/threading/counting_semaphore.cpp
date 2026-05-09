@@ -12,14 +12,11 @@
 //
 //  Process-local counting semaphore implementation.
 
-#include "platform/platform_defines.hpp"
-
-#if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)
-
 #include <cstdint>      //  std::uint32_t
 
 #include "platform/threading/counting_semaphore.hpp"
 #include "platform/threading/wait_word.hpp"
+#include "platform/platform_defines.hpp"
 
 namespace threading
 {
@@ -176,5 +173,3 @@ void CCountingSemaphore::signal_shutdown() noexcept
 }
 
 }   //  namespace threading
-
-#endif  //  #if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)

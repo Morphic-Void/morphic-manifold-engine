@@ -18,8 +18,9 @@
 #define NATIVE_PATH_HPP_INCLUDED
 
 #include "containers/TPodVector.hpp"
+#include "platform/platform_defines.hpp"
 
-#if defined(_WIN32) || defined(_WIN64)
+#if MV_PLATFORM_WINDOWS
 #include <wchar.h>
 using native_char = wchar_t;
 #else

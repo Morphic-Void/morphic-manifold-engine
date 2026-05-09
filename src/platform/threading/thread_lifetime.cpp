@@ -21,12 +21,12 @@
 #include "platform/platform_defines.hpp"
 #include "debug/debug.hpp"
 
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"
 #include <process.h>
 #endif
 
-#if defined(MV_PLATFORM_HAS_PTHREADS)
+#if MV_PLATFORM_HAS_PTHREADS
 #include <pthread.h>
 #endif
 
@@ -63,7 +63,7 @@ static T unpack_native_token(const std::uint64_t packed) noexcept
 
 struct ThreadEntryAccess
 {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     static unsigned __stdcall thread_entry_shim(void* const arg) noexcept
     {
@@ -75,7 +75,7 @@ struct ThreadEntryAccess
         return 0u;
     }
 
-#elif defined(MV_PLATFORM_HAS_PTHREADS)
+#elif MV_PLATFORM_HAS_PTHREADS
 
     static void* thread_entry_shim(void* const arg) noexcept
     {
@@ -144,7 +144,7 @@ bool CThread::join_and_close() noexcept
 {
     if (MV_FAIL_SAFE_ASSERT(is_valid()))
     {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
         const std::uint32_t current_thread_id = static_cast<std::uint32_t>(::GetCurrentThreadId());
         if (MV_FAIL_SAFE_ASSERT(m_windows_thread_id != current_thread_id))
         {
@@ -157,7 +157,7 @@ bool CThread::join_and_close() noexcept
                 return true;
             }
         }
-#elif defined(MV_PLATFORM_HAS_PTHREADS)
+#elif MV_PLATFORM_HAS_PTHREADS
         const pthread_t native_thread = unpack_native_token<pthread_t>(m_native_token);
         if (MV_FAIL_SAFE_ASSERT(::pthread_equal(::pthread_self(), native_thread) == 0))
         {
@@ -177,10 +177,10 @@ void CThread::close_handle() noexcept
 {
     if (is_valid())
     {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
         const HANDLE handle = unpack_native_token<HANDLE>(m_native_token);
         (void)::CloseHandle(handle);
-#elif defined(MV_PLATFORM_HAS_PTHREADS)
+#elif MV_PLATFORM_HAS_PTHREADS
         const pthread_t native_thread = unpack_native_token<pthread_t>(m_native_token);
         (void)::pthread_detach(native_thread);
 #endif
@@ -207,7 +207,7 @@ std::uint32_t CThread::run_entry() noexcept
 
 bool CThread::create_native_thread(const std::uint32_t stack_size_bytes) noexcept
 {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     static_assert((sizeof(HANDLE) <= sizeof(std::uint64_t)), "CThread native token is too small for HANDLE.");
 
@@ -226,7 +226,7 @@ bool CThread::create_native_thread(const std::uint32_t stack_size_bytes) noexcep
         return true;
     }
 
-#elif defined(MV_PLATFORM_HAS_PTHREADS)
+#elif MV_PLATFORM_HAS_PTHREADS
 
     static_assert((sizeof(pthread_t) <= sizeof(std::uint64_t)), "CThread native token is too small for pthread_t.");
 
@@ -294,7 +294,7 @@ void CThread::clear() noexcept
     m_valid = false;
 }
 
-#if !defined(MV_PLATFORM_WINDOWS) && !defined(MV_PLATFORM_HAS_PTHREADS)
+#if !MV_PLATFORM_WINDOWS && !MV_PLATFORM_HAS_PTHREADS
 
 #error "platform::threading::CThread is not implemented for this platform."
 

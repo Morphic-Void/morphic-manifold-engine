@@ -12,27 +12,24 @@
 //
 //  Low-level atomic wait/wake primitive implementation.
 
-#include "platform/platform_defines.hpp"
-
-#if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)
-
 #include <atomic>       //  std::atomic
 #include <cstdint>      //  std::uint32_t
 
 #include "platform/threading/wait_word.hpp"
+#include "platform/platform_defines.hpp"
 
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"
 #endif
 
-#if defined(MV_PLATFORM_LINUX_ONLY)
+#if MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID
 #include <limits.h>
 #include <linux/futex.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #endif
 
-#if defined(MV_PLATFORM_APPLE_SUPPORTED)
+#if MV_PLATFORM_MAC_OS
 #include <os/os_sync_wait_on_address.h>
 #endif
 
@@ -46,10 +43,6 @@ namespace platform::threading
 namespace internal
 {
 
-#if defined(MV_PLATFORM_WINDOWS) || \
-    defined(MV_PLATFORM_LINUX_ONLY) || \
-    defined(MV_PLATFORM_APPLE_SUPPORTED)
-
 static_assert((sizeof(std::atomic<std::uint32_t>) == sizeof(std::uint32_t)),
     "std::atomic<std::uint32_t> must have the same storage size as std::uint32_t.");
 
@@ -59,9 +52,7 @@ static_assert((alignof(std::atomic<std::uint32_t>) >= alignof(std::uint32_t)),
 static_assert((std::atomic<std::uint32_t>::is_always_lock_free),
     "std::atomic<std::uint32_t> must be always lock-free.");
 
-#endif
-
-#if defined(MV_PLATFORM_WINDOWS) || defined(MV_PLATFORM_APPLE_SUPPORTED)
+#if MV_PLATFORM_WINDOWS || MV_PLATFORM_MAC_OS
 
 void* wait_address_from_word(const std::atomic<std::uint32_t>& word) noexcept
 {
@@ -72,7 +63,7 @@ void* wait_address_from_word(const std::atomic<std::uint32_t>& word) noexcept
 
 #endif
 
-#if defined(MV_PLATFORM_LINUX_ONLY)
+#if MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID
 
 const std::uint32_t* futex_address_from_word(const std::atomic<std::uint32_t>& word) noexcept
 {
@@ -105,7 +96,7 @@ long futex_wake_private(const std::uint32_t* const address, const int waiter_cou
 //  Atomic wait word primitive implementations
 //==============================================================================
 
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
 void wait_while_equal(const std::atomic<std::uint32_t>& word, const std::uint32_t expected) noexcept
 {
@@ -127,7 +118,7 @@ void wake_all_waiters(const std::atomic<std::uint32_t>& word) noexcept
     WakeByAddressAll(internal::wait_address_from_word(word));
 }
 
-#elif defined(MV_PLATFORM_LINUX_ONLY)
+#elif MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID
 
 void wait_while_equal(const std::atomic<std::uint32_t>& word, const std::uint32_t expected) noexcept
 {
@@ -150,7 +141,15 @@ void wake_all_waiters(const std::atomic<std::uint32_t>& word) noexcept
     (void)internal::futex_wake_private(address, INT_MAX);
 }
 
-#elif defined(MV_PLATFORM_APPLE_SUPPORTED)
+#if MV_PLATFORM_ANDROID
+#if defined(_MSC_VER)
+#pragma message("warning: Android wait-word support is experimental and currently uses the Linux futex implementation path.")
+#else
+#warning "Android wait-word support is experimental and currently uses the Linux futex implementation path."
+#endif
+#endif
+
+#elif MV_PLATFORM_MAC_OS
 
 void wait_while_equal(const std::atomic<std::uint32_t>& word, const std::uint32_t expected) noexcept
 {
@@ -197,22 +196,7 @@ void wake_all_waiters(const std::atomic<std::uint32_t>& word) noexcept
     (void)word;
 }
 
-#if defined(MV_PLATFORM_ANDROID_ONLY)
-
-//  Android wait-word support is expected to use the Linux futex path, or a
-//  near-equivalent Android futex syscall path. It remains disabled until the
-//  implementation has been validated on target Android / Quest hardware.
-#error "platform::threading wait-word selected Android, but Android native wait-word support has not been implemented yet."
-
-#elif defined(MV_PLATFORM_APPLE) && !defined(MV_PLATFORM_APPLE_SUPPORTED)
-
-#error "platform::threading wait-word selected an Apple target that is not in the supported Apple wait-word set."
-
-#else
-
-#error "platform::threading wait-word selected a platform with no native wait-word implementation."
-
-#endif
+#error "platform::threading wait-word is not implemented for this platform."
 
 #endif
 
@@ -251,5 +235,3 @@ std::uint32_t wait_until_not_equal(const std::atomic<std::uint32_t>& word, const
 }
 
 }   //  namespace platform::threading
-
-#endif  //  #if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)

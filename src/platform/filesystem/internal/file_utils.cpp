@@ -13,15 +13,10 @@
 //  - No exceptions.
 
 #include "platform/filesystem/internal/file_utils.hpp"
+#include "platform/platform_defines.hpp"
 
-#if defined(_WIN32) || defined(_WIN64)
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #include <Windows.h>
+#if MV_PLATFORM_WINDOWS
+    #include "platform/windows_include.hpp"
     #include <io.h>
     #include <fcntl.h>
 #else   //  default, assumes _POSIX_VERSION or __APPLE__ or__linux__ or similar

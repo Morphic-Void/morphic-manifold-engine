@@ -4,7 +4,7 @@
 //
 //  File:   platform_defines.hpp
 //  Author: Ritchie Brannan
-//  Date:   7 May 26
+//  Date:   9 May 26
 //
 //  Requirements:
 //  - Requires C++17 or later.
@@ -15,13 +15,9 @@
 //
 //  This header classifies the target platform and derives coarse
 //  platform capabilities.
-// 
+//
 //  This header does NOT declare platform APIs or provide feature
 //  wrappers and these should not be added to this file.
-//
-//  Apple targets require target and availability classification
-//  headers so that unsupported Apple deployment baseline targets
-//  can be rejected at compile time.
 //
 //  Supported targets
 //  -----------------
@@ -30,17 +26,24 @@
 //  - Linux desktop.
 //
 //  Secondary:
-//  - Android is classified, but does not currently provide native
-//    wait-word support.
+//  - Android API 32 or later.
 //
 //  Tertiary:
 //  - macOS 14.4 or later.
-//  - Other Apple targets are intentionally unsupported for now.
 //
 //  Unsupported Apple targets
 //  -------------------------
 //  iOS, iPadOS, tvOS, watchOS, visionOS, simulators, and older macOS
 //  deployment targets are rejected until deliberately enabled.
+//
+//  Platform defines
+//  ----------------
+//  Exactly one MV_PLATFORM_* target define is set to 1.
+//
+//  MV_PLATFORM_WINDOWS
+//  MV_PLATFORM_LINUX
+//  MV_PLATFORM_ANDROID
+//  MV_PLATFORM_MAC_OS
 //
 //  Capability defines
 //  ------------------
@@ -50,6 +53,10 @@
 //  MV_PLATFORM_HAS_NATIVE_WAIT_WORD
 //      Target has a native 32-bit wait-by-address / wake-by-address primitive
 //      suitable for platform::threading wait-word support.
+//
+//  MV_PLATFORM_NATIVE_WAIT_WORD_EXPERIMENTAL
+//      Target is routed through native wait-word support, but the platform
+//      implementation has not yet been validated on the target devices.
 
 #pragma once
 
@@ -57,78 +64,92 @@
 #define PLATFORM_DEFINES_HPP_INCLUDED
 
 //==============================================================================
-//  Platforms
+//  Platform defaults
+//==============================================================================
+
+#define MV_PLATFORM_WINDOWS 0
+#define MV_PLATFORM_LINUX   0
+#define MV_PLATFORM_ANDROID 0
+#define MV_PLATFORM_MAC_OS  0
+
+#define MV_PLATFORM_HAS_PTHREADS                  0
+#define MV_PLATFORM_HAS_NATIVE_WAIT_WORD          0
+#define MV_PLATFORM_NATIVE_WAIT_WORD_EXPERIMENTAL 0
+
+//==============================================================================
+//  Platform classification
 //==============================================================================
 
 #if defined(_WIN32) || defined(_WIN64)
-#define MV_PLATFORM_WINDOWS
-#endif
 
-#if defined(__APPLE__) && defined(__MACH__)
-#define MV_PLATFORM_APPLE
-#endif
+#undef  MV_PLATFORM_WINDOWS
+#define MV_PLATFORM_WINDOWS 1
 
-#if defined(__linux__) && !defined(__ANDROID__)
-#define MV_PLATFORM_LINUX_ONLY
-#endif
+#elif defined(__ANDROID__)
 
-#if defined(__ANDROID__)
-#define MV_PLATFORM_ANDROID_ONLY
-#endif
+#undef  MV_PLATFORM_ANDROID
+#define MV_PLATFORM_ANDROID 1
 
-#if defined(MV_PLATFORM_LINUX_ONLY) || defined(MV_PLATFORM_ANDROID_ONLY)
-#define MV_PLATFORM_LINUX_ANDROID
-#endif
+#elif defined(__linux__)
 
-//==============================================================================
-//  Supported platforms
-//==============================================================================
+#undef  MV_PLATFORM_LINUX
+#define MV_PLATFORM_LINUX 1
 
-#if defined(MV_PLATFORM_ANDROID_ONLY)
+#elif defined(__APPLE__) && defined(__MACH__)
 
-#if defined(__ANDROID_API__) && (__ANDROID_API__ >= 32)
-#define MV_PLATFORM_ANDROID_SUPPORTED
+#undef  MV_PLATFORM_MAC_OS
+#define MV_PLATFORM_MAC_OS 1
+
 #else
+
+#error "Unsupported platform."
+
+#endif
+
+//==============================================================================
+//  Supported platform validation
+//==============================================================================
+
+#if MV_PLATFORM_ANDROID
+
+#if !defined(__ANDROID_API__) || (__ANDROID_API__ < 32)
 #error "Unsupported Android target. Requires Android API 32 or later."
 #endif
 
-#endif  //  #if defined(MV_PLATFORM_ANDROID_ONLY)
+#endif  //  #if MV_PLATFORM_ANDROID
 
-#if defined(MV_PLATFORM_APPLE)
+#if MV_PLATFORM_MAC_OS
 
 #include <Availability.h>
 #include <TargetConditionals.h>
 
-#if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+#if !defined(TARGET_OS_OSX) || !TARGET_OS_OSX
+#error "Unsupported Apple target. Only macOS 14.4 or later is currently supported."
+#endif
 
-#define MV_PLATFORM_APPLE_MACOS
-
-#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140400)
-#define MV_PLATFORM_APPLE_SUPPORTED
-#else
+#if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || (__MAC_OS_X_VERSION_MIN_REQUIRED < 140400)
 #error "Unsupported macOS target. Requires macOS 14.4 or later."
 #endif
 
-#else
-
-#error "Unsupported Apple target. Only macOS 14.4 or later is currently supported."
-
-#endif  //  #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
-
-#endif  //  #if defined(MV_PLATFORM_APPLE)
+#endif  //  #if MV_PLATFORM_MAC_OS
 
 //==============================================================================
 //  Platform capabilities
 //==============================================================================
 
-#if defined(MV_PLATFORM_APPLE) || defined(MV_PLATFORM_LINUX_ANDROID)
-#define MV_PLATFORM_HAS_PTHREADS
+#if MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID || MV_PLATFORM_MAC_OS
+#undef  MV_PLATFORM_HAS_PTHREADS
+#define MV_PLATFORM_HAS_PTHREADS 1
 #endif
 
-#if defined(MV_PLATFORM_WINDOWS) || \
-    defined(MV_PLATFORM_LINUX_ONLY) || \
-    defined(MV_PLATFORM_APPLE_SUPPORTED)
-#define MV_PLATFORM_HAS_NATIVE_WAIT_WORD
+#if MV_PLATFORM_WINDOWS || MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID || MV_PLATFORM_MAC_OS
+#undef  MV_PLATFORM_HAS_NATIVE_WAIT_WORD
+#define MV_PLATFORM_HAS_NATIVE_WAIT_WORD 1
+#endif
+
+#if MV_PLATFORM_ANDROID
+#undef  MV_PLATFORM_NATIVE_WAIT_WORD_EXPERIMENTAL
+#define MV_PLATFORM_NATIVE_WAIT_WORD_EXPERIMENTAL 1
 #endif
 
 #endif  //  #ifndef PLATFORM_DEFINES_HPP_INCLUDED

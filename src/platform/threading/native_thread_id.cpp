@@ -17,17 +17,17 @@
 #include "platform/threading/native_thread_id.hpp"
 #include "platform/platform_defines.hpp"
 
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"
 #endif
 
-#if defined(MV_PLATFORM_APPLE_SUPPORTED)
-#include <pthread.h>
-#endif
-
-#if defined(MV_PLATFORM_LINUX_ANDROID)
+#if MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID
 #include <sys/syscall.h>
 #include <unistd.h>
+#endif
+
+#if MV_PLATFORM_MAC_OS
+#include <pthread.h>
 #endif
 
 namespace platform::threading
@@ -35,11 +35,11 @@ namespace platform::threading
 
 CPlatformThreadId query_current_thread_id() noexcept
 {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     return CPlatformThreadId(static_cast<std::uint64_t>(GetCurrentThreadId()));
 
-#elif defined(MV_PLATFORM_LINUX_ANDROID)
+#elif MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID
 
     const long id = ::syscall(SYS_gettid);
 
@@ -47,7 +47,7 @@ CPlatformThreadId query_current_thread_id() noexcept
         ? CPlatformThreadId(static_cast<std::uint64_t>(id))
         : CPlatformThreadId();
 
-#elif defined(MV_PLATFORM_APPLE_SUPPORTED)
+#elif MV_PLATFORM_MAC_OS
 
     std::uint64_t id = 0u;
     const int result = pthread_threadid_np(nullptr, &id);

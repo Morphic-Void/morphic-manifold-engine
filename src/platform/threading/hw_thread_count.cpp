@@ -18,15 +18,15 @@
 #include "platform/threading/hw_thread_count.hpp"
 #include "platform/platform_defines.hpp"
 
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"
 #endif
 
-#if defined(MV_PLATFORM_APPLE_SUPPORTED)
+#if MV_PLATFORM_MAC_OS
 #include <sys/sysctl.h>
 #endif
 
-#if defined(MV_PLATFORM_LINUX_ANDROID)
+#if MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID
 #include <sched.h>
 #include <unistd.h>
 #endif
@@ -38,7 +38,7 @@ std::uint32_t query_hardware_thread_count() noexcept
 {
     std::uint32_t count = 0u;
 
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     DWORD dw_count = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
 
@@ -54,7 +54,7 @@ std::uint32_t query_hardware_thread_count() noexcept
         count = static_cast<std::uint32_t>(dw_count);
     }
 
-#elif defined(MV_PLATFORM_LINUX_ANDROID)
+#elif MV_PLATFORM_LINUX || MV_PLATFORM_ANDROID
 
     cpu_set_t set;
     CPU_ZERO(&set);
@@ -87,7 +87,7 @@ std::uint32_t query_hardware_thread_count() noexcept
         }
     }
 
-#elif defined(MV_PLATFORM_APPLE_SUPPORTED)
+#elif MV_PLATFORM_MAC_OS
 
     static const char* const k_query_names[3] =
     {

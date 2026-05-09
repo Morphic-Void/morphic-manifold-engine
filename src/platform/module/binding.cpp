@@ -13,15 +13,10 @@
 //  Module (DLL/SO/DYLIB) binding (load/query/unload)
 
 #include "platform/module/binding.hpp"
+#include "platform/platform_defines.hpp"
 
-#if defined(_WIN32) || defined(_WIN64)
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #include <Windows.h>
+#if MV_PLATFORM_WINDOWS
+    #include "platform/windows_include.hpp"
 #else
     #include <dlfcn.h>
 #endif
@@ -31,9 +26,9 @@ namespace platform::module
 
 const char* getModulesStdExt() noexcept
 {
-#if defined(_WIN32) || defined(_WIN64)
+#if MV_PLATFORM_WINDOWS
     static const char* k_ext = "dll";
-#elif defined(__APPLE__)
+#elif MV_PLATFORM_MAC_OS
     static const char* k_ext = "dylib";
 #else   //  default, assumes _POSIX_VERSION or __linux__ or similar
     static const char* k_ext = "so";
@@ -47,7 +42,7 @@ CPlatformModule bindModule(const platform::path::NativePath& path) noexcept
 
     if (!path.is_empty())
     {
-#if defined(_WIN32) || defined(_WIN64)
+#if MV_PLATFORM_WINDOWS
         HMODULE handle = LoadLibraryW(path.data());
         if (handle != nullptr)
         {
@@ -71,7 +66,7 @@ void* findModuleSymbol(const CPlatformModule& module, const char* const symbol_n
 
     if ((module.native_handle != nullptr) && (symbol_name != nullptr) && (symbol_name[0] != 0))
     {
-#if defined(_WIN32) || defined(_WIN64)
+#if MV_PLATFORM_WINDOWS
         HMODULE handle = reinterpret_cast<HMODULE>(module.native_handle);
         FARPROC proc = GetProcAddress(handle, symbol_name);
         if (proc != nullptr)

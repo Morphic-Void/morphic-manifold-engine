@@ -15,7 +15,7 @@
 #include "platform/threading/processor_relax.hpp"
 #include "platform/platform_defines.hpp"
 
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"
 #endif
 
@@ -24,7 +24,7 @@ namespace platform::threading
 
 void processor_relax() noexcept
 {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     YieldProcessor();
 

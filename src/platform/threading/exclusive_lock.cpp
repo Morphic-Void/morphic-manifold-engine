@@ -20,11 +20,11 @@
 #include "platform/platform_defines.hpp"
 #include "debug/debug.hpp"
 
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"
 #endif
 
-#if defined(MV_PLATFORM_HAS_PTHREADS)
+#if MV_PLATFORM_HAS_PTHREADS
 #include <pthread.h>
 #endif
 
@@ -190,7 +190,7 @@ void CExclusiveLock::release_owner_thread_id_gate() noexcept
 
 bool CExclusiveLock::initialise_native_lock() noexcept
 {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     static_assert((sizeof(SRWLOCK) <= k_opaque_size), "CExclusiveLock storage is too small for SRWLOCK.");
     static_assert((alignof(SRWLOCK) <= k_opaque_alignment), "CExclusiveLock alignment is too small for SRWLOCK.");
@@ -201,7 +201,7 @@ bool CExclusiveLock::initialise_native_lock() noexcept
 
     return true;
 
-#elif defined(MV_PLATFORM_HAS_PTHREADS)
+#elif MV_PLATFORM_HAS_PTHREADS
 
     static_assert((sizeof(pthread_mutex_t) <= k_opaque_size), "CExclusiveLock storage is too small for pthread_mutex_t.");
     static_assert((alignof(pthread_mutex_t) <= k_opaque_alignment), "CExclusiveLock alignment is too small for pthread_mutex_t.");
@@ -228,11 +228,11 @@ bool CExclusiveLock::initialise_native_lock() noexcept
 
 bool CExclusiveLock::destroy_native_lock() noexcept
 {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     return true;
 
-#elif defined(MV_PLATFORM_HAS_PTHREADS)
+#elif MV_PLATFORM_HAS_PTHREADS
 
     const int result = ::pthread_mutex_destroy(reinterpret_cast<pthread_mutex_t*>(m_opaque));
 
@@ -247,13 +247,13 @@ bool CExclusiveLock::destroy_native_lock() noexcept
 
 bool CExclusiveLock::acquire_native_lock() noexcept
 {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     AcquireSRWLockExclusive(reinterpret_cast<SRWLOCK*>(m_opaque));
 
     return true;
 
-#elif defined(MV_PLATFORM_HAS_PTHREADS)
+#elif MV_PLATFORM_HAS_PTHREADS
 
     const int result = ::pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(m_opaque));
 
@@ -268,13 +268,13 @@ bool CExclusiveLock::acquire_native_lock() noexcept
 
 bool CExclusiveLock::release_native_lock() noexcept
 {
-#if defined(MV_PLATFORM_WINDOWS)
+#if MV_PLATFORM_WINDOWS
 
     ReleaseSRWLockExclusive(reinterpret_cast<SRWLOCK*>(m_opaque));
 
     return true;
 
-#elif defined(MV_PLATFORM_HAS_PTHREADS)
+#elif MV_PLATFORM_HAS_PTHREADS
 
     const int result = ::pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(m_opaque));
 
@@ -296,7 +296,7 @@ void CExclusiveLock::clear() noexcept
     std::memset(m_opaque, 0, sizeof(m_opaque));
 }
 
-#if !defined(MV_PLATFORM_WINDOWS) && !defined(MV_PLATFORM_HAS_PTHREADS)
+#if !MV_PLATFORM_WINDOWS && !MV_PLATFORM_HAS_PTHREADS
 
 #error "platform::threading::CExclusiveLock is not implemented for this platform."
 

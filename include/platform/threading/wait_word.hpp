@@ -34,10 +34,6 @@
 #ifndef WAIT_WORD_HPP_INCLUDED
 #define WAIT_WORD_HPP_INCLUDED
 
-#include "platform/platform_defines.hpp"
-
-#if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)
-
 #include <atomic>       //  std::atomic
 #include <cstdint>      //  std::uint32_t
 
@@ -70,7 +66,5 @@ void wait_until_equal(const std::atomic<std::uint32_t>& word, const std::uint32_
 std::uint32_t wait_until_not_equal(const std::atomic<std::uint32_t>& word, const std::uint32_t value) noexcept;
 
 }   //  namespace platform::threading
-
-#endif  //  #if defined(MV_PLATFORM_HAS_NATIVE_WAIT_WORD)
 
 #endif  //  #ifndef WAIT_WORD_HPP_INCLUDED
