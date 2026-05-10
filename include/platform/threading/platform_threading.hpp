@@ -23,7 +23,6 @@
 #include "platform/threading/exclusive_lock.hpp"
 #include "platform/threading/hw_thread_count.hpp"
 #include "platform/threading/native_thread_id.hpp"
-#include "platform/threading/process_priority.hpp"
 #include "platform/threading/processor_relax.hpp"
 #include "platform/threading/thread_lifetime.hpp"
 #include "platform/threading/thread_priority.hpp"

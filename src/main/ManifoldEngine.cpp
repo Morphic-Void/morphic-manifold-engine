@@ -37,6 +37,7 @@
 #include "platform/filesystem/log.hpp"
 #include "platform/module/binding.hpp"
 #include "platform/path/native_path.hpp"
+#include "platform/system/process_priority.hpp"
 #include "platform/threading/platform_threading.hpp"
 #include "system/system_ids.hpp"
 #include "system/TStaticLookup.hpp"
@@ -52,12 +53,12 @@
 int main()
 {
     int ret = 0;
-    constexpr std::size_t executable_host_system_id = system_ids::make_system_id(module_ids::executable, thread_ids::host);
-    memory::IAllocator* host_allocator = memory::get_the_host_allocator(executable_host_system_id);
+    memory::IAllocator* host_allocator = memory::get_the_host_allocator(system_ids::host);
     if (MV_FAIL_SAFE_ASSERT(host_allocator != nullptr))
     {
         if (MV_FAIL_SAFE_ASSERT(memory::set_allocator(host_allocator)))
         {
+            platform::system::set_current_process_priority(platform::system::ProcessPriority::AboveNormal);
             const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();
             ret = run_tests();
         }

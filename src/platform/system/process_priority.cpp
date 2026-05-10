@@ -13,7 +13,7 @@
 //
 //  Current-process priority hint implementation.
 
-#include "platform/threading/process_priority.hpp"
+#include "platform/system/process_priority.hpp"
 #include "platform/platform_defines.hpp"
 #include "debug/debug.hpp"
 
@@ -21,14 +21,14 @@
 #include "platform/windows_include.hpp"
 #endif
 
-namespace platform::threading
+namespace platform::system
 {
 
 //==============================================================================
 //  Process priority
 //==============================================================================
 
-bool set_current_process_priority(const EProcessPriority priority) noexcept
+bool set_current_process_priority(const ProcessPriority priority) noexcept
 {
 #if MV_PLATFORM_WINDOWS
 
@@ -36,13 +36,13 @@ bool set_current_process_priority(const EProcessPriority priority) noexcept
 
     switch (priority)
     {
-        case EProcessPriority::Normal:
+        case ProcessPriority::Normal:
             native_priority = NORMAL_PRIORITY_CLASS;
             break;
-        case EProcessPriority::AboveNormal:
+        case ProcessPriority::AboveNormal:
             native_priority = ABOVE_NORMAL_PRIORITY_CLASS;
             break;
-        case EProcessPriority::High:
+        case ProcessPriority::High:
             native_priority = HIGH_PRIORITY_CLASS;
             break;
         default:
@@ -60,4 +60,4 @@ bool set_current_process_priority(const EProcessPriority priority) noexcept
 #endif
 }
 
-}   //  namespace platform::threading
+}   //  namespace platform::system

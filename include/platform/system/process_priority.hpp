@@ -30,20 +30,20 @@
 
 #include <cstdint>      //  std::uint8_t
 
-namespace platform::threading
+namespace platform::system
 {
 
 //==============================================================================
 //  Process priority
 //==============================================================================
 
-enum class EProcessPriority : std::uint8_t { Normal = 0u, AboveNormal = 1u, High = 2u };
+enum class ProcessPriority : std::uint8_t { Normal = 0u, AboveNormal = 1u, High = 2u };
 
 //  Applies a best-effort priority hint to the current process.
 //  Returns true if a native process-priority signal was applied.
 //  Returns false if the mapping is unsupported or the native call fails.
-bool set_current_process_priority(EProcessPriority priority) noexcept;
+bool set_current_process_priority(ProcessPriority priority) noexcept;
 
-}   //  namespace platform::threading
+}   //  namespace platform::system
 
 #endif  //  #ifndef PROCESS_PRIORITY_HPP_INCLUDED

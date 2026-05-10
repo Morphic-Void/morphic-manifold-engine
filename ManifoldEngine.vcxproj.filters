@@ -139,6 +139,12 @@
     <Filter Include="src\platform\filesystem\internal">
       <UniqueIdentifier>{7abcd676-9572-48ed-86e1-5292f0cfc232}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\platform\system">
+      <UniqueIdentifier>{dad96ea2-46df-46fa-810a-2434b670ddd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\platform\system">
+      <UniqueIdentifier>{cf36b9eb-f12e-4750-a1b0-84b9b8e04e5c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -327,14 +333,14 @@
     <ClInclude Include="include\system\TStaticLookup.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
-    <ClInclude Include="include\platform\threading\process_priority.hpp">
-      <Filter>include\platform\threading</Filter>
-    </ClInclude>
     <ClInclude Include="include\platform\threading\thread_priority.hpp">
       <Filter>include\platform\threading</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\alternating_parking_gate.hpp">
       <Filter>include\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="include\platform\system\process_priority.hpp">
+      <Filter>include\platform\system</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -410,14 +416,14 @@
     <ClCompile Include="src\memory\host_allocator.cpp">
       <Filter>src\memory</Filter>
     </ClCompile>
-    <ClCompile Include="src\platform\threading\process_priority.cpp">
-      <Filter>src\platform\threading</Filter>
-    </ClCompile>
     <ClCompile Include="src\platform\threading\thread_priority.cpp">
       <Filter>src\platform\threading</Filter>
     </ClCompile>
     <ClCompile Include="src\threading\alternating_parking_gate.cpp">
       <Filter>src\threading</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\system\process_priority.cpp">
+      <Filter>src\platform\system</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
