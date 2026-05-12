@@ -57,8 +57,7 @@ public:
 IAllocator* get_the_host_allocator(const std::size_t system_id) noexcept
 {
     static CSystemAllocator allocator;
-    if ((system_ids::get_module_id(system_id) == module_ids::executable) &&
-        (system_ids::get_thread_id(system_id) == thread_ids::host))
+    if (system_id == system_ids::host)
     {
         return &allocator;
     }
