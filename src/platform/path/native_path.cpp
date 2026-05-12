@@ -37,6 +37,7 @@ NativePath makeNativePath(const char* const utf8_path) noexcept
         TPodVector<char> cpath;
         if (cpath.allocate(path_length + 1u))
         {
+            (void)cpath.set_size(path_length + 1u);
             for (std::size_t byte_index = 0; byte_index <= path_length; ++byte_index)
             {
                 char byte = utf8_path[byte_index];
@@ -89,6 +90,7 @@ NativePath makeNativePath(const char* const utf8_path) noexcept
                     NativePath wpath;
                     if (wpath.allocate(static_cast<std::size_t>(wlen)))
                     {
+                        (void)wpath.set_size(static_cast<std::size_t>(wlen));
                         const int wchk = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, cpath.data(), -1, wpath.data(), wlen);
                         if (wchk == wlen)
                         {   //  success, the returned size is the wchar count INCLUDING the null terminator
@@ -120,6 +122,7 @@ NativePath makeTempNativePath(const NativePath& std_path) noexcept
 #endif
         if (tmp_path.allocate(tmp_length))
         {
+            (void)tmp_path.set_size(tmp_length);
 #if MV_PLATFORM_WINDOWS
             if (_snwprintf_s(tmp_path.data(), tmp_length, (tmp_length - 1), L"%s.tmp", std_path.data()) < 0)
 #else
