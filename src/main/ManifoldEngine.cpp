@@ -51,6 +51,27 @@
 
 #include "tests/run_tests.hpp"
 
+bool test_tga()
+{
+    bool success = false;
+    CByteBuffer loaded_tga = platform::filesystem::loadFile("d:/test_input.tga");
+    if (!loaded_tga.is_empty())
+    {
+        image::codec::tga::decoded_image_desc desc;
+        CByteRectBuffer decoded_tga = image::codec::tga::decode(loaded_tga.const_view(), desc);
+        if (!decoded_tga.is_empty())
+        {
+            image::codec::tga::EncodeOptions options;
+            CByteBuffer encoded_tga = image::codec::tga::encode(decoded_tga.const_view(), options);
+            if (!encoded_tga.is_empty())
+            {
+                success = platform::filesystem::saveFile("d:/test_output.tga", encoded_tga.const_view());
+            }
+        }
+    }
+    return success;
+}
+
 int main()
 {
     int ret = 0;
@@ -59,6 +80,7 @@ int main()
     {
         if (MV_FAIL_SAFE_ASSERT(memory::set_allocator(host_allocator)))
         {
+            //test_tga();
             platform::system::set_current_process_priority(platform::system::ProcessPriority::AboveNormal);
             const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();
             ret = run_tests();
