@@ -3,11 +3,15 @@ License: MIT (see LICENSE file in repository root)
 
 File:   manifold_engine_interim_backlog.md  
 Author: Ritchie Brannan  
-Date:   3 May 26  
+Date:   Updated 12 May 26  
 
-This represents the first run capture of the backlog after describing
-my expected "to do" list to ChatGPT who I also asked to ask me clarifying
+This represents the second run capture of the backlog.
+
+The capture was originally created by ChatGPT after describing
+my expected "to do" list to it and after having it ask me clarifying
 questions and perform some initial grouping.  
+
+Updates and maintainence of this backlog also heavily use ChatGPT.
 
 Some of the elements described here are already present, some of the questions
 listed I already have answers for.  
@@ -15,65 +19,407 @@ listed I already have answers for.
 This does represent what was in my head and in my notebooks regarding the design.  
 
 
-# Manifold Engine Backlog - Interim Capture
+# Manifold Engine Backlog - Interim Capture v2
 
-**Status:** Interim backlog capture  
-**Date:** 3 May 2026  
-**Purpose:** Local archive, stepping-off point, and backup for known Manifold Engine backlog elements.
+**Status:** Updated interim backlog  
+**Purpose:** Local archive, stepping-off point, and backup for known Manifold Engine backlog elements.  
+**Update intent:** Incorporates changes since the first interim capture, removes completed items from the active backlog, and reflects the current short-term pivot toward text ingestion and JSON infrastructure.
 
-This document is an intentionally early backlog organisation pass. It captures known required systems,
-desired components, infrastructure tasks, and higher-level future consumers. It does not attempt to fully
-solve dependency ordering, implementation design, or task decomposition.
-
-## Conventions captured
-
-- **Cross-platform baseline** means:
-  - Windows
-  - Linux
-  - macOS / OSX
-  - Android
-
-- **Host thread** means the default executable thread.
-  - It creates and tears down the system.
-  - During normal operation it acts as a service layer.
-  - Main application logic runs on a host-created application/game thread.
-
-- **Thread/module IDs** are static role/location identifiers.
-  - They do not contain generation information.
-  - They are not lifetime-validating handles.
-  - They are static throughout the codebase.
-
-- **All threads are host-created.**
-  - Native creation is provided by the platform module.
-  - Provisioning, identity, TLS, transports, and lifecycle ownership remain host responsibilities.
-
-- **Host Registry** is the ultimate owner of shared services and backing resources.
-  - It exists once.
-  - It lives on the host thread.
-  - It physically owns all standard SPSC transports.
-  - It issues opaque 64-bit handles and permissions.
-
-- **Debug reporting** does not use the standard SPSC transports.
-  - It has its own dedicated communication path, likely MPSC and atomic.
-  - It uses static thread/module IDs and TLS context.
-
-- **JSON consumes text from the low-level text ingester.**
-  - The JSON parser receives standards-compliant UTF-8.
-  - Host / Host Registry remains the ultimate source of truth for actual file paths.
-
-- **The 2-phase parking gate is only a parking mechanism.**
-  - It reduces processor load and thread pressure.
-  - It is not a correctness-bearing synchronisation primitive.
+This document remains an interim backlog. It is not a full dependency graph, schedule, or implementation design. It is a scope and work-organisation aid.
 
 ---
 
-# 1. Foundation / bootstrap
+# 0. Current direction
 
-## 1.1 Allocator bootstrap ordering
+## 0.1 Short-term focus
 
-**Type:** Required bootstrap task.
+The immediate focus is now platform-agnostic lower-layer buildout:
 
-**Purpose:** Ensure the system allocation path is installed before any system allocation, module load, registry creation, or thread creation.
+1. Low-level text ingester.
+2. JSON infrastructure.
+3. Debug system buildout in smaller interleaved slices.
+
+The JSON work extends upward architecturally, but it is a single contained pillar and is therefore suitable as the main near-term focus.
+
+## 0.2 Deferred but not abandoned
+
+Remaining threading work is deferred, not abandoned.
+
+The completed primitive layer is sufficient for now. Remaining thread provisioning, TLS, and higher thread lifecycle work naturally lead upward into larger integration, so they will resume when there is more useful functionality to connect to.
+
+## 0.3 Platform module reframing
+
+Threading support no longer lives in the platform module.
+
+The contained cross-platform threading wrappers are sufficient as the native/threading primitive layer. The platform module is now primarily for:
+
+- system/message pumps
+- HID / input device handling
+- window creation
+- popup/dialog creation
+
+Some popup creation may enter the main executable directly as part of debug infrastructure, especially for early or fatal reporting.
+
+---
+
+# 1. Completed since first interim capture
+
+These items are complete and are removed from the active backlog.
+
+## 1.1 FIFO discard-oldest / try_add work
+
+**Status:** Complete  
+**Scale:** Small/Medium  
+**Domain:** Containers
+
+Completed scope:
+
+- Added optional full-buffer insertion policy.
+- Added discard-oldest behaviour.
+- Added `try_add()` function group matching `add()`.
+- `try_add()` never overwrites.
+- Added current policy query.
+- HID-specific recovery behaviour kept out of FIFO implementation.
+
+## 1.2 Cross-platform threading primitive / thread-start tranche
+
+**Status:** Implementation complete  
+**Domain:** Threading primitives
+
+Completed implementation items:
+
+1. Defined primitive wrapper boundary.
+2. Implemented hardware thread count query.
+3. Implemented mutex wrapper.
+4. Implemented wait/wake wrapper or fallback-compatible wait primitive.
+5. Decided semaphore was needed for this layer.
+6. Implemented semaphore wrapper.
+7. Implemented 2-phase parking gate.
+8. Defined native thread entry contract.
+9. Implemented native thread creation wrapper.
+10. Implemented minimal thread start trampoline.
+
+Validation status:
+
+- Windows path has passed basic ad-hoc functional testing.
+- Formal smoke/stress testing remains open and deferred.
+
+## 1.3 Cross-platform high-performance counter
+
+**Status:** Complete  
+**Scale:** Small  
+**Domain:** Timing / profiling foundation
+
+Completed scope:
+
+- Cross-platform high-frequency counter.
+- Query current count.
+- Query counter frequency.
+- Suitable as low-level timing source for:
+  - debug
+  - profiling
+  - frame timing
+  - frame-rate display
+  - throttling layers
+
+---
+
+# 2. Active short-term backlog
+
+## 2.1 Low-level text ingester
+
+**Status:** Active / primary near-term focus  
+**Scale:** Medium  
+**Domain:** Text / encoding / source ingestion
+
+### Purpose
+
+Ingest raw text into confirmed-good UTF-8 while normalising line endings and reporting source characteristics.
+
+### Scope
+
+- Build on SuiteUTF.
+- Configurable strictness settings.
+- Most use cases use maximum strictness.
+- Always normalise line endings.
+- Produce confirmed-good UTF-8 output.
+- Produce an ingestion report.
+
+### Ingestion report should include
+
+- what was encountered
+- whether anything was corrected
+- how corrections were applied
+- line count
+- maximum line length
+- similar structural statistics
+- non-standard/deviant UTF categories detected
+
+### Non-standard UTF handling
+
+Detect and categorise:
+
+- Java-style nulls
+- overlong encodings
+- other decodable but non-standard UTF forms
+
+These categories remain associated with the ingested file for downstream policy decisions.
+
+### Consumers
+
+- JSON parser
+- source code ingestion
+- shader source ingestion
+- localisation data path
+- code generation inputs
+- tooling
+
+---
+
+## 2.2 JSON infrastructure - first pillar
+
+**Status:** Active / primary near-term focus after or alongside text ingester  
+**Scale:** Medium to Large  
+**Domain:** Structured data / schema / generation
+
+### Purpose
+
+Provide the structured-data backbone for configuration, localisation, non-fast-path state capture/reconstruction, code generation, graphics metadata, and validation.
+
+### Initial scope
+
+- JSON internal dynamic representation.
+- JSON parser.
+- JSON writer.
+- Parse diagnostics.
+
+### Parser input
+
+- Consumes text from the low-level text ingester.
+- Receives standards-compliant UTF-8.
+- May allow only minor strictness relaxation around permissive normalisation.
+- No broad JSON-extension model is currently implied.
+
+### Diagnostics
+
+JSON parse/schema diagnostics should retain:
+
+- line number
+- column number
+- JSON hierarchy context string
+
+### Later JSON layers
+
+- Schema system.
+- Structure definitions for code generation.
+- Graphics reflection metadata.
+- Validated graphics state descriptions.
+- Configuration.
+- Localisation data.
+- Non-fast-path state capture/reconstruction.
+
+---
+
+## 2.3 Debug system buildout
+
+**Status:** Active but secondary / interleaved  
+**Scale:** Medium to Large  
+**Domain:** Diagnostics / debug
+
+### Purpose
+
+Centralised diagnostic, reporting, fatal capture, and controlled shutdown support.
+
+### Current role in schedule
+
+Debug system work will occur in smaller interleaved slices, both to provide variety from text/JSON work and to support diagnostics needed by text ingestion and JSON parsing.
+
+### Ordering / lifecycle
+
+- One of the first systems created.
+- One of the last systems destroyed.
+- Must exist before any worker/application thread creation once full threading resumes.
+- Depends on thread-system reporting/topology to provision worst-case thread support.
+
+### Allocation policy
+
+- May allocate during debug-system creation.
+- After creation, performs no further allocation through the codebase allocator.
+- Contained unavoidable OS/platform allocation may be tolerated where required.
+
+### Communication model
+
+- Does not use standard SPSC transports.
+- Uses a dedicated debug communication path.
+- Likely MPSC and atomic.
+- Threads report using static thread/module IDs and TLS context once that layer exists.
+
+### Initial buildout areas
+
+- Debug report payloads.
+- Severity handling.
+- Allocation-at-create storage.
+- Initial fatal/invariant reporting path.
+- Initial safe output targets.
+- Support for text/JSON diagnostics where useful.
+
+### Later output targets
+
+- In-engine overlay.
+- Rendered UI reporting once game/editor rendering is available.
+
+---
+
+## 2.4 TGA manual testing / lightweight validation
+
+**Status:** Open  
+**Scale:** Small/Medium  
+**Domain:** Image codec validation
+
+### Current leaning
+
+Perform manual testing rather than building formal tests immediately.
+
+### Scope
+
+- Exercise representative TGA decode paths.
+- Exercise representative TGA encode paths.
+- Check format assumptions.
+- Check orientation handling.
+- Check grayscale, 24-bit, 32-bit, and RLE paths where practical.
+- Defer formal automated test suite unless manual testing exposes issues or later tooling makes it cheap.
+
+---
+
+# 3. Deferred validation backlog
+
+## 3.1 Threading primitive smoke/stress tests
+
+**Status:** Deferred  
+**Scale:** Small/Medium  
+**Domain:** Threading validation
+
+### Current status
+
+- Windows path has passed basic ad-hoc functional testing.
+- Formal smoke/stress coverage is still required.
+- Testing is deferred until the codebase can exercise at least Windows and Linux paths.
+
+### Coverage should include
+
+- hardware thread count query
+- mutex lock/unlock
+- wait/wake single
+- wait/wake all
+- semaphore acquire/release
+- 2-phase parking gate behaviour
+- native thread creation/start/exit
+- repeated initialise/destroy
+- basic failure-state handling where testable
+- cross-platform behaviour comparison between Windows and Linux
+
+---
+
+# 4. Threading / identity / provisioning backlog
+
+The primitive/native wrapper layer is complete. The remaining threading work is deferred until lower-layer text/JSON/debug prerequisites are more useful.
+
+## 4.1 Refactor module/thread IDs to separate role and sub-role/sub-identity
+
+**Status:** Open  
+**Scale:** Small/Medium  
+**Domain:** Static identity model
+
+### Purpose
+
+Refine existing static module/thread IDs to separate primary role from sub-role/sub-identity.
+
+### Scope
+
+- Preserve static role/location semantics.
+- No generation/lifetime identity implied.
+- Support more precise naming, reporting, and provisioning.
+- Feed later debug and thread provisioning structures.
+
+---
+
+## 4.2 Module, thread, and system names / ID registry
+
+**Status:** Open  
+**Scale:** Small/Medium  
+**Domain:** Diagnostics / identity metadata
+
+### Purpose
+
+Provide human-readable names for static IDs.
+
+### Scope
+
+- Module names.
+- Thread names.
+- System names.
+- ID registry for lookup and diagnostics.
+
+### Likely consumers
+
+- debug reports
+- logging
+- assertions
+- thread naming
+- profiling
+- Host Registry diagnostics
+
+---
+
+## 4.3 Thread provisioning and data access structures
+
+**Status:** Deferred  
+**Scale:** Medium  
+**Domain:** Threading tranche 2
+
+### Purpose
+
+Define the host-side data structures used to provision threads and expose per-thread data/services.
+
+### Scope
+
+- Thread provisioning records.
+- Access structures for per-thread data/services.
+- Host-created thread data made available to runtime code.
+- Shape the data model before TLS is finalised.
+
+---
+
+## 4.4 TLS definition
+
+**Status:** Deferred  
+**Scale:** Medium  
+**Domain:** Threading tranche 2
+
+### Dependency
+
+Depends on thread provisioning and data access structure decisions.
+
+### Scope
+
+- TLS template.
+- Thread-local identity access.
+- Access to provisioned per-thread data.
+- Support for debug routing and generic code access.
+
+---
+
+# 5. Foundation / bootstrap backlog
+
+## 5.1 Allocator bootstrap ordering
+
+**Status:** Open  
+**Scale:** Small  
+**Domain:** Foundation / memory bootstrap
+
+### Purpose
+
+Ensure system allocation routing is installed before any system allocation, module load, registry creation, or thread creation.
 
 ### Scope
 
@@ -90,16 +436,15 @@ This must be completed before the temporary fallback allocator can be removed.
 
 ---
 
-## 1.2 Temporary fallback allocator removal
+## 5.2 Temporary fallback allocator removal
 
-**Type:** Required memory/bootstrap hardening task.
+**Status:** Open  
+**Scale:** Small/Medium  
+**Domain:** Memory/bootstrap hardening
 
-**Purpose:** Replace the temporary low-level fallback allocator with a hard invariant/fatal debug capture path once sufficient debug support exists.
+### Purpose
 
-### Current state
-
-- Low-level memory management has a temporary fallback allocator.
-- This exists only as a development/bootstrap convenience.
+Replace the temporary fallback allocator with a hard invariant/fatal debug capture path once sufficient debug support exists.
 
 ### Target behaviour
 
@@ -110,210 +455,19 @@ Once the host-thread allocation object is installed and the debug system can rep
 - The host initiates controlled shutdown.
 - The fallback allocator is no longer a hidden recovery path.
 
-### Tasks
-
-- Preserve temporary fallback allocator only until bootstrap and debug support are ready.
-- Add invariant check for unreachable fallback use.
-- Route violation to debug fatal capture.
-- Trigger controlled host teardown.
-
 ---
 
-## 1.3 Baseline exception-free mutex
+# 6. Host ownership / registry / permissions backlog
 
-**Type:** Required pre-platform threading primitive.
+## 6.1 Host Registry
 
-**Purpose:** Provide a baseline exception-free mutex available before the platform module is loaded.
+**Status:** Later / required  
+**Scale:** Large  
+**Domain:** Host ownership / registry / permissions
 
-### Scope
+### Purpose
 
-- Lives in the pre-platform threading layer.
-- Sits alongside abstracted threading primitives such as SPSC transports.
-- May be used by the platform module as a fallback or interface-test implementation.
-- Must expose a `noexcept` interface.
-
-### Allocation policy
-
-- Should generally not allocate during initialisation.
-- Platform-native implementations may internally allocate if required.
-- Such platform allocation must remain contained and must not use the main codebase allocator.
-
-### Later clarification
-
-- Exact operations:
-  - initialise / destroy
-  - lock / unlock
-  - try-lock
-  - timed lock, if any
-
----
-
-## 1.4 Baseline 2-phase parking gate
-
-**Type:** Required fallback parking primitive.
-
-**Purpose:** Provide a minimal always-available thread parking mechanism to reduce processor load and scheduler pressure.
-
-### Model
-
-- Two mutexes.
-- Simple `0/1` phase/index state.
-- All participating threads observe the phase.
-- Controller flips/toggles the phase to release or redirect waiting threads.
-
-### Scope
-
-- Pure parking mechanism only.
-- Not a correctness-bearing synchronisation primitive.
-- Not used for ownership transfer, work publication, queue correctness, or memory ordering correctness.
-- Should wrap an already-correct polling/work loop.
-
-### Platform integration
-
-The platform module may provide better implementations using:
-
-- wait-on-address primitives
-- futex-style primitives
-- semaphores
-- other native park/wake mechanisms
-
-The platform implementation may replace the mutex-based internals or replicate the baseline behaviour.
-
----
-
-# 2. Threading / scheduling / transports
-
-## 2.1 Static system IDs
-
-**Type:** Required identity infrastructure.
-
-**Purpose:** Centrally define static role/location IDs for modules and threads.
-
-### Scope
-
-- Define one shared `system_ids`-style header.
-- Define static thread role IDs.
-- Define static module IDs.
-- IDs identify role/location only.
-- No generation or lifetime validation is implied.
-
----
-
-## 2.2 Host-created thread wrapper / core thread model
-
-**Type:** Required core threading infrastructure.
-
-**Purpose:** Define engine thread representation, TLS setup, identity, service access, and baseline transport provisioning.
-
-### Thread role model
-
-- Thread roles are fixed at compile time.
-- Some conceptual or virtual roles may share one physical thread.
-- Shared conceptual roles use the physical thread identity.
-- The system may define many possible worker roles.
-- Not all possible roles need to exist in every environment.
-
-### Host-owned creation model
-
-- All engine threads are host-created.
-- The platform module creates native threads.
-- The host provides all provisioning and host-system knowledge.
-- The host manages all thread lifecycle.
-
-### Mandatory early threads
-
-The host always creates at least:
-
-- application/game thread
-- one or two background task threads for file loading and conditioning
-
-Other systems may request additional threads, coordinated through the application thread, but the host remains the creator and owner.
-
----
-
-## 2.3 TLS template and population
-
-**Type:** Required thread wrapper subcomponent.
-
-**Purpose:** Provide thread-local identity and per-thread service access for engine code.
-
-### Scope
-
-- TLS template belongs to the thread wrapper system.
-- Host populates TLS during thread initialisation.
-- TLS provides access to the current static thread ID and relevant module/thread context.
-- Debug system uses enough thread topology information to provision support but does not own the TLS model.
-
-### Consumers
-
-- Generic engine code.
-- Debug macros/reporting.
-- Module interfaces.
-- Thread service access.
-- Transport access.
-
----
-
-## 2.4 Standard SPSC transport provisioning
-
-**Type:** Required communication infrastructure.
-
-**Purpose:** Provide baseline host-to-thread and thread-to-host SPSC communication paths.
-
-### Scope
-
-- Host provisions all thread transports.
-- Baseline transports are always provided.
-- Additional transports are provided based on the thread creation request.
-- Direct thread-to-thread transports are later optional topology support, not a first implementation task.
-
-### Host ownership
-
-- Host Registry physically owns all standard SPSC transports.
-- Temporary oversight authority may be delegated.
-- Ownership is not transferred away from the Host Registry.
-
----
-
-## 2.5 Transport endpoint identity update
-
-**Type:** Required update to existing SPSC transports.
-
-**Purpose:** Add static identity context to each transport.
-
-### Affected transports
-
-Likely includes:
-
-- `TRing`
-- `TQueue`
-- `TOwning`
-- `TBulk`
-
-### Required identity data
-
-Each transport should record or expose:
-
-- producer thread ID
-- producer module ID
-- consumer thread ID
-- consumer module ID
-- host/controller thread ID
-- host/controller module ID, where relevant
-
-### Notes
-
-The host/controller thread is usually the main engine host thread, but that responsibility may sometimes be delegated.
-
----
-
-# 3. Host ownership / registry / permissions
-
-## 3.1 Host Registry
-
-**Type:** Required core host infrastructure.
-
-**Purpose:** Single authoritative host-side registry for handles, permissions, ownership, resource lifetime, and controlled cross-thread/module access.
+Single authoritative host-side registry for handles, permissions, ownership, resource lifetime, and controlled cross-thread/module access.
 
 ### Core identity
 
@@ -338,28 +492,15 @@ The host/controller thread is usually the main engine host thread, but that resp
 
 ---
 
-## 3.2 Permissions and revocation
+## 6.2 Temporary handle-addressed host data
 
-**Type:** Host Registry subcomponent.
+**Status:** Later / required  
+**Scale:** Medium  
+**Domain:** Host services
 
-**Purpose:** Control real runtime access and lifetime, not merely debug validation.
+### Purpose
 
-### Scope
-
-- Permission records are managed by the Host Registry.
-- Permissions may be revoked.
-- Revocation may:
-  - disable interfaces
-  - move handles/resources to retirement management
-  - prevent further access through controlled interfaces
-
----
-
-## 3.3 Temporary handle-addressed host data
-
-**Type:** Host service infrastructure.
-
-**Purpose:** Support host-controlled multi-pass data handling using temporary handles.
+Support host-controlled multi-pass data handling using temporary handles.
 
 ### Example flow
 
@@ -373,318 +514,105 @@ The host/controller thread is usually the main engine host thread, but that resp
 - Host may discard or archive the raw file buffer.
 - If retained, raw data handle may be promoted into the Host Registry backing assets register.
 
-### Scope
-
-- Temporary data store.
-- Handle assignment.
-- Access permission.
-- Promotion to backing resource/asset register.
-- Retirement/discard handling.
-
 ---
 
-## 3.4 Module teardown survival
+# 7. Platform / OS integration backlog
 
-**Type:** Primary host/registry responsibility.
+Threading support is no longer part of the platform module scope.
 
-**Purpose:** Ensure resources that must survive module teardown are retained by the host system.
+## 7.1 Windows platform module
+
+**Status:** Later  
+**Scale:** Medium/Large  
+**Domain:** Platform / OS integration
 
 ### Scope
 
-- Day-one requirement.
-- Involves the Host Registry.
-- Supports safe teardown of modules.
-- Host makes policy decisions.
-- Host Registry records and enforces ownership/lifetime state.
+- Windows message/system pump.
+- HID ingestion.
+- Window creation.
+- Popup/dialog support where appropriate.
+- Rendering surface support where needed.
+
+### Out of scope
+
+- Native threading primitives.
+- Thread creation.
+- Mutex/wait/wake/semaphore wrappers.
+- Thread provisioning.
+- TLS setup.
 
 ---
 
-# 4. Diagnostics / debug
+## 7.2 Linux platform module
 
-## 4.1 Debug system
-
-**Type:** Required standalone core system.
-
-**Purpose:** Centralised diagnostic, reporting, fatal capture, and controlled shutdown support.
-
-### Ordering
-
-- One of the first systems created.
-- One of the last systems destroyed.
-- Must exist before any worker/application thread creation.
-- Depends on thread-system reporting/topology to provision worst-case thread support.
-
-### Allocation policy
-
-- May allocate during debug-system creation.
-- After creation, performs no further allocation through the codebase allocator.
-- Contained unavoidable OS/platform allocation may be tolerated where required.
-
-### Communication model
-
-- Does not use standard SPSC transports.
-- Uses dedicated debug communication path.
-- Likely MPSC and atomic.
-- Threads report using static thread/module IDs and TLS context.
-
-### Reporting scope
-
-- Error reporting.
-- Assertion/invariant failure reporting.
-- Fatal diagnostic capture.
-- Controlled shutdown trigger.
-- Fallback allocator violation reporting.
-- Thread-aware reports.
-- Module-aware reports.
-
-### Fatal handling
-
-Fatal behaviour depends on severity.
-
-If the reporting thread cannot safely continue:
-
-- debug system may block that thread
-- host is notified
-- teardown proceeds without depending on the blocked thread
-
-This should be rare; if reached, it indicates a significant invariant break requiring urgent correction.
-
-### Output targets
-
-Early safe output targets may include:
-
-- debugger output
-- console/log-style output where available
-- file output if safe
-- native popup for fatal paths, initially possibly Windows-only
-
-Later output targets:
-
-- in-engine overlay
-- rendered UI reporting once game/editor rendering is available
-
----
-
-# 5. Platform / OS integration
-
-## 5.1 Minimal executable platform shim
-
-**Type:** Required bootstrap platform support.
-
-**Purpose:** Provide only the minimal platform support built into the executable.
+**Status:** Later  
+**Scale:** Medium/Large  
+**Domain:** Platform / OS integration
 
 ### Scope
 
-There is always a minimal built-in platform shim, but not all facilities are available.
+- Linux event/system pump equivalent.
+- HID/input ingestion.
+- Window creation path.
+- Popup/dialog strategy where appropriate.
+- Rendering surface support where needed.
 
-Notably absent from the minimal shim:
+### Out of scope
 
-- thread creation
-- controller support
-- keyboard support
-- mouse support
-- hardware-device-level input use
-
----
-
-## 5.2 Platform system module
-
-**Type:** Required cross-platform service module.
-
-**Purpose:** Provide platform-specific services required by host, rendering, input, threading, and OS-facing UI behaviour.
-
-### Baseline platforms
-
-- Windows
-- Linux
-- macOS / OSX
-- Android
-
-### Core responsibilities
-
-- Windows message pump and equivalent platform event loops.
-- Native thread creation.
-- Native park/wake/semaphore primitives.
-- Native window creation for rendering.
-- Popup/dialog handling.
-- Concrete input device ingestion:
-  - controller
-  - keyboard
-  - mouse where available/applicable
-
-### Ownership boundaries
-
-- Platform module creates native threads.
-- Host provisions threads.
-- Platform module does not own host topology knowledge.
-- Concrete input ingestion belongs to the platform system.
-- Host conditions input before provisioning it to other threads.
-
-### Window/message pump
-
-Currently treated as closely coupled, especially from the Windows perspective. Final separation may be platform-driven.
-
-### Popup/dialog handling
-
-Needed for:
-
-- development
-- fatal conditions
-
-Once game/editor rendering is running, most popup-like reporting should move to the rendering system.
+- Native threading primitives.
+- Thread creation.
+- Mutex/wait/wake/semaphore wrappers.
+- Thread provisioning.
+- TLS setup.
 
 ---
 
-# 6. Text / encoding / source ingestion
+## 7.3 Main executable popup/debug path
 
-## 6.1 Low-level text ingester
+**Status:** Later / possible  
+**Scale:** Small/Medium  
+**Domain:** Debug / platform-adjacent
 
-**Type:** Required low-level infrastructure component.
+### Purpose
 
-**Purpose:** Ingest raw text into confirmed-good UTF-8 while normalising line endings and reporting source characteristics.
+Allow some popup creation directly from the main executable as part of debug infrastructure, especially for fatal paths where the platform module or rendering system may not be available.
+
+---
+
+# 8. Build and platform validation backlog
+
+## 8.1 Set up project to build on Linux
+
+**Status:** Open  
+**Scale:** Medium  
+**Domain:** Build/platform enablement
+
+### Purpose
+
+Stand up Linux build support.
 
 ### Scope
 
-- Configurable strictness settings.
-- Most use cases use maximum strictness.
-- Always normalise line endings.
-- Provide confirmed-good UTF-8 output.
-- Produce an ingestion report.
-
-### Ingestion report
-
-The report should describe:
-
-- what was encountered
-- whether anything was corrected
-- how corrections were applied
-- line count
-- maximum line length
-- similar structural statistics
-- non-standard/deviant UTF categories detected
-
-### Non-standard UTF handling
-
-Detect and categorise:
-
-- Java-style nulls
-- overlong encodings
-- other decodable but non-standard forms
-
-These categories remain associated with the ingested file for downstream policy decisions.
-
-### Purpose of metadata
-
-Allows later systems to decide whether the ingested data may enter a given path.
-
-Examples:
-
-- strict JSON parsing
-- source ingestion
-- localisation
-- tool-only handling
-- quarantine/rejection for strict consumers
+- Verify existing theoretically-Linux paths.
+- Enable basic compilation and linking.
+- Begin making Linux path testable.
+- Unlock formal Windows/Linux comparison for threading primitive tests.
+- Prepare ground for Linux platform module later.
 
 ---
 
-## 6.2 Source code ingestion
+# 9. Maths / geometry backlog
 
-**Type:** Text ingester consumer.
+## 9.1 Maths system
 
-**Purpose:** Use the same low-level ingester for source-like text.
+**Status:** Later / required  
+**Scale:** Large  
+**Domain:** Maths / geometry
 
-### Scope
+### Purpose
 
-- Source code ingestion.
-- Shader source ingestion.
-- Possible later connection back to JSON system.
-- Ingested source may be represented in JSON metadata or conditioned assets.
-
----
-
-# 7. Structured data / schema / generation
-
-## 7.1 JSON system
-
-**Type:** Large foundational structured-data system.
-
-**Purpose:** Backbone for configuration, localisation, non-fast-path state capture/reconstruction, code generation, graphics metadata, and validation.
-
-### Initial layer
-
-- JSON internal dynamic representation.
-- JSON parser.
-- JSON writer.
-
-### Parser input
-
-- Consumes text from the low-level text ingester.
-- Receives standards-compliant UTF-8.
-- May allow only minor strictness relaxation around permissive normalisation.
-- No broad JSON-extension model is implied at this stage.
-
-### Diagnostics
-
-JSON parse/schema diagnostics retain:
-
-- line number
-- column number
-- JSON hierarchy context string
-
-### Later/layered extensions
-
-- Schema system.
-- Structure definitions for code generation.
-- Graphics reflection metadata.
-- Validated graphics state descriptions.
-- Configuration.
-- Localisation data.
-- Non-fast-path state capture/reconstruction.
-
----
-
-## 7.2 File path handling in JSON
-
-**Type:** JSON/host boundary rule.
-
-**Purpose:** Clarify that JSON may contain path-like values without becoming the authoritative file path system.
-
-### Scope
-
-- JSON may include file paths.
-- JSON may include shader source code as strings.
-- JSON may include metadata that references source or asset files.
-- JSON-local path interpretation may exist.
-
-### Authority
-
-The Host / Host Registry remains the ultimate source of truth for actual file paths, permissions, canonicalisation, and resolution.
-
----
-
-## 7.3 Code generation / schema-backed structure definitions
-
-**Type:** Later JSON layer.
-
-**Purpose:** Use JSON schemas and structure definitions for generated code and reflection metadata.
-
-### Scope
-
-- Structure definitions.
-- Code generation inputs.
-- Graphics reflection support.
-- Validated graphics-state support.
-- Potential editor/tooling integration.
-
----
-
-# 8. Maths / geometry
-
-## 8.1 Maths system
-
-**Type:** Large layered maths and geometry system.
-
-**Purpose:** Provide foundational maths, geometry primitives, spatial queries, transforms, and joints.
+Provide foundational maths, geometry primitives, spatial queries, transforms, and joints.
 
 ### Low-level layer
 
@@ -699,7 +627,7 @@ The Host / Host Registry remains the ultimate source of truth for actual file pa
 
 - Circumspheres.
 - Inspheres.
-- Vector/ray collision tests against primitives:
+- Vector/ray collision tests against:
   - boxes
   - spheres
   - planes
@@ -707,18 +635,14 @@ The Host / Host Registry remains the ultimate source of truth for actual file pa
   - quads
   - similar simple primitives
 
-### Intersection results
-
-May include:
+### Intersection results may include
 
 - `t` value
 - point of intersection
 - normal at intersection
 - reflection at intersection
 
-### Penetration tests
-
-May include:
+### Penetration tests may include
 
 - penetration depth
 - shortest resolution distance
@@ -744,13 +668,17 @@ Consumers include:
 
 ---
 
-# 9. Rendering / graphics pipeline
+# 10. Rendering / graphics pipeline backlog
 
-## 9.1 Graphics pipeline conditioning and validation
+## 10.1 Graphics pipeline conditioning and validation
 
-**Type:** Graphics/tooling module; separable from day one.
+**Status:** Later / required  
+**Scale:** Large  
+**Domain:** Graphics/tooling
 
-**Purpose:** Prepare and validate graphics pipeline data for runtime and offline use.
+### Purpose
+
+Prepare and validate graphics pipeline data for runtime and offline use.
 
 ### Scope
 
@@ -772,11 +700,15 @@ The renderer should not care whether pipeline data came from:
 
 ---
 
-## 9.2 Graphics asset conditioning
+## 10.2 Graphics asset conditioning
 
-**Type:** Graphics/tooling module; separable from day one.
+**Status:** Later / required  
+**Scale:** Medium/Large  
+**Domain:** Graphics/tooling
 
-**Purpose:** Prepare graphics assets for runtime and offline use.
+### Purpose
+
+Prepare graphics assets for runtime and offline use.
 
 ### Scope
 
@@ -794,11 +726,15 @@ This must remain separable from pipeline conditioning, even if bundled together 
 
 ---
 
-## 9.3 Rendering system
+## 10.3 Rendering system
 
-**Type:** Large hot-path runtime system; swappable module.
+**Status:** Later / required  
+**Scale:** Large  
+**Domain:** Runtime rendering
 
-**Purpose:** Runtime rendering implementation.
+### Purpose
+
+Runtime rendering implementation.
 
 ### Scope
 
@@ -818,13 +754,17 @@ This must remain separable from pipeline conditioning, even if bundled together 
 
 ---
 
-# 10. Vector text / fonts / image annotation
+# 11. Vector text / fonts / image annotation backlog
 
-## 10.1 Vector text and font system
+## 11.1 Vector text and font system
 
-**Type:** Standalone glyph-oriented component.
+**Status:** Later / required  
+**Scale:** Large  
+**Domain:** Text rendering / glyphs
 
-**Purpose:** Main user-facing text system for editor and game, also used by debug and prototyping.
+### Purpose
+
+Main user-facing text system for editor and game, also used by debug and prototyping.
 
 ### Consumers
 
@@ -848,11 +788,15 @@ This is not part of the general text manipulation system. It is primarily glyph-
 
 ---
 
-## 10.2 Image-buffer drawing/view layer
+## 11.2 Image-buffer drawing/view layer
 
-**Type:** Supporting image annotation component.
+**Status:** Later / required  
+**Scale:** Medium  
+**Domain:** Image annotation
 
-**Purpose:** Provide a simple view over existing rect byte buffers as images.
+### Purpose
+
+Provide a simple view over existing rect byte buffers as images.
 
 ### Supported buffer formats
 
@@ -874,13 +818,17 @@ This is not part of the general text manipulation system. It is primarily glyph-
 
 ---
 
-# 11. Localisation / Katakana
+# 12. Localisation / Katakana backlog
 
-## 11.1 Localisation system
+## 12.1 Localisation system
 
-**Type:** Significant engine system.
+**Status:** Later / required  
+**Scale:** Medium/Large  
+**Domain:** Localisation
 
-**Purpose:** Localised content handling, backed by JSON from the start.
+### Purpose
+
+Localised content handling, backed by JSON from the start.
 
 ### Scope
 
@@ -891,11 +839,15 @@ This is not part of the general text manipulation system. It is primarily glyph-
 
 ---
 
-## 11.2 Dedicated Katakana handling system
+## 12.2 Dedicated Katakana handling system
 
-**Type:** Small specialised UTF-8 processing component.
+**Status:** Later / desired/specialised  
+**Scale:** Small  
+**Domain:** UTF-8 text conditioning
 
-**Purpose:** Provide narrow Katakana-specific string conditioning.
+### Purpose
+
+Provide narrow Katakana-specific string conditioning.
 
 ### Scope
 
@@ -907,109 +859,132 @@ This is not part of the general text manipulation system. It is primarily glyph-
 
 ---
 
-# 12. Tooling / editor-facing infrastructure
+# 13. Tooling / codebase hygiene backlog
 
-## 12.1 Offline asset pipeline
+## 13.1 Code sanitisation / codebase rule checker
 
-**Type:** Tooling infrastructure.
+**Status:** Later  
+**Scale:** Medium initially, possibly larger over time  
+**Domain:** Tooling / static-analysis-style support
 
-**Purpose:** Condition assets and metadata for runtime use.
+### Purpose
 
-### Scope
+Build a small code parser/scanner to detect unwanted language and architectural usage creeping into the codebase.
 
-- Graphics pipeline conditioning.
-- Graphics asset conditioning.
-- Spreadsheet-to-JSON localisation conditioning.
-- JSON-backed code generation.
-- Source/shader ingestion.
-- Image conditioning.
-- Asset metadata generation.
+### Initial checks
 
-### Requirement
+- detect use of `new`
+- detect use of `delete`, if not already implied
+- detect exception usage
+- detect `throw`
+- detect `try`
+- detect `catch`
+- detect exception-bearing patterns where practical
 
-Conditioned runtime data should match the shape of data produced by on-demand runtime conditioning so runtime consumers do not care where it originated.
+### Supported invariants
+
+- no exceptions
+- no general `new` / `delete`
+- allocation through the controlled memory layer
+- module/host boundary discipline
+
+### Likely later expansion
+
+- undesirable code crossing module boundaries
+- undesirable data crossing module boundaries
+- misuse of host services
+- incorrect ownership transfer patterns
+- direct access where controlled interfaces are required
+- forbidden includes in specific layers
+- dependency direction violations
+- accidental use of disallowed standard library facilities
+
+### Timing
+
+This should remain later backlog work because its useful shape depends on more progress in:
+
+- module interfaces
+- host service interfaces
+- module boundary rules
+- allocation rules in final form
+- exception quarantine rules, if any external SDKs require them
+- directory/layer structure
 
 ---
 
-## 12.2 Editor-facing utilities
+# 14. Higher-level consumer systems
 
-**Type:** Tool/editor infrastructure placeholder.
+These remain placeholders. They are intentionally not decomposed yet.
 
-**Purpose:** Support editor-facing rendering, text, image annotation, sketching, asset handling, and debug/prototyping workflows.
+## 14.1 Game system
 
-### Likely consumers
+**Status:** Later / placeholder  
+**Scale:** Large  
+**Domain:** Product/runtime
 
-- Vector text/font system.
-- Image-buffer drawing/view layer.
-- JSON system.
-- Maths/geometry.
-- Rendering system.
-- Graphics conditioning systems.
-- Host Registry path/resource authority.
+### Role
 
----
-
-# 13. Higher-level consumer systems
-
-These are intentionally left as placeholders in this interim document. They are distant implementation targets but should remain visible so infrastructure decisions are shaped by their eventual needs.
-
-## 13.1 Game system
-
-**Type:** High-level product/runtime system.
-
-**Role:** The actual game/application layer consuming the engine infrastructure.
+The actual game/application layer consuming engine infrastructure.
 
 ### Likely dependencies
 
-- Platform system.
-- Rendering system.
-- Maths/geometry.
-- Vector text/font system.
-- Input/human interface.
-- Threading/services.
-- JSON/config/state systems.
-- Physics system.
-- Localisation/Katakana support where needed.
+- platform system
+- rendering system
+- maths/geometry
+- vector text/font system
+- input/human interface
+- threading/services
+- JSON/config/state systems
+- physics system
+- localisation/Katakana support where needed
 
 ---
 
-## 13.2 Editor system
+## 14.2 Editor system
 
-**Type:** High-level tooling/application system.
+**Status:** Later / placeholder  
+**Scale:** Large  
+**Domain:** Tooling/application
 
-**Role:** Main authoring environment for game/world/content/tool workflows.
+### Role
+
+Main authoring environment for game/world/content/tool workflows.
 
 ### Likely dependencies
 
-- Platform/windowing/input.
-- Rendering system.
-- Vector text/font system.
-- Image annotation/sketch layer.
-- JSON system.
-- Graphics conditioning systems.
-- Asset conditioning systems.
-- Maths/geometry.
-- Host Registry/resource ownership.
-- File/path authority.
+- platform/windowing/input
+- rendering system
+- vector text/font system
+- image annotation/sketch layer
+- JSON system
+- graphics conditioning systems
+- asset conditioning systems
+- maths/geometry
+- Host Registry/resource ownership
+- file/path authority
 
 ---
 
-## 13.3 Physics system
+## 14.3 Physics system
 
-**Type:** High-level runtime/simulation system.
+**Status:** Later / placeholder  
+**Scale:** Large  
+**Domain:** Simulation
 
-**Role:** Simulation and spatial interaction system above maths/geometry primitives.
+### Role
+
+Simulation and spatial interaction system above maths/geometry primitives.
 
 ### Likely dependencies
 
-- Vector maths.
-- Transforms.
-- Joints.
-- Primitive intersection tests.
-- Penetration tests.
-- Threading/job services.
-- JSON/config/state capture.
-- Game/editor integration.
+- vector maths
+- transforms
+- joints
+- primitive intersection tests
+- penetration tests
+- threading/job services
+- JSON/config/state capture
+- game/editor integration
 
 ### Boundary
 
@@ -1017,134 +992,75 @@ Maths collision/intersection primitives are not owned by physics. Physics consum
 
 ---
 
-# 14. Current broad backlog map
+# 15. Broad backlog map
 
 ```text
-01 Foundation / bootstrap
-02 Threading / scheduling / transports
-03 Host ownership / registry / permissions
-04 Diagnostics / debug
-05 Platform / OS integration
-06 Text / encoding / source ingestion
-07 Structured data / schema / generation
-08 Maths / geometry
-09 Rendering / graphics pipeline
-10 Vector text / fonts / image annotation
-11 Localisation / Katakana
-12 Tooling / editor-facing infrastructure
-13 Higher-level consumer systems
+01 Current direction
+02 Completed since first interim capture
+03 Active short-term backlog
+04 Deferred validation backlog
+05 Threading / identity / provisioning backlog
+06 Foundation / bootstrap backlog
+07 Host ownership / registry / permissions backlog
+08 Platform / OS integration backlog
+09 Build and platform validation backlog
+10 Maths / geometry backlog
+11 Rendering / graphics pipeline backlog
+12 Vector text / fonts / image annotation backlog
+13 Localisation / Katakana backlog
+14 Tooling / codebase hygiene backlog
+15 Higher-level consumer systems
 ```
 
 ---
 
-# 15. Known unresolved areas for later passes
+# 16. Suggested next working passes
 
-The following are intentionally not resolved in this interim capture.
+## Pass A: Text ingester implementation slice
 
-## Dependency ordering
-
-- Full bootstrap dependency chain.
-- Thread/debug/registry creation order.
-- Platform module load sequence.
-- Rendering/platform/window creation sequence.
-- Offline asset pipeline dependency graph.
-
-## Task decomposition
-
-Large systems still need decomposition into buildable milestones:
-
-- JSON system.
-- Maths system.
-- Host Registry.
-- Debug system.
-- Platform system.
-- Rendering system.
-- Graphics conditioning systems.
-- Vector text/font system.
-- Physics system.
-- Editor system.
-- Game system.
-
-## Interfaces and data models
-
-Still to define:
-
-- Host Registry handle layout and permission record format.
-- TLS structure.
-- Debug report payload format.
-- SPSC transport endpoint descriptors.
-- Thread creation request structure.
-- JSON dynamic representation ownership model.
-- Text ingestion report format.
-- Graphics metadata schema.
-- Vector glyph representation.
-- Image-buffer drawing API.
-- Localisation JSON schema.
-
-## Build / module packaging
-
-Still to decide:
-
-- Which systems are static executable facilities.
-- Which systems are swappable modules.
-- Which systems are shared by runtime and offline tools.
-- Which modules can be bundled while remaining architecturally separable.
-
----
-
-# 16. Suggested next backlog passes
-
-## Pass A: Bootstrap dependency chain
-
-Goal: establish first safe creation order from process start to application thread creation.
+Goal: define and implement the first usable low-level text ingestion path.
 
 Likely scope:
 
-- executable platform shim
-- allocator installation
-- debug system creation
-- Host Registry creation
-- platform module load
-- thread wrapper setup
-- application thread creation
+- SuiteUTF integration boundary
+- strictness options
+- line-ending normalisation
+- ingestion report structure
+- UTF-8 validation/correction reporting
+- normalised output buffer ownership
 
-## Pass B: Threading and registry data model
+## Pass B: JSON first implementation slice
 
-Goal: define the identity, handle, transport, and lifecycle records required before implementation.
-
-Likely scope:
-
-- static system IDs
-- TLS template
-- thread role table
-- transport descriptors
-- opaque 64-bit handles
-- permissions
-- retirement backlog
-- temporary host work data
-
-## Pass C: Text / JSON first implementation slice
-
-Goal: define a concrete first implementation path for source/config/localisation ingestion.
+Goal: define and implement a minimal dynamic representation, parser, writer, and diagnostics path.
 
 Likely scope:
 
-- text ingester
-- ingestion report
-- JSON dynamic representation
-- parser/writer
-- parse diagnostics
-- initial localisation JSON path
+- JSON value representation
+- allocation/ownership model
+- parser source view over ingested text
+- writer
+- line/column diagnostics
+- hierarchy context strings
 
-## Pass D: Graphics conditioning boundary
+## Pass C: Debug support slice for text/JSON
 
-Goal: define the module boundaries between pipeline conditioning, asset conditioning, renderer, and offline tools.
+Goal: add enough debug reporting to support parser/ingester diagnostics and invariant capture.
 
 Likely scope:
 
-- API-agnostic pipeline conditioning
-- API-specific pipeline conditioning
-- API-agnostic asset conditioning
-- API-specific asset conditioning
-- JSON metadata schema
-- renderer-facing conditioned data contract
+- report payload
+- severity enum
+- safe output target
+- allocation-at-create storage
+- fatal/invariant capture path
+
+## Pass D: Linux build setup
+
+Goal: make Linux compilation/linking possible and begin validating cross-platform paths.
+
+Likely scope:
+
+- build system setup
+- include/platform define fixes
+- compile/link verification
+- later formal threading primitive smoke/stress tests
