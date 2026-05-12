@@ -37,6 +37,7 @@
 #include "platform/filesystem/log.hpp"
 #include "platform/module/binding.hpp"
 #include "platform/path/native_path.hpp"
+#include "platform/system/performance_counter.hpp"
 #include "platform/system/process_priority.hpp"
 #include "platform/threading/platform_threading.hpp"
 #include "system/system_ids.hpp"

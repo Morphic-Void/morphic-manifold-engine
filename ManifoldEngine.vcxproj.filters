@@ -351,6 +351,9 @@
     <ClInclude Include="include\platform\threading\thread_naming.hpp">
       <Filter>include\platform\threading</Filter>
     </ClInclude>
+    <ClInclude Include="include\platform\system\performance_counter.hpp">
+      <Filter>include\platform\system</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main\ManifoldEngine.cpp">
@@ -442,6 +445,9 @@
     </ClCompile>
     <ClCompile Include="src\platform\threading\thread_naming.cpp">
       <Filter>src\platform\threading</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\system\performance_counter.cpp">
+      <Filter>src\platform\system</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
