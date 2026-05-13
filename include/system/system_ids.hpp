@@ -53,14 +53,14 @@ struct TField
     static constexpr std::size_t encode_id(const std::size_t value) noexcept
     {
         return (value < k_max_id_count)
-            ? (bit_ops::spread_to_even_bits(value ^ k_payload_mask) << k_id_field_shift)
+            ? (bit_ops::spread_to_even_bits((value & k_payload_mask) ^ k_payload_mask) << k_id_field_shift)
             : std::size_t{ 0u };
     }
 
     static constexpr std::size_t decode_id(const std::size_t id) noexcept
     {
         return is_valid_id(id)
-            ? (bit_ops::pack_from_even_bits(id >> k_id_field_shift) ^ k_payload_mask)
+            ? ((bit_ops::pack_from_even_bits(id >> k_id_field_shift) ^ k_payload_mask) & k_payload_mask)
             : std::size_t{ 0u };
     }
 };
