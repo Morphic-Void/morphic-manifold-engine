@@ -162,7 +162,7 @@ inline bool TOrderedCollection<T, TKey>::is_valid() const noexcept
 template<typename T, typename TKey>
 inline bool TOrderedCollection<T, TKey>::is_empty() const noexcept
 {
-    return m_slots.is_empty();
+    return base_class::is_empty();
 }
 
 template<typename T, typename TKey>

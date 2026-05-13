@@ -86,6 +86,8 @@ protected:
 
     [[nodiscard]] bool is_initialised() const noexcept;
 
+    [[nodiscard]] bool is_empty() const noexcept;
+
     [[nodiscard]] std::uint32_t capacity() const noexcept;
     [[nodiscard]] std::uint32_t minimum_safe_capacity() const noexcept;
 
@@ -493,6 +495,12 @@ template<typename TIndex>
 inline bool TUnorderedSlots<TIndex>::is_initialised() const noexcept
 {
     return m_meta_slot_array.data() != nullptr;
+}
+
+template<typename TIndex>
+inline bool TUnorderedSlots<TIndex>::is_empty() const noexcept
+{
+    return m_loose_count == 0u;
 }
 
 template<typename TIndex>

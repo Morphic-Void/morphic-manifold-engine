@@ -147,7 +147,7 @@ inline bool TUnorderedCollection<T>::is_valid() const noexcept
 template<typename T>
 inline bool TUnorderedCollection<T>::is_empty() const noexcept
 {
-    return m_slots.is_empty();
+    return base_class::is_empty();
 }
 
 template<typename T>
