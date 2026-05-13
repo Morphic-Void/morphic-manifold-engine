@@ -114,6 +114,16 @@ void CWaitPredicate::set(const std::uint32_t value) noexcept
     m_word.store(value, std::memory_order_release);
 }
 
+void CWaitPredicate::increment() noexcept
+{
+    m_word.fetch_add(1u, std::memory_order_acq_rel);
+}
+
+void CWaitPredicate::decrement() noexcept
+{
+    m_word.fetch_sub(1u, std::memory_order_acq_rel);
+}
+
 //==============================================================================
 //  Predicate waits
 //==============================================================================

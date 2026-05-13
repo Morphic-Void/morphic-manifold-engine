@@ -66,7 +66,9 @@ public:
 
     //  Word access
     std::uint32_t get() const noexcept;
-    void set(std::uint32_t value) noexcept;
+    void set(const std::uint32_t value) noexcept;
+    void increment() noexcept;
+    void decrement() noexcept;
 
     //  Predicate waits
     void wait_until_equal(CParkingTicket& ticket, const std::uint32_t value) noexcept;
