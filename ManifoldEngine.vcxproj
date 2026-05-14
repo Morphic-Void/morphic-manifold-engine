@@ -262,6 +262,8 @@
     <ClInclude Include="include\threading\transports\interfaces\TRingInterfaces.hpp" />
     <ClInclude Include="include\types\fp16data_t.hpp" />
     <ClInclude Include="include\types\typeless.hpp" />
+    <ClInclude Include="include\types\typeless_pod.hpp" />
+    <ClInclude Include="include\types\typeless_traits.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
