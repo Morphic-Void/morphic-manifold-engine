@@ -310,16 +310,16 @@ template<typename T>
 inline bool TUnorderedCollection<T>::initialise(const std::size_t initial_slot_count, const std::size_t slots_per_buffer) noexcept
 {
     deallocate();
-    if (base_class::initialise(std::max(initial_slot_count, std::size_t{ 32u })))
+    if (base_class::initialise(std::max(static_cast<std::uint32_t>(initial_slot_count), 32u)))
     {
         if (m_storage.initialise(std::max(slots_per_buffer, std::size_t{ 32u })))
         {
             const std::size_t size = base_class::capacity();
-            if (m_slots.initialise(size))
+            if (m_slots.allocate(size))
             {
                 for (std::size_t i = 0u; i < size; ++i)
                 {
-                    m_slots.push_back({ SlotState::Unmapped, i });
+                    (void)m_slots.push_back({ SlotState::Unmapped, i });
                 }
                 return true;
             }

@@ -139,7 +139,7 @@ inline bool TStableStorage<T>::is_valid() const noexcept
         ((m_slot_capacity >> m_buffer_shift) <= m_buffer_capacity))
     {   //  core invariants hold, now check the buffer pointers
         const std::size_t used_buffer_count = buffer_count();
-        const T** const buffers = m_buffers.data();
+        T** const buffers = m_buffers.data();
         std::size_t buffer_index = 0u;
         while (buffer_index < used_buffer_count)
         {   //  check the allocation state of the allocated buffers
