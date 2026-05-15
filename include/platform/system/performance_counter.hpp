@@ -101,10 +101,7 @@ private:
 //  Delta calculation
 //==============================================================================
 
-bool calculate_perf_counter_delta(
-    const CPerfCounter begin,
-    const CPerfCounter end,
-    std::uint64_t& out_delta) noexcept;
+bool calculate_perf_counter_delta(const CPerfCounter begin, const CPerfCounter end, std::uint64_t& out_delta) noexcept;
 
 }   //  namespace platform::system
 
