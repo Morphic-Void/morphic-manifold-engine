@@ -145,6 +145,18 @@
     <Filter Include="src\platform\system">
       <UniqueIdentifier>{cf36b9eb-f12e-4750-a1b0-84b9b8e04e5c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\host">
+      <UniqueIdentifier>{cf4ee6a1-27a9-46d6-afcc-8e3e8a2b705a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\modules">
+      <UniqueIdentifier>{f7132911-4c79-4206-be87-573987054570}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\host">
+      <UniqueIdentifier>{682a690b-ab31-42ae-a796-9f0e3d8a8fab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\modules">
+      <UniqueIdentifier>{210de3cd-e8f2-4189-8c29-651432a71849}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -354,9 +366,6 @@
     <ClInclude Include="include\platform\system\performance_counter.hpp">
       <Filter>include\platform\system</Filter>
     </ClInclude>
-    <ClInclude Include="include\tests\threading_test.hpp">
-      <Filter>include\tests</Filter>
-    </ClInclude>
     <ClInclude Include="include\threading\CThreadControlState.hpp">
       <Filter>include\threading</Filter>
     </ClInclude>
@@ -371,6 +380,18 @@
     </ClInclude>
     <ClInclude Include="include\types\typeless_traits.hpp">
       <Filter>include\types</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\CPodThreadMsg.hpp">
+      <Filter>include\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="include\containers\containers.hpp">
+      <Filter>include\containers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\threading.hpp">
+      <Filter>include\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="include\host\host.hpp">
+      <Filter>include\host</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -467,8 +488,8 @@
     <ClCompile Include="src\platform\system\performance_counter.cpp">
       <Filter>src\platform\system</Filter>
     </ClCompile>
-    <ClCompile Include="src\tests\threading_test.cpp">
-      <Filter>src\tests</Filter>
+    <ClCompile Include="src\host\host.cpp">
+      <Filter>src\host</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

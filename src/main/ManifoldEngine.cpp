@@ -30,6 +30,7 @@
 #include "containers/TOrderedCollection.hpp"
 #include "containers/TUnorderedCollection.hpp"
 #include "debug/debug.hpp"
+#include "host/host.hpp"
 #include "image/codec/tga.hpp"
 #include "memory/host_allocator.hpp"
 #include "memory/memory_allocation.hpp"
@@ -86,10 +87,11 @@ int main()
     {
         if (MV_FAIL_SAFE_ASSERT(memory::set_allocator(host_allocator)))
         {
-            //test_tga();
+            //host();
             platform::system::set_current_process_priority(platform::system::EProcessPriority::AboveNormal);
             const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();
             ret = run_tests();
+            memory::set_allocator(nullptr);
         }
     }
     return ret;

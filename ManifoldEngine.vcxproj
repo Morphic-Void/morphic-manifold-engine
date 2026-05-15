@@ -156,6 +156,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\debug\debug.cpp" />
+    <ClCompile Include="src\host\host.cpp" />
     <ClCompile Include="src\image\codec\tga.cpp" />
     <ClCompile Include="src\main\ManifoldEngine.cpp" />
     <ClCompile Include="src\memory\memory_allocation.cpp" />
@@ -177,7 +178,6 @@
     <ClCompile Include="src\platform\threading\thread_priority.cpp" />
     <ClCompile Include="src\platform\threading\wait_word.cpp" />
     <ClCompile Include="src\tests\run_tests.cpp" />
-    <ClCompile Include="src\tests\threading_test.cpp" />
     <ClCompile Include="src\tests\TOrderedSlots_test_harness.cpp" />
     <ClCompile Include="src\tests\TOwningTransport_test_suite.cpp" />
     <ClCompile Include="src\tests\TQueueTransport_test_suite.cpp" />
@@ -194,6 +194,7 @@
     <ClInclude Include="include\bit_utils\bit_utils.hpp" />
     <ClInclude Include="include\bit_utils\spatial_codes.hpp" />
     <ClInclude Include="include\containers\ByteBuffers.hpp" />
+    <ClInclude Include="include\containers\containers.hpp" />
     <ClInclude Include="include\containers\slots\SlotsRankMap.hpp" />
     <ClInclude Include="include\containers\slots\TOrderedSlots.hpp" />
     <ClInclude Include="include\containers\slots\TUnorderedSlots.hpp" />
@@ -207,6 +208,7 @@
     <ClInclude Include="include\containers\TStableStorage.hpp" />
     <ClInclude Include="include\containers\TUnorderedCollection.hpp" />
     <ClInclude Include="include\debug\debug.hpp" />
+    <ClInclude Include="include\host\host.hpp" />
     <ClInclude Include="include\image\codec\tga.hpp" />
     <ClInclude Include="include\memory\memory_allocation.hpp" />
     <ClInclude Include="include\memory\host_allocator.hpp" />
@@ -234,7 +236,6 @@
     <ClInclude Include="include\system\system_ids.hpp" />
     <ClInclude Include="include\system\TStaticLookup.hpp" />
     <ClInclude Include="include\tests\run_tests.hpp" />
-    <ClInclude Include="include\tests\threading_test.hpp" />
     <ClInclude Include="include\tests\TOrderedSlots_test_harness.hpp" />
     <ClInclude Include="include\tests\TOwningTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TQueueTransport_test_suite.hpp" />
@@ -242,8 +243,10 @@
     <ClInclude Include="include\tests\TUnorderedSlots_test_harness.hpp" />
     <ClInclude Include="include\threading\CCountingSemaphore.hpp" />
     <ClInclude Include="include\threading\CParkingGate.hpp" />
+    <ClInclude Include="include\threading\CPodThreadMsg.hpp" />
     <ClInclude Include="include\threading\CThreadControlState.hpp" />
     <ClInclude Include="include\threading\CWaitPredicate.hpp" />
+    <ClInclude Include="include\threading\threading.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TBulkBundle.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TOwningBundle.hpp" />
     <ClInclude Include="include\threading\transports\bundles\TQueueBundle.hpp" />
