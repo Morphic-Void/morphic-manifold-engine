@@ -63,7 +63,11 @@ struct PodThreadMsgPayload
 //  Fixed-size non-owning POD typeless thread message
 //==============================================================================
 
-using CPodThreadMsg = TTypelessPodFor<PodThreadMsgPayload>;
+struct CPodThreadMsg
+{
+    std::int32_t async_slot = 0;
+    TTypelessPodFor<PodThreadMsgPayload> payload;
+};
 
 static_assert((sizeof(std::uintptr_t) <= sizeof(std::uint64_t)), "CPodThreadMsg requires pointer-sized values to fit in std::uint64_t.");
 
