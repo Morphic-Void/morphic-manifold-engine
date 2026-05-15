@@ -235,8 +235,8 @@ constexpr std::size_t rhi = encode_id(5u);
 constexpr std::size_t simulation = encode_id(8u);
 
 //  background tasks
-constexpr std::size_t background_file_io = encode_id(16u);
-constexpr std::size_t background_conditioning = encode_id(17u);
+constexpr std::size_t bg_file_io = encode_id(16u);
+constexpr std::size_t bg_conditioning = encode_id(17u);
 
 //  generic workers
 constexpr std::size_t jobs_worker_00 = encode_id(32u);
@@ -282,6 +282,8 @@ namespace system_ids
 {
 
 constexpr std::size_t host = make_system_id(module_ids::executable, thread_ids::host);
+constexpr std::size_t bg_file_io = make_system_id(module_ids::executable, thread_ids::bg_file_io);
+constexpr std::size_t bg_conditioning = make_system_id(module_ids::executable, thread_ids::bg_conditioning);
 constexpr std::size_t application = make_system_id(module_ids::application, thread_ids::application);
 
 }   //  namespace system_ids
