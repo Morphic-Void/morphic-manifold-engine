@@ -17,6 +17,8 @@
 #ifndef TOWNING_ENDPOINTS_HPP_INCLUDED
 #define TOWNING_ENDPOINTS_HPP_INCLUDED
 
+#include <utility>      //  std::move
+
 #include "containers/TPodVector.hpp"
 #include "threading/transports/core/TOwningTransport.hpp"
 #include "threading/transports/interfaces/TOwningInterfaces.hpp"
@@ -91,7 +93,7 @@ template<typename T>
 inline bool TOwningProducerEndpoint<T>::post(T&& src) noexcept
 {
     MV_HARD_ASSERT(m_ring != nullptr);
-    return (m_ring != nullptr) ? m_ring->post(src) : false;
+    return (m_ring != nullptr) ? m_ring->post(std::move(src)) : false;
 }
 
 template<typename T>
