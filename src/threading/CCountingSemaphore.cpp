@@ -96,8 +96,7 @@ void CCountingSemaphore::release_control() noexcept
 {
     if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control))
     {
-        const std::uint32_t previous =
-            m_count.exchange(k_control_released_count, std::memory_order_acq_rel);
+        const std::uint32_t previous = m_count.exchange(k_control_released_count, std::memory_order_acq_rel);
 
         MV_FAIL_SAFE_ASSERT(previous != k_control_released_count);
 
