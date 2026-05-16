@@ -66,6 +66,12 @@ inline bool disable_asserts() noexcept
 void hard_fail() noexcept;
 bool fail_safe(const bool success) noexcept;
 
+//==============================================================================
+//  Simple debug output
+//==============================================================================
+
+void debug_output(const char* format, ...) noexcept;
+
 }   //  namespace debug_utils
 
 #endif  //  #ifndef DEBUG_HPP_INCLUDED
