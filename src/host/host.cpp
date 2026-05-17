@@ -601,8 +601,7 @@ int host()
                             outbound_msg.async_slot = 0;
                             outbound_msg.payload.assign(forward);
                             (void)outbound_controller.outbound_msgs.post(outbound_msg);
-                            outbound_controller.wait_predicate.increment();
-                            outbound_controller.wait_predicate.wake_all_waiters();
+                            outbound_controller.wait_predicate.poke_epoch_and_wake_one();
                             break;
                         }
                         case (k_type_id_v<TgaLoadRequest>):
@@ -621,8 +620,8 @@ int host()
                             outbound_msg.async_slot = 0;
                             outbound_msg.payload.assign(file_load_request);
                             (void)outbound_controller.outbound_msgs.post(outbound_msg);
-                            outbound_controller.wait_predicate.increment();
-                            outbound_controller.wait_predicate.wake_all_waiters();
+                            outbound_controller.wait_predicate.poke_epoch_and_wake_one();
+
                             break;
                         }
                         case (k_type_id_v<TgaSaveRequest>):
@@ -643,8 +642,7 @@ int host()
                             outbound_msg.async_slot = 0;
                             outbound_msg.payload.assign(tga_encode_request);
                             (void)outbound_controller.outbound_msgs.post(outbound_msg);
-                            outbound_controller.wait_predicate.increment();
-                            outbound_controller.wait_predicate.wake_all_waiters();
+                            outbound_controller.wait_predicate.poke_epoch_and_wake_one();
                             break;
                         }
                         case (k_type_id_v<UnrecognisedMsg>):
@@ -685,8 +683,7 @@ int host()
                             outbound_msg.async_slot = 0;
                             outbound_msg.payload.assign(tga_decode_request);
                             (void)outbound_controller.outbound_msgs.post(outbound_msg);
-                            outbound_controller.wait_predicate.increment();
-                            outbound_controller.wait_predicate.wake_all_waiters();
+                            outbound_controller.wait_predicate.poke_epoch_and_wake_one();
                             break;
                         }
                         case (k_type_id_v<TgaEncodeResultOwning>):
@@ -705,8 +702,7 @@ int host()
                             outbound_msg.async_slot = 0;
                             outbound_msg.payload.assign(file_save_request);
                             (void)outbound_controller.outbound_msgs.post(outbound_msg);
-                            outbound_controller.wait_predicate.increment();
-                            outbound_controller.wait_predicate.wake_all_waiters();
+                            outbound_controller.wait_predicate.poke_epoch_and_wake_one();
                             break;
                         }
                         case (k_type_id_v<TgaDecodeResultOwning>):
@@ -726,8 +722,7 @@ int host()
                             outbound_msg.async_slot = 0;
                             outbound_msg.payload.assign(tga_load_result);
                             (void)outbound_controller.outbound_msgs.post(outbound_msg);
-                            outbound_controller.wait_predicate.increment();
-                            outbound_controller.wait_predicate.wake_all_waiters();
+                            outbound_controller.wait_predicate.poke_epoch_and_wake_one();
                             break;
                         }
                         default:
