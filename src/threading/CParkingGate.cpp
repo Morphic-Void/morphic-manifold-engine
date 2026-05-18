@@ -4,7 +4,11 @@
 //
 //  File:   CParkingGate.cpp
 //  Author: Ritchie Brannan
-//  Date:   9 May 26
+//  Date:   18 May 26
+//
+//  Requirements:
+//  - Requires C++17 or later.
+//  - No exceptions.
 
 #include "threading/CParkingGate.hpp"
 #include "platform/threading/processor_relax.hpp"
@@ -17,16 +21,14 @@ namespace threading
 //  Constructor and destructor
 //==============================================================================
 
-CParkingGate::CParkingGate() noexcept
+CParkingGate::CParkingGate() noexcept : m_state(0u)
 {
     m_valid = m_gates[0].is_valid() && m_gates[1].is_valid();
-    m_closed_phase = 0u;
-    m_has_control = false;
 }
 
 CParkingGate::~CParkingGate() noexcept
 {
-    MV_HARD_ASSERT(!m_has_control);
+    MV_HARD_ASSERT(!has_control());
 }
 
 //==============================================================================
@@ -40,7 +42,7 @@ bool CParkingGate::is_valid() const noexcept
 
 bool CParkingGate::has_control() const noexcept
 {
-    return m_has_control;
+    return (m_state.load(std::memory_order_acquire) & k_control_mask) != 0u;
 }
 
 //==============================================================================
@@ -49,23 +51,33 @@ bool CParkingGate::has_control() const noexcept
 
 bool CParkingGate::acquire_control() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && !m_has_control))
+    if (MV_FAIL_SAFE_ASSERT(m_valid))
     {
-        m_closed_phase = 0u;
-        m_gates[m_closed_phase].acquire();
-        m_has_control = true;
-        return true;
+        const std::uint32_t state = m_state.load(std::memory_order_acquire);
+        if (MV_FAIL_SAFE_ASSERT((state & k_control_mask) == 0u))
+        {   //  the gate is not controlled already so acquire it
+            const std::uint32_t closed_phase = 0u;
+            const std::uint32_t next_state = ((state + k_generation_step) & k_generation_mask) | k_control_mask | closed_phase;
+            m_gates[closed_phase].acquire();
+            m_state.store(next_state, std::memory_order_release);
+            return true;
+        }
     }
     return false;
 }
 
 void CParkingGate::release_control() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control))
+    if (MV_FAIL_SAFE_ASSERT(m_valid))
     {
-        m_gates[m_closed_phase].release();
-        m_closed_phase = 0u;
-        m_has_control = false;
+        const std::uint32_t state = m_state.load(std::memory_order_acquire);
+        if (MV_FAIL_SAFE_ASSERT((state & k_control_mask) != 0u))
+        {   //  the gate is controlled, so release it
+            const std::uint32_t closed_phase = state & k_phase_mask;
+            const std::uint32_t next_state = state & k_generation_mask;
+            m_state.store(next_state, std::memory_order_release);
+            m_gates[closed_phase].release();
+        }
     }
 }
 
@@ -77,11 +89,21 @@ void CParkingGate::park(CParkingTicket& ticket) noexcept
 {
     if (MV_FAIL_SAFE_ASSERT(m_valid))
     {
-        const std::uint32_t phase = ticket.m_phase & 1u;
-        platform::threading::processor_relax();
-        m_gates[phase].acquire();
-        m_gates[phase].release();
-        ticket.m_phase = phase ^ 1u;
+        const std::uint32_t gate_state = m_state.load(std::memory_order_acquire);
+        const std::uint32_t ticket_state = ticket.get_state();
+        const bool ticket_was_controlled = (ticket_state & k_control_mask) != 0u;
+        if (((gate_state & k_control_mask) == 0u) || (ticket_was_controlled && (((ticket_state ^ gate_state) & k_generation_mask) != 0u)))
+        {   //  gate is uncontrolled or the ticket is invalid for parking (controlled by a previous generation), update the ticket without parking
+            ticket.set_state(gate_state);
+        }
+        else
+        {   //  the gate is controlled and the ticket is valid for parking, pass through the parking gate and update the ticket
+            const std::uint32_t ticket_phase = (ticket_was_controlled ? ticket_state: gate_state) & k_phase_mask;
+            platform::threading::processor_relax();
+            m_gates[ticket_phase].acquire();
+            m_gates[ticket_phase].release();
+            ticket.set_state((gate_state & k_validation_mask) | (ticket_phase ^ k_phase_mask));
+        }
     }
 }
 
@@ -91,13 +113,18 @@ void CParkingGate::park(CParkingTicket& ticket) noexcept
 
 void CParkingGate::cycle_phase() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control))
-    {   //  Close the open phase before opening the closed phase.
-        const std::uint32_t closed_phase = m_closed_phase;
-        const std::uint32_t open_phase = closed_phase ^ 1u;
-        m_gates[open_phase].acquire();
-        m_gates[closed_phase].release();
-        m_closed_phase = open_phase;
+    if (MV_FAIL_SAFE_ASSERT(m_valid))
+    {
+        std::uint32_t state = m_state.load(std::memory_order_acquire);
+        if (MV_FAIL_SAFE_ASSERT((state & k_control_mask) != 0u))
+        {   //  the gate is controlled so safe to cycle
+            const std::uint32_t closed_phase = state & k_phase_mask;
+            const std::uint32_t open_phase = closed_phase ^ k_phase_mask;
+            state ^= k_phase_mask;
+            m_gates[open_phase].acquire();
+            m_state.store(state, std::memory_order_release);
+            m_gates[closed_phase].release();
+        }
     }
 }
 
