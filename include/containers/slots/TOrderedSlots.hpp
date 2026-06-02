@@ -3358,7 +3358,7 @@ inline bool TOrderedSlots<TIndex, TMeta>::copy_from(const TOrderedSlots& src) no
 {
     if (src.is_initialised())
     {
-        if (!m_meta_slot_array.clone(src.m_meta_slot_array, src.m_capacity))
+        if (!m_meta_slot_array.clone(src.m_meta_slot_array))
         {
             return false;
         }

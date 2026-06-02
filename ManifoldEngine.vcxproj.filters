@@ -582,6 +582,9 @@
     <None Include="docs\backlog\current_scope_backlog.md">
       <Filter>docs\backlog</Filter>
     </None>
+    <None Include="docs\memory\memory_subsystem.md">
+      <Filter>docs\memory</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE.txt" />

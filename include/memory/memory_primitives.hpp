@@ -6,72 +6,35 @@
 //  Author: Ritchie Brannan
 //  Date:   22 Feb 26
 //
-//  Requirements:
-//  - Requires C++17 or later.
-//  - No exceptions.
+//  Raw memory ownership and view primitives.
 //
-//  Raw memory ownership and view primitives for byte and typed storage.
+//  Provides:
+//  - CMemoryToken for owned byte storage;
+//  - TMemoryToken<T> for owned typed storage;
+//  - CMemoryView / CMemoryConstView for non-owning byte views;
+//  - TMemoryView<T> / TMemoryConstView<T> for non-owning typed views;
+//  - checked adoption and stealing between byte and typed forms.
 //
-//  Models address, alignment, and reinterpretation only.
-//  Does not track extent, perform bounds checking, or manage element lifetime.
+//  Does not provide:
+//  - bounds checking;
+//  - non-trivial object construction/destruction;
+//  - non-trivial relocation;
+//  - container semantics;
+//  - view-carried extent;
+//  - deep allocation accounting.
 //
-//  IMPORTANT SEMANTIC NOTES
-//  ------------------------
-//
-//  State model:
-//  - Canonical empty: {data == nullptr, align == 0}
-//  - Canonical ready: {data != nullptr, align != 0}
-//  - Broken states:
-//      {data == nullptr, align != 0}
-//      {data != nullptr, align == 0}
-//
-//  Observation model:
-//  - Pointer and align observers are fail-safe and return canonical empty
-//    for broken states
-//  - Readiness and emptiness observers are fail-safe and report
-//    not-ready / empty for broken states
-//  - Validity observers report invariant validity directly
-//
-//  Alignment model:
-//  - CMemoryToken stores normalised alignment intent
-//  - Views report guaranteed alignment of the current address and may
-//    be less than actual
-//  - Subviews may reduce alignment based on byte offset
-//  - Typed variants derive alignment from T and underlying storage
-//  - Typed subviews advance in whole T elements and preserve T alignment
-//
-//  Constness model:
-//  - const applies to the wrapper only
-//  - does not imply immutable access to referenced memory
-//  - read-only access is represented by const view types only
-//
-//  Typed model:
-//  - Typed variants reinterpret storage as tightly packed T[]
-//  - Element count is provided externally
-//  - Typed reallocation requires trivially copyable T
-//  - No construction, destruction, or non-trivial relocation
-//
-//  Adoption model:
-//  - Byte views may adopt typed views directly
-//  - Typed views may adopt byte views only when address and guaranteed
-//    alignment are compatible with T
-//  - Canonical empty state is preserved across adoption
-//  - Failed typed adoption leaves destination unchanged
-//
-//  Relationship between byte and typed forms:
-//  - Byte primitives define ownership and alignment semantics
-//  - Typed primitives are a reinterpretation layer
-//  - Adoption functions define checked crossing points
-//  - Both forms share invariant and fail-safe behaviour
+//  Cross-header ownership, extent, observation, reallocation, alignment, and
+//  accounting policy is documented in docs/memory/memory_subsystem.md.
 
 #pragma once
 
 #ifndef MEMORY_PRIMITIVES_HPP_INCLUDED
 #define MEMORY_PRIMITIVES_HPP_INCLUDED
 
+#include <algorithm>    //  std::min, std::max
 #include <cstddef>      //  std::size_t
 #include <cstdint>      //  std::uint8_t
-#include <cstring>      //  std::memset
+#include <cstring>      //  std::memcpy, std::memset
 #include <type_traits>  //  std::is_trivially_copyable_v
 
 #include "memory_allocation.hpp"
@@ -87,36 +50,6 @@ namespace memory
 
 namespace util
 {
-
-[[nodiscard]] inline bool is_valid(const std::uint8_t* const data, const std::size_t align) noexcept
-{
-    return (data == nullptr) == (align == 0u);
-}
-
-[[nodiscard]] inline bool is_empty(const std::uint8_t* const data, const std::size_t align) noexcept
-{
-    return (data == nullptr) || (align == 0u);
-}
-
-[[nodiscard]] inline bool is_ready(const std::uint8_t* const data, const std::size_t align) noexcept
-{
-    return (data != nullptr) && (align != 0u);
-}
-
-[[nodiscard]] inline std::uint8_t* data(std::uint8_t* const data, const std::size_t align) noexcept
-{
-    return (align != 0u) ? data : nullptr;
-}
-
-[[nodiscard]] inline const std::uint8_t* data(const std::uint8_t* const data, const std::size_t align) noexcept
-{
-    return (align != 0u) ? data : nullptr;
-}
-
-[[nodiscard]] inline std::size_t align(const std::uint8_t* const data, const std::size_t align) noexcept
-{
-    return (data != nullptr) ? align : std::size_t{ 0 };
-}
 
 [[nodiscard]] inline std::size_t norm_align(const std::size_t align) noexcept
 {
@@ -165,9 +98,11 @@ public:
     ~CMemoryToken() noexcept { deallocate(); }
 
     //  Status
-    [[nodiscard]] bool is_valid() const noexcept { return util::is_valid(m_data, m_align); }
-    [[nodiscard]] bool is_empty() const noexcept { return util::is_empty(m_data, m_align); }
-    [[nodiscard]] bool is_ready() const noexcept { return util::is_ready(m_data, m_align); }
+    [[nodiscard]] bool is_valid() const noexcept { return is_ready() || ((m_data == nullptr) && (m_align == 0u) && (m_bytes == 0u)); }
+    [[nodiscard]] bool is_empty() const noexcept { return (m_data == nullptr) || (m_align == 0u) || (m_bytes == 0u); }
+    [[nodiscard]] bool is_ready() const noexcept { return (m_data != nullptr) && (m_align != 0u) && (m_bytes != 0u); }
+    [[nodiscard]] bool owns_memory() const noexcept { return m_data != nullptr; }
+    [[nodiscard]] explicit operator bool() const noexcept { return is_ready(); }
 
     //  Adoption
     template<typename T> void steal(TMemoryToken<T>& token) noexcept;
@@ -177,17 +112,20 @@ public:
     [[nodiscard]] CMemoryConstView const_view() const noexcept;
 
     //  Common accessors (see constness model above)
-    [[nodiscard]] std::uint8_t* data() const noexcept { return util::data(m_data, m_align); }
-    [[nodiscard]] std::size_t align() const noexcept { return util::align(m_data, m_align); }
+    [[nodiscard]] std::uint8_t* data() const noexcept { return ((m_align != 0u) && (m_bytes != 0u)) ? m_data : nullptr; }
+    [[nodiscard]] std::size_t align() const noexcept { return ((m_data != nullptr) && (m_bytes != 0u)) ? m_align : std::size_t{ 0 }; }
+    [[nodiscard]] std::size_t bytes() const noexcept { return ((m_data != nullptr) && (m_align != 0u)) ? m_bytes : std::size_t{ 0 }; }
 
     //  Capacity management (state unchanged on failure)
-    [[nodiscard]] bool allocate(const std::size_t size, const std::size_t align, const bool zero = true) noexcept;
-    [[nodiscard]] bool reallocate(const std::size_t old_size, const std::size_t new_size, const std::size_t align, const bool zero_extra = true) noexcept;
+    [[nodiscard]] bool allocate(const std::size_t bytes, const std::size_t align, const bool zero = true) noexcept;
+    [[nodiscard]] bool reallocate(const std::size_t copy_bytes, const std::size_t bytes, const std::size_t align, const bool zero_extra = true) noexcept;
+    [[nodiscard]] bool clone(const CMemoryToken& src) noexcept;
     void deallocate() noexcept;
 
 private:
     std::uint8_t* m_data = nullptr;
     std::size_t m_align = 0u;
+    std::size_t m_bytes = 0u;
 
 private:
     template<typename T>
@@ -221,17 +159,17 @@ public:
     template<typename T> void adopt(const TMemoryView<T>& view) noexcept;
 
     //  Status
-    [[nodiscard]] bool is_valid() const noexcept { return util::is_valid(m_data, m_align); }
-    [[nodiscard]] bool is_empty() const noexcept { return util::is_empty(m_data, m_align); }
-    [[nodiscard]] bool is_ready() const noexcept { return util::is_ready(m_data, m_align); }
+    [[nodiscard]] bool is_valid() const noexcept { return (m_data == nullptr) == (m_align == 0u); }
+    [[nodiscard]] bool is_empty() const noexcept { return (m_data == nullptr) || (m_align == 0u); }
+    [[nodiscard]] bool is_ready() const noexcept { return (m_data != nullptr) && (m_align != 0u); }
 
     //  Views and sub-views (offset parameter validation is a caller responsibility)
     [[nodiscard]] CMemoryView subview(const std::size_t offset = 0u) const noexcept;
     [[nodiscard]] CMemoryConstView const_view() const noexcept;
 
     //  Common accessors (see constness model above)
-    [[nodiscard]] std::uint8_t* data() const noexcept { return util::data(m_data, m_align); }
-    [[nodiscard]] std::size_t align() const noexcept { return util::align(m_data, m_align); }
+    [[nodiscard]] std::uint8_t* data() const noexcept { return (m_align != 0u) ? m_data : nullptr; }
+    [[nodiscard]] std::size_t align() const noexcept { return (m_data != nullptr) ? m_align : std::size_t{ 0 }; }
 
     //  Constants
     static constexpr std::size_t k_max_elements = t_max_elements<std::uint8_t>();
@@ -273,16 +211,16 @@ public:
     template<typename T> void adopt(const TMemoryConstView<T>& view) noexcept;
 
     //  Status
-    [[nodiscard]] bool is_valid() const noexcept { return util::is_valid(m_data, m_align); }
-    [[nodiscard]] bool is_empty() const noexcept { return util::is_empty(m_data, m_align); }
-    [[nodiscard]] bool is_ready() const noexcept { return util::is_ready(m_data, m_align); }
+    [[nodiscard]] bool is_valid() const noexcept { return (m_data == nullptr) == (m_align == 0u); }
+    [[nodiscard]] bool is_empty() const noexcept { return (m_data == nullptr) || (m_align == 0u); }
+    [[nodiscard]] bool is_ready() const noexcept { return (m_data != nullptr) && (m_align != 0u); }
 
     //  Views and sub-views (offset parameter validation is a caller responsibility)
     [[nodiscard]] CMemoryConstView subview(const std::size_t offset = 0u) const noexcept;
 
     //  Common accessors (read-only memory access)
-    [[nodiscard]] const std::uint8_t* data() const noexcept { return util::data(m_data, m_align); }
-    [[nodiscard]] std::size_t align() const noexcept { return util::align(m_data, m_align); }
+    [[nodiscard]] const std::uint8_t* data() const noexcept { return (m_align != 0u) ? m_data : nullptr; }
+    [[nodiscard]] std::size_t align() const noexcept { return (m_data != nullptr) ? m_align : std::size_t{ 0 }; }
 
     //  Constants
     static constexpr std::size_t k_max_elements = t_max_elements<std::uint8_t>();
@@ -313,9 +251,11 @@ public:
     ~TMemoryToken() noexcept { deallocate(); }
 
     //  Status
-    [[nodiscard]] bool is_empty() const noexcept { return m_data == nullptr; }
-    [[nodiscard]] bool is_ready() const noexcept { return m_data != nullptr; }
-    [[nodiscard]] explicit operator bool() const noexcept { return m_data != nullptr; }
+    [[nodiscard]] bool is_valid() const noexcept { return (m_data == nullptr) == (m_count == 0u); }
+    [[nodiscard]] bool is_empty() const noexcept { return (m_data == nullptr) || (m_count == 0u); }
+    [[nodiscard]] bool is_ready() const noexcept { return (m_data != nullptr) && (m_count != 0u); }
+    [[nodiscard]] bool owns_memory() const noexcept { return m_data != nullptr; }
+    [[nodiscard]] explicit operator bool() const noexcept { return is_ready(); }
 
     //  Adoption
     [[nodiscard]] static bool can_steal(const CMemoryToken& token) noexcept;
@@ -326,12 +266,14 @@ public:
     [[nodiscard]] TMemoryConstView<T> const_view() const noexcept { return TMemoryConstView<T>{ m_data }; }
 
     //  Common accessors (see constness model above)
-    [[nodiscard]] T* data() const noexcept { return m_data; }
+    [[nodiscard]] T* data() const noexcept { return (m_count != 0u) ? m_data : nullptr; }
+    [[nodiscard]] std::size_t count() const noexcept { return (m_data != nullptr) ? m_count : std::size_t{ 0u }; }
+    [[nodiscard]] std::size_t bytes() const noexcept { return (m_data != nullptr) ? (m_count * k_element_size) : std::size_t{ 0u }; }
 
     //  Capacity management (state unchanged on failure)
-    [[nodiscard]] bool allocate(const std::size_t size, const bool zero = true) noexcept;
-    [[nodiscard]] bool reallocate(const std::size_t old_size, const std::size_t new_size, const bool zero_extra = true) noexcept;
-    [[nodiscard]] bool clone(const TMemoryToken<T>& src, const std::size_t size) noexcept;
+    [[nodiscard]] bool allocate(const std::size_t count, const bool zero = true) noexcept;
+    [[nodiscard]] bool reallocate(const std::size_t copy_count, const std::size_t count, const bool zero_extra = true) noexcept;
+    [[nodiscard]] bool clone(const TMemoryToken<T>& src) noexcept;
     void deallocate() noexcept;
 
     //  Constants
@@ -341,6 +283,7 @@ public:
 
 private:
     T* m_data = nullptr;
+    std::size_t m_count = 0u;
 
 private:
     friend class CMemoryToken;
@@ -371,11 +314,11 @@ public:
     TMemoryView& reset() noexcept { m_data = nullptr; return *this; }
 
     //  Adoption
-    [[nodiscard]] static bool can_adopt(const std::uint8_t* const data) noexcept;
-    [[nodiscard]] static bool can_adopt(const std::uint8_t* const data, const std::size_t align) noexcept;
+    [[nodiscard]] static bool can_adopt(std::uint8_t* const data) noexcept;
+    [[nodiscard]] static bool can_adopt(std::uint8_t* const data, const std::size_t align) noexcept;
     [[nodiscard]] static bool can_adopt(const CMemoryView& view) noexcept;
-    [[nodiscard]] bool adopt(const std::uint8_t* data) noexcept;
-    [[nodiscard]] bool adopt(const std::uint8_t* data, const std::size_t align) noexcept;
+    [[nodiscard]] bool adopt(std::uint8_t* const data) noexcept;
+    [[nodiscard]] bool adopt(std::uint8_t* const data, const std::size_t align) noexcept;
     [[nodiscard]] bool adopt(const CMemoryView& view) noexcept;
 
     //  Views and sub-views (offset parameter validation is a caller responsibility)
@@ -426,8 +369,8 @@ public:
     [[nodiscard]] static bool can_adopt(const std::uint8_t* const data, const std::size_t align) noexcept;
     [[nodiscard]] static bool can_adopt(const CMemoryView& view) noexcept;
     [[nodiscard]] static bool can_adopt(const CMemoryConstView& view) noexcept;
-    [[nodiscard]] bool adopt(const std::uint8_t* data) noexcept;
-    [[nodiscard]] bool adopt(const std::uint8_t* data, const std::size_t align) noexcept;
+    [[nodiscard]] bool adopt(const std::uint8_t* const data) noexcept;
+    [[nodiscard]] bool adopt(const std::uint8_t* const data, const std::size_t align) noexcept;
     [[nodiscard]] bool adopt(const CMemoryView& view) noexcept;
     [[nodiscard]] bool adopt(const CMemoryConstView& view) noexcept;
 
@@ -470,8 +413,10 @@ inline CMemoryToken::CMemoryToken(CMemoryToken&& other) noexcept
 {
     m_data = other.m_data;
     m_align = other.m_align;
+    m_bytes = other.m_bytes;
     other.m_data = nullptr;
     other.m_align = 0u;
+    other.m_bytes = 0u;
 }
 
 inline CMemoryToken& CMemoryToken::operator=(CMemoryToken&& other) noexcept
@@ -481,19 +426,27 @@ inline CMemoryToken& CMemoryToken::operator=(CMemoryToken&& other) noexcept
         deallocate();
         m_data = other.m_data;
         m_align = other.m_align;
+        m_bytes = other.m_bytes;
         other.m_data = nullptr;
         other.m_align = 0u;
+        other.m_bytes = 0u;
     }
     return *this;
 }
 
-template<typename T>  
+template<typename T>
 inline void CMemoryToken::steal(TMemoryToken<T>& token) noexcept
 {
     deallocate();
-    m_data = token.m_data;
-    m_align = (m_data != nullptr) ? TMemoryToken<T>::k_align : std::size_t{ 0u };
+    if (token.owns_memory())
+    {
+        m_data = reinterpret_cast<std::uint8_t*>(token.m_data);
+        m_align = TMemoryToken<T>::k_align;
+        m_bytes = token.bytes();
+        MV_HARD_ASSERT(m_bytes != 0u);
+    }
     token.m_data = nullptr;
+    token.m_count = 0u;
 }
 
 inline CMemoryView CMemoryToken::view() const noexcept
@@ -506,25 +459,26 @@ inline CMemoryConstView CMemoryToken::const_view() const noexcept
     return is_ready() ? CMemoryConstView{ m_data, m_align } : CMemoryConstView{};
 }
 
-inline bool CMemoryToken::allocate(const std::size_t size, const std::size_t align, const bool zero) noexcept
+inline bool CMemoryToken::allocate(const std::size_t bytes, const std::size_t align, const bool zero) noexcept
 {
-    if (size == 0u)
+    if (bytes == 0u)
     {
         deallocate();
         return true;
     }
-    if (size <= k_max_elements)
+    if (bytes <= k_max_elements)
     {
         const std::size_t norm_align = util::norm_align(align);
-        std::uint8_t* const data = reinterpret_cast<std::uint8_t*>(byte_allocate(size, norm_align));
+        std::uint8_t* const data = reinterpret_cast<std::uint8_t*>(byte_allocate(bytes, norm_align));
         if (data != nullptr)
         {
             deallocate();
             m_data = data;
             m_align = norm_align;
+            m_bytes = bytes;
             if (zero)
             {
-                std::memset(m_data, 0, size);
+                std::memset(m_data, 0, bytes);
             }
             MV_HARD_ASSERT(bit_ops::is_pow2(m_align));
             MV_HARD_ASSERT((reinterpret_cast<std::uintptr_t>(m_data) & (m_align - 1u)) == 0u);
@@ -534,46 +488,71 @@ inline bool CMemoryToken::allocate(const std::size_t size, const std::size_t ali
     return false;
 }
 
-inline bool CMemoryToken::reallocate(const std::size_t old_size, const std::size_t new_size, const std::size_t align, const bool zero_extra) noexcept
+inline bool CMemoryToken::reallocate(const std::size_t copy_bytes, const std::size_t bytes, const std::size_t align, const bool zero_extra) noexcept
 {
-    if (new_size == 0u)
+    const std::size_t min_bytes = std::min(m_bytes, bytes);
+    if ((bytes <= k_max_elements) && (copy_bytes <= min_bytes))
     {
-        deallocate();
-        return true;
-    }
-    if (std::max(old_size, new_size) <= k_max_elements)
-    {
-        const std::size_t norm_align = util::norm_align(align);
-        if ((old_size == new_size) && (norm_align == m_align))
+        if (bytes == 0u)
         {
+            deallocate();
             return true;
         }
-        std::uint8_t* const data = reinterpret_cast<std::uint8_t*>(byte_allocate(new_size, norm_align));
+        const std::size_t norm_align = util::norm_align(align);
+        if ((m_bytes == bytes) && (m_data != nullptr) && (norm_align == m_align))
+        {
+            if (zero_extra && (bytes > copy_bytes))
+            {
+                std::memset((m_data + copy_bytes), 0, (bytes - copy_bytes));
+            }
+            return true;
+        }
+        std::uint8_t* const data = reinterpret_cast<std::uint8_t*>(byte_allocate(bytes, norm_align));
         if (data != nullptr)
         {
-            if (old_size != 0u)
+            if (copy_bytes != 0u)
             {
-                const std::size_t copy_size = std::min(new_size, old_size);
                 if (m_data != nullptr)
                 {
-                    std::memcpy(data, m_data, copy_size);
+                    std::memcpy(data, m_data, copy_bytes);
                 }
                 else if (zero_extra)
                 {
-                    std::memset(data, 0, copy_size);
+                    std::memset(data, 0, copy_bytes);
                 }
             }
-            if (zero_extra && (new_size > old_size))
+            if (zero_extra && (bytes > copy_bytes))
             {
-                std::memset((data + old_size), 0, (new_size - old_size));
+                std::memset((data + copy_bytes), 0, (bytes - copy_bytes));
             }
             deallocate();
             m_data = data;
             m_align = norm_align;
+            m_bytes = bytes;
             MV_HARD_ASSERT(bit_ops::is_pow2(m_align));
             MV_HARD_ASSERT((reinterpret_cast<std::uintptr_t>(m_data) & (m_align - 1u)) == 0u);
             return true;
         }
+    }
+    return false;
+}
+
+inline bool CMemoryToken::clone(const CMemoryToken& src) noexcept
+{
+    if (!src.is_ready())
+    {
+        deallocate();
+        return true;
+    }
+    std::uint8_t* const data = reinterpret_cast<std::uint8_t*>(byte_allocate(src.m_bytes, src.m_align));
+    if (data != nullptr)
+    {
+        deallocate();
+        m_data = data;
+        m_align = src.m_align;
+        m_bytes = src.m_bytes;
+        std::memcpy(m_data, src.m_data, m_bytes);
+        return true;
     }
     return false;
 }
@@ -582,10 +561,13 @@ inline void CMemoryToken::deallocate() noexcept
 {
     if (m_data != nullptr)
     {   //  note: the null check is not strictly required
+        MV_HARD_ASSERT(m_align != 0u);
+        MV_HARD_ASSERT(m_bytes != 0u);
         byte_deallocate(m_data, m_align);
         m_data = nullptr;
     }
     m_align = 0u;
+    m_bytes = 0u;
 }
 
 //==============================================================================
@@ -690,7 +672,6 @@ void CMemoryConstView::adopt(const TMemoryView<T>& view) noexcept
     }
 }
 
-
 template<typename T>
 void CMemoryConstView::adopt(const TMemoryConstView<T>& view) noexcept
 {
@@ -726,7 +707,9 @@ template<typename T>
 inline TMemoryToken<T>::TMemoryToken(TMemoryToken<T>&& other) noexcept
 {
     m_data = other.m_data;
+    m_count = other.m_count;
     other.m_data = nullptr;
+    other.m_count = 0u;
 }
 
 template<typename T>
@@ -736,7 +719,9 @@ inline TMemoryToken<T>& TMemoryToken<T>::operator=(TMemoryToken<T>&& other) noex
     {
         deallocate();
         m_data = other.m_data;
+        m_count = other.m_count;
         other.m_data = nullptr;
+        other.m_count = 0u;
     }
     return *this;
 }
@@ -744,7 +729,7 @@ inline TMemoryToken<T>& TMemoryToken<T>::operator=(TMemoryToken<T>&& other) noex
 template<typename T>
 inline bool TMemoryToken<T>::can_steal(const CMemoryToken& token) noexcept
 {
-    return (token.m_data == nullptr) || (token.m_align == k_align);
+    return token.is_valid() && ((token.m_data == nullptr) || ((token.m_align == k_align) && ((token.m_bytes % k_element_size) == 0u)));
 }
 
 template<typename T>
@@ -753,32 +738,39 @@ inline bool TMemoryToken<T>::steal(CMemoryToken& token) noexcept
     if (can_steal(token))
     {
         deallocate();
-        m_data = token.m_data;
+        if (token.owns_memory())
+        {
+            m_data = reinterpret_cast<T*>(token.m_data);
+            m_count = token.m_bytes / k_element_size;
+            MV_HARD_ASSERT(m_count != 0u);
+        }
         token.m_data = nullptr;
         token.m_align = 0u;
+        token.m_bytes = 0u;
         return true;
     }
     return false;
 }
 
 template<typename T>
-inline bool TMemoryToken<T>::allocate(const std::size_t size, const bool zero) noexcept
+inline bool TMemoryToken<T>::allocate(const std::size_t count, const bool zero) noexcept
 {
-    if (size == 0u)
+    if (count == 0u)
     {
         deallocate();
         return true;
     }
-    if (size <= k_max_elements)
+    if (count <= k_max_elements)
     {
-        T* data = t_allocate<T>(size);
+        T* data = t_allocate<T>(count);
         if (data != nullptr)
         {
             deallocate();
             m_data = data;
+            m_count = count;
             if (zero)
             {
-                std::memset(m_data, 0, (size * k_element_size));
+                std::memset(m_data, 0, (count * k_element_size));
             }
             return true;
         }
@@ -787,43 +779,70 @@ inline bool TMemoryToken<T>::allocate(const std::size_t size, const bool zero) n
 }
 
 template<typename T>
-inline bool TMemoryToken<T>::reallocate(const std::size_t old_size, const std::size_t new_size, const bool zero_extra) noexcept
+inline bool TMemoryToken<T>::reallocate(const std::size_t copy_count, const std::size_t count, const bool zero_extra) noexcept
 {
     static_assert(std::is_trivially_copyable_v<T>, "TMemoryToken<T>::reallocate requires trivially copyable T");
-    if (new_size == 0u)
+    const std::size_t min_count = std::min(m_count, count);
+    if ((count <= k_max_elements) && (copy_count <= min_count))
     {
-        deallocate();
-        return true;
-    }
-    if (std::max(old_size, new_size) <= k_max_elements)
-    {
-        if (old_size == new_size)
+        if (count == 0u)
         {
+            deallocate();
             return true;
         }
-        T* data = t_allocate<T>(new_size);
+        if ((m_count == count) && (m_data != nullptr))
+        {
+            if (zero_extra && (count > copy_count))
+            {
+                std::memset((m_data + copy_count), 0, ((count - copy_count) * k_element_size));
+            }
+            return true;
+        }
+        T* data = t_allocate<T>(count);
         if (data != nullptr)
         {
-            if (old_size != 0u)
+            if (copy_count != 0u)
             {
-                const std::size_t copy_size = std::min(new_size, old_size) * k_element_size;
+                const std::size_t copy_bytes = copy_count * k_element_size;
                 if (m_data != nullptr)
                 {
-                    std::memcpy(data, m_data, copy_size);
+                    std::memcpy(data, m_data, copy_bytes);
                 }
                 else if (zero_extra)
                 {
-                    std::memset(data, 0, copy_size);
+                    std::memset(data, 0, copy_bytes);
                 }
             }
-            if (zero_extra && (new_size > old_size))
+            if (zero_extra && (count > copy_count))
             {
-                std::memset((data + old_size), 0, ((new_size - old_size) * k_element_size));
+                std::memset((data + copy_count), 0, ((count - copy_count) * k_element_size));
             }
             deallocate();
             m_data = data;
+            m_count = count;
             return true;
         }
+    }
+    return false;
+}
+
+template<typename T>
+inline bool TMemoryToken<T>::clone(const TMemoryToken<T>& src) noexcept
+{
+    static_assert(std::is_trivially_copyable_v<T>, "TMemoryToken<T>::clone requires trivially copyable T");
+    if (!src.is_ready())
+    {
+        deallocate();
+        return true;
+    }
+    T* data = t_allocate<T>(src.m_count);
+    if (data != nullptr)
+    {
+        deallocate();
+        m_data = data;
+        m_count = src.m_count;
+        std::memcpy(m_data, src.m_data, (m_count * k_element_size));
+        return true;
     }
     return false;
 }
@@ -833,32 +852,11 @@ inline void TMemoryToken<T>::deallocate() noexcept
 {
     if (m_data != nullptr)
     {
+        MV_HARD_ASSERT(m_count != 0u);
         t_deallocate<T>(m_data);
         m_data = nullptr;
     }
-}
-
-template<typename T>
-inline bool TMemoryToken<T>::clone(const TMemoryToken<T>& src, const std::size_t size) noexcept
-{
-    static_assert(std::is_trivially_copyable_v<T>, "TMemoryToken<T>::clone requires trivially copyable T");
-    if (size == 0u)
-    {
-        deallocate();
-        return true;
-    }
-    if (src.m_data != nullptr)
-    {
-        T* data = t_allocate<T>(size);
-        if (data != nullptr)
-        {
-            t_deallocate<T>(m_data);
-            m_data = data;
-            std::memcpy(m_data, src.m_data, (size * k_element_size));
-            return true;
-        }
-    }
-    return false;
+    m_count = 0u;
 }
 
 //==============================================================================
@@ -866,13 +864,13 @@ inline bool TMemoryToken<T>::clone(const TMemoryToken<T>& src, const std::size_t
 //==============================================================================
  
 template<typename T>
-inline bool TMemoryView<T>::can_adopt(const std::uint8_t* const data) noexcept
+inline bool TMemoryView<T>::can_adopt(std::uint8_t* const data) noexcept
 {
     return (reinterpret_cast<std::uintptr_t>(data) & (k_align - 1u)) == 0u;
 }
 
 template<typename T>
-inline bool TMemoryView<T>::can_adopt(const std::uint8_t* const data, const std::size_t align) noexcept
+inline bool TMemoryView<T>::can_adopt(std::uint8_t* const data, const std::size_t align) noexcept
 {
     if (data == nullptr)
     {
@@ -888,7 +886,7 @@ inline bool TMemoryView<T>::can_adopt(const CMemoryView& view) noexcept
 }
 
 template<typename T>
-inline bool TMemoryView<T>::adopt(const std::uint8_t* data) noexcept
+inline bool TMemoryView<T>::adopt(std::uint8_t* const data) noexcept
 {
     if (can_adopt(data))
     {
@@ -899,7 +897,7 @@ inline bool TMemoryView<T>::adopt(const std::uint8_t* data) noexcept
 }
 
 template<typename T>
-inline bool TMemoryView<T>::adopt(const std::uint8_t* data, const std::size_t align) noexcept
+inline bool TMemoryView<T>::adopt(std::uint8_t* const data, const std::size_t align) noexcept
 {
     if (can_adopt(data, align))
     {
@@ -959,7 +957,7 @@ inline bool TMemoryConstView<T>::can_adopt(const CMemoryConstView& view) noexcep
 }
 
 template<typename T>
-inline bool TMemoryConstView<T>::adopt(const std::uint8_t* data) noexcept
+inline bool TMemoryConstView<T>::adopt(const std::uint8_t* const data) noexcept
 {
     if (can_adopt(data))
     {
@@ -970,7 +968,7 @@ inline bool TMemoryConstView<T>::adopt(const std::uint8_t* data) noexcept
 }
 
 template<typename T>
-inline bool TMemoryConstView<T>::adopt(const std::uint8_t* data, const std::size_t align) noexcept
+inline bool TMemoryConstView<T>::adopt(const std::uint8_t* const data, const std::size_t align) noexcept
 {
     if (can_adopt(data, align))
     {

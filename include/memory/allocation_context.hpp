@@ -6,53 +6,24 @@
 //  Author: Ritchie Brannan
 //  Date:   29 May 26
 //
-//  Allocation context interface and state.
+//  Per-thread / per-module / per-DLL allocation context interface.
 //
-//  Purpose
-//  -------
-//  Defines the per-thread allocation context used to route raw byte allocation
-//  requests through an externally owned allocator interface.
+//  Provides:
+//  - IAllocator, the non-owning raw byte allocator interface.
+//  - CAllocationContext, the allocator binding and local accounting state.
+//  - memory::context declarations for installing a thread-local current
+//    allocation context and routing allocation/deallocation through it.
 //
-//  This header contains:
+//  Does not provide:
+//  - heap storage ownership;
+//  - allocation policy;
+//  - alignment normalization;
+//  - typed storage semantics;
+//  - container semantics;
+//  - synchronized live telemetry.
 //
-//      - IAllocator, the non-owning raw byte allocator interface
-//      - CAllocationContext, the allocator binding and local accounting state
-//      - memory::context declarations for installing a thread-local current
-//        context and routing allocation/deallocation through it
-//
-//  Scope
-//  -----
-//  This file defines routing state only. It does not own heap storage, define
-//  allocation policy, construct objects, normalize alignment, or provide typed
-//  container semantics.
-//
-//  State model
-//  -----------
-//  A CAllocationContext contains a caller-defined system id, a non-owning
-//  allocator pointer, and local allocation counters.
-//
-//  The allocator pointer may only be changed while the context has no recorded
-//  live allocations. is_usable() reports whether the context has an allocator
-//  currently available for routing.
-//
-//  Successful non-zero byte allocations increase the live, peak, and lifetime
-//  counters. Successful deallocations decrease the live counter.
-//
-//  Ownership and lifetime
-//  ----------------------
-//  CAllocationContext does not own the allocator it references. The allocator
-//  must remain valid for every allocation and deallocation routed through the
-//  context.
-//
-//  Threading model
-//  ---------------
-//  The installed current context is thread-local. A context is expected to be
-//  provisioned before the owning thread installs it, mutated only by that
-//  thread while installed, and inspected externally only after the owning thread
-//  has stopped using it.
-//
-//  The counters are local accounting fields, not atomic telemetry. They do not
-//  support concurrent host observation while the owning thread is active.
+//  Cross-header ownership, accounting, threading, and attribution policy
+//  is documented in docs/memory/memory_subsystem.md.
 
 #pragma once
 

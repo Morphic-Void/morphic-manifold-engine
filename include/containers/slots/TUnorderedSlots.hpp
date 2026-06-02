@@ -1532,7 +1532,7 @@ inline bool TUnorderedSlots<TIndex>::copy_from(const TUnorderedSlots& src) noexc
 {
     if (src.is_initialised())
     {
-        if (!m_meta_slot_array.clone(src.m_meta_slot_array, src.m_capacity))
+        if (!m_meta_slot_array.clone(src.m_meta_slot_array))
         {
             return false;
         }

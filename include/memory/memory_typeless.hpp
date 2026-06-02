@@ -6,26 +6,26 @@
 //  Author: Ritchie Brannan
 //  Date:   22 Feb 26
 //
-//  Requirements:
-//  - Requires C++17 or later.
-//  - No exceptions.
-//
 //  Move-only erased ownership for one typed payload-family node.
 //
-//  Not a container and not a multi-object ownership mechanism.
+//  Provides:
+//  - CTypeless, the erased owning carrier;
+//  - TTypeless<T, type_id>, the typed payload node wrapper;
+//  - checked typed recovery through typeless_cast<T, type_id>().
 //
-//  IMPORTANT SEMANTIC NOTE
-//  -----------------------
-//  CTypeless emptiness is carrier-level emptiness only.
+//  Does not provide:
+//  - general container semantics;
+//  - multi-object ownership;
+//  - payload semantic emptiness;
+//  - deep allocation accounting;
+//  - unchecked type recovery;
+//  - a general runtime type system or plugin ABI.
 //
-//  Payload semantic emptiness, if any, is defined by the recovered
-//  payload type, not by CTypeless.
+//  Cross-header ownership, attribution, and accounting policy is documented
+//  in docs/memory/memory_subsystem.md.
 //
-//  type_id() reports payload-family identity. Empty ownership reports 0.
-//
-//  Typed recovery is explicit and checked via typeless_cast<T, type_id>().
-//
-//  See docs/memory/memory_typeless.md for the full documentation.
+//  Typeless-specific payload-family, recovery, and usage guidance is documented
+//  in docs/memory/memory_typeless.md.
 
 #pragma once
 

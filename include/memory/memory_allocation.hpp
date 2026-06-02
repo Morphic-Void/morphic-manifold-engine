@@ -6,34 +6,25 @@
 //  Author: Ritchie Brannan
 //  Date:   17 Feb 26
 //
-//  The memory substrate (C++17, noexcept).
+//  Mechanical memory allocation substrate.
 //
-//  Purpose
-//  -------
-//  Provides the shared foundational memory layer.
+//  Provides:
+//  - shared allocation limits and limit helpers;
+//  - growth policy helpers;
+//  - allocation alignment policy;
+//  - allocator configuration entry points;
+//  - nothrow raw byte allocation/deallocation entry points;
+//  - typed allocation/deallocation helpers.
 //
-//  This header contains:
+//  Does not provide:
+//  - storage ownership semantics;
+//  - view semantics;
+//  - container semantics;
+//  - object construction/destruction policy;
+//  - deep allocation accounting.
 //
-//      - Shared limits and limit helpers
-//      - Growth policies and default growth policy
-//      - Allocation alignment policy
-//      - Allocation configuration (nothrow)
-//      - Aligned allocation / deallocation (nothrow)
-//      - Allocator interface definition
-//
-//  Scope
-//  -----
-//  This file is strictly mechanical. It defines no semantics.
-//
-//  Design Constraints
-//  ------------------
-//  - Requires C++17 or greater.
-//  - No exceptions (allocation uses nothrow new[]).
-//  - 32-bit element domain cap:
-//      memory::k_max_elements = 0x80000000u
-//
-//  Higher-level structures build semantic behavior on top of the
-//  primitives defined here.
+//  Higher-level ownership, attribution, and accounting policy is documented in
+//  docs/memory/memory_subsystem.md.
 
 #pragma once
 
