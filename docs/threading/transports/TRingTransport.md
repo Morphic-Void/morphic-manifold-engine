@@ -170,6 +170,7 @@ Pointer rules:
 
 - `src == nullptr` with `count != 0` fails
 - `src == nullptr` with `count == 0` succeeds if the transport is ready
+- the view overload requires a valid view; a zero-length invalid view fails
 
 ## Read semantics
 
@@ -198,6 +199,7 @@ Pointer rules:
 
 - `dst == nullptr` with `count != 0` fails
 - `dst == nullptr` with `count == 0` succeeds if the transport is ready
+- the view overload requires a valid view; a zero-length invalid view fails
 
 ## Status and validity
 

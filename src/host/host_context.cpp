@@ -1,0 +1,78 @@
+
+//  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
+//  License: MIT (see LICENSE file in repository root)
+//
+//  File:   host_context.cpp
+//  Author: Ritchie Brannan
+//  Date:   13 July 26
+//
+//  Installs the host context including the host memory context.
+// 
+//  This file should not be included in modules/DLLs.
+//
+//  Design constraints
+//  ------------------
+//  - Requires C++17 or later.
+//  - No exceptions.
+//  - Allocation uses nothrow new[].
+
+#include <cstddef>      //  std::size_t
+#include <new>          //  std::nothrow, aligned operator new[]/delete[]
+
+#include "host/host_context.hpp"
+#include "platform/platform_defines.hpp"
+#include "memory/memory_policies.hpp"
+#include "memory/memory_context.hpp"
+#include "system/system_context.hpp"
+#include "system/system_ids.hpp"
+
+namespace host
+{
+
+//==============================================================================
+//  The host memory allocation functions
+//==============================================================================
+
+static void* MV_STD_ABI_CALL host_allocate(void* const context, const std::size_t align, const std::size_t bytes) noexcept
+{
+    (void)context;
+    if (bytes != 0u)
+    {
+        return ::operator new[](bytes, std::align_val_t{ align }, std::nothrow);
+    }
+    return nullptr;
+
+}
+
+static bool MV_STD_ABI_CALL host_deallocate(void* const context, const std::size_t align, void* const ptr) noexcept
+{
+    (void)context;
+    (void)align;
+    if (ptr != nullptr)
+    {
+        ::operator delete[](ptr, std::align_val_t{ align });
+        return true;
+    }
+    return false;
+}
+
+//==============================================================================
+//  The host memory allocator and memory context
+//==============================================================================
+
+static memory::CMemoryAllocator s_host_memory_allocator(nullptr, &host_allocate, &host_deallocate, system_ids::host);
+
+static memory::CMemoryContext s_host_memory_context(s_host_memory_allocator, system_ids::host);
+
+//==============================================================================
+//  Host context installation
+//==============================================================================
+
+void host_context_install() noexcept
+{
+    (void)system_context::set_ambient_module_id(module_ids::executable);
+    (void)system_context::set_ambient_thread_id(thread_ids::host);
+    (void)memory::set_module_memory_context(&s_host_memory_context);
+}
+
+}   //  namespace host

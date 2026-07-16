@@ -8,13 +8,14 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <new>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "threading/transports/TOwningTransport.hpp"
 #include "tests/TOwningTransport_test_suite.hpp"
-#include "memory/memory_allocation.hpp"
+#include "memory/memory_context.hpp"
 #include "debug/debug.hpp"
 
 using threading::transports::TOwning;
@@ -161,6 +162,18 @@ struct TTrackedValue
     }
 };
 
+struct alignas(64) TLargeAlignedValue
+{
+    char payload[4096];
+
+    TLargeAlignedValue() noexcept = default;
+    TLargeAlignedValue(const TLargeAlignedValue&) = delete;
+    TLargeAlignedValue& operator=(const TLargeAlignedValue&) = delete;
+    TLargeAlignedValue(TLargeAlignedValue&&) noexcept = default;
+    TLargeAlignedValue& operator=(TLargeAlignedValue&&) noexcept { return *this; }
+    ~TLargeAlignedValue() noexcept = default;
+};
+
 std::uint32_t TTrackedValue::s_default_constructed = 0u;
 std::uint32_t TTrackedValue::s_destructed = 0u;
 std::uint32_t TTrackedValue::s_move_constructed = 0u;
@@ -170,6 +183,22 @@ std::uint32_t TTrackedValue::s_live_count = 0u;
 inline TTrackedValue make_value(const int value) noexcept
 {
     return TTrackedValue(value);
+}
+
+static void* MV_STD_ABI_CALL allocate_test_memory(void*, const std::size_t alignment, const std::size_t bytes) noexcept
+{
+    return ::operator new(bytes, std::align_val_t{ alignment }, std::nothrow);
+}
+
+static bool MV_STD_ABI_CALL deallocate_test_memory(void*, const std::size_t alignment, void* const ptr) noexcept
+{
+    ::operator delete(ptr, std::align_val_t{ alignment });
+    return true;
+}
+
+static void* MV_STD_ABI_CALL reject_allocation(void*, const std::size_t, const std::size_t) noexcept
+{
+    return nullptr;
 }
 
 template<typename TTransport>
@@ -313,19 +342,40 @@ void test_owning_initial_allocation_failure(TTestContext& ctx)
 {
     TTrackedValue::reset_counters();
 
+    memory::CMemoryAllocator allocator(nullptr, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryAllocator rejecting_allocator(nullptr, reject_allocation, deallocate_test_memory, 1u);
+    memory::CMemoryContext usable_context(allocator, 1u);
+    memory::CMemoryContext rejecting_context(rejecting_allocator, 1u);
+    memory::CMemoryContext* const previous_thread_context = memory::set_thread_memory_context(&usable_context);
+
+    (void)memory::set_thread_memory_context(&rejecting_context);
     TOwning<TTrackedValue> ring;
 
-    const bool previous = memory::enable_allocation(false);
-    (void)previous;
-
     TEST_EXPECT_FALSE(ctx, ring.initialise(TOwning<TTrackedValue>::k_min_capacity));
-
-    (void)memory::enable_allocation(true);
+    (void)memory::set_thread_memory_context(previous_thread_context);
 
     TEST_EXPECT_FALSE(ctx, ring.is_ready());
     TEST_EXPECT_TRUE(ctx, ring.is_valid());
     TEST_EXPECT_EQ(ctx, TTrackedValue::s_default_constructed, 0u);
     TEST_EXPECT_EQ(ctx, TTrackedValue::s_live_count, 0u);
+}
+
+void test_owning_respects_byte_ceiling(TTestContext& ctx)
+{
+    TOwning<TLargeAlignedValue> ring;
+
+    TEST_EXPECT_TRUE(ctx, ring.initialise(TOwning<TLargeAlignedValue>::k_min_capacity));
+    TEST_EXPECT_TRUE(ctx, ring.is_valid());
+    TEST_EXPECT_TRUE(ctx, ring.is_ready());
+    TEST_EXPECT_EQ(ctx, ring.writable_count(), TOwning<TLargeAlignedValue>::k_min_capacity);
+
+    ring.deallocate();
+
+    TEST_EXPECT_FALSE(ctx, ring.initialise(TOwning<TLargeAlignedValue>::k_max_capacity));
+    TEST_EXPECT_TRUE(ctx, ring.is_valid());
+    TEST_EXPECT_FALSE(ctx, ring.is_ready());
+    TEST_EXPECT_EQ(ctx, ring.readable_count(), 0u);
+    TEST_EXPECT_EQ(ctx, ring.writable_count(), 0u);
 }
 
 void test_owning_basic_single_transfer(TTestContext& ctx)
@@ -522,6 +572,7 @@ int test_owning_transport()
     test_owning_uninitialised_state(ctx);
     test_owning_initialise_and_conditioning(ctx);
     test_owning_initial_allocation_failure(ctx);
+    test_owning_respects_byte_ceiling(ctx);
     test_owning_basic_single_transfer(ctx);
     test_owning_full_reject_and_reuse(ctx);
     test_owning_wraparound_write_and_read(ctx);

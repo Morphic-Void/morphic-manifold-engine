@@ -5,19 +5,19 @@ File:   TOrderedCollection.md
 Author: Ritchie Brannan  
 Date:   1 Apr 2026  
 
-# TOrderedCollection<TKey, T>
+# TOrderedCollection<T, TKey>
 
 ## Overview
 
-TOrderedCollection<TKey, T> is a move-only ordered collection wrapper
-over TOrderedSlots and TStableStorage.
+TOrderedCollection<T, TKey> is a move-only ordered collection wrapper
+over TOrderedSlots and stable CMemoryToken storage.
 
 Slot metadata and ordering are managed by TOrderedSlots. Object storage
-is provided by TStableStorage.
+is provided by CMemoryToken in stable mode.
 
 Public identity during the mutable phase is slot_index.
 
-Constructed objects have stable addresses in TStableStorage.
+Constructed objects have stable addresses in the stable token.
 
 sort_and_pack() remaps slot metadata, slot-side payload, and keys in
 lock-step but does not relocate live T objects. Pointers and references
@@ -75,7 +75,7 @@ storage_index:
 
 ## Storage and stability
 
-Objects are placement-constructed in TStableStorage.
+Objects are placement-constructed in stable token storage.
 
 - addresses are stable once constructed
 - slot and key remapping does not relocate objects

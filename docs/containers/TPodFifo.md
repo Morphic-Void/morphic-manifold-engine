@@ -38,7 +38,7 @@ Scope:
 
 ## Storage model
 
-Ownership is provided by memory::TMemoryToken<T>.
+Ownership is provided by `memory::CMemoryToken`.
 
 The container stores:
 
@@ -54,6 +54,7 @@ While ready:
 - storage exists
 - m_size <= m_capacity
 - m_read_index < m_capacity
+- m_read_index == 0 when m_size == 0
 - logical FIFO contents begin at m_read_index
 - logical FIFO contents occupy m_size elements with at most one wrap
 
@@ -92,6 +93,7 @@ Ready:
     size <= capacity
     capacity != 0
     read_index < capacity
+    size != 0 or read_index == 0
 
 After pack():
 
@@ -100,7 +102,7 @@ After pack():
 
 ## FIFO operation model
 
-push_back() and pop_front() are all-or-nothing.
+push_back(), pop_front(), and discard_front() are all-or-nothing.
 
 push_back():
 
@@ -114,13 +116,25 @@ pop_front():
 - removes elements from the logical front of the FIFO
 - fails if the full requested count is not currently present
 
+discard_front():
+
+- removes elements from the logical front without copying them to a destination
+- fails if the full requested count is not currently present
+
 Single-element, pointer-count, and view overloads follow the same FIFO
 semantics.
 
 Pointer rules:
 
-- null pointer with non-zero count fails
-- null pointer with zero count succeeds if the container is ready
+- a raw pointer-count operation with zero count succeeds without requiring
+  allocated storage and does not inspect the pointer
+- a non-zero count requires a non-null pointer
+- a non-zero source or destination within the FIFO's own backing allocation is
+  rejected
+- a view overload requires a valid view; a zero-length invalid view fails
+
+Removing the final element, whether by pop_front() or discard_front(), resets
+m_read_index to 0.
 
 ## Packing and layout normalisation
 
@@ -162,6 +176,7 @@ reserve(minimum_capacity):
 
 - ensures capacity >= minimum_capacity
 - does not mutate layout if no growth is required
+- succeeds without allocating when the requested capacity is already satisfied
 
 ensure_free(extra):
 

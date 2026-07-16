@@ -4,7 +4,7 @@
 //
 //  TUnorderedSlots_test_harness.cpp
 //
-//  Standalone configurable test harness for TUnorderedSlots<TIndex>.
+//  Standalone configurable test harness for TUnorderedSlots<TSlotBacking, TIndex>.
 //
 //  Build (Clang/GCC):
 //    clang++ -std=c++14 -O0 -g TUnorderedSlots_test_harness.cpp -o tun_test
@@ -29,6 +29,7 @@
 #include <sstream>
 #include <string>
 
+#include "containers/TPodUnorderedSlots.hpp"
 #include "containers/slots/TUnorderedSlots.hpp"
 #include "tests/TUnorderedSlots_test_harness.hpp"
 
@@ -67,7 +68,7 @@ struct TestLogger
     }
 };
 
-// Hard-fail helper for contract violations inside virtual callbacks or harness adapter invariants.
+// Hard-fail helper for contract violations inside slot-backing operations or harness adapter invariants.
 // (Intentionally ignores stop_on_fail and always terminates.)
 [[noreturn]] static void hard_fail_contract(const char* msg) noexcept
 {
@@ -109,44 +110,53 @@ static std::string vec_i32_to_string(const std::vector<int32_t>& v)
 // Harness: derived test adapter
 // -----------------------------
 template<typename TIndex>
-class TUnorderedSlots_Test final : private slots::TUnorderedSlots<TIndex>
+class TUnorderedSlots_TestStorage
 {
-    using Base = slots::TUnorderedSlots<TIndex>;
+public:
+    void on_move_payload(const int32_t source_index, const int32_t target_index) noexcept;
+    [[nodiscard]] uint32_t on_reserve_empty(const uint32_t minimum_capacity, const uint32_t recommended_capacity) noexcept;
+    void ensure_payload_capacity_matches_slots(const uint32_t capacity) noexcept;
+
+protected:
+    std::vector<int> m_payload;
+    bool m_temp_valid = false;
+    int m_temp = 0;
+};
+
+template<typename TIndex>
+class TUnorderedSlots_Test final : private slots::TUnorderedSlots<TUnorderedSlots_TestStorage<TIndex>, TIndex>
+{
+    using SlotBacking = TUnorderedSlots_TestStorage<TIndex>;
+    using Base = slots::TUnorderedSlots<SlotBacking, TIndex>;
 
 public:
-    struct VisitRec { int32_t slot = -1; int32_t id = -999; };
-
     TUnorderedSlots_Test() noexcept
         : m_next_value(1)
-        , m_temp_valid(false)
-        , m_temp(0)
     {
     }
 
     bool init(uint32_t cap) noexcept
     {
-        m_visits.clear();
         m_next_value = 1;
-        m_temp_valid = false;
-        m_temp = 0;
+        this->m_temp_valid = false;
+        this->m_temp = 0;
 
         if (!Base::initialise(cap))
             return false;
 
-        ensure_payload_capacity_matches_slots();
+        this->ensure_payload_capacity_matches_slots(Base::capacity());
         // Initialize payload to a recognizable pattern (not required, but helps debug).
-        for (size_t i = 0; i < m_payload.size(); ++i) m_payload[i] = 0;
+        for (size_t i = 0; i < this->m_payload.size(); ++i) this->m_payload[i] = 0;
         return true;
     }
 
     void shutdown() noexcept
     {
         (void)Base::shutdown();
-        m_payload.clear();
-        m_visits.clear();
+        this->m_payload.clear();
         m_next_value = 1;
-        m_temp_valid = false;
-        m_temp = 0;
+        this->m_temp_valid = false;
+        this->m_temp = 0;
     }
 
     // Expose safe accessors
@@ -170,8 +180,8 @@ public:
         const bool ok = Base::clear();
         if (ok)
         {
-            ensure_payload_capacity_matches_slots();
-            std::fill(m_payload.begin(), m_payload.end(), 0);
+            this->ensure_payload_capacity_matches_slots(Base::capacity());
+            std::fill(this->m_payload.begin(), this->m_payload.end(), 0);
         }
         return ok;
     }
@@ -182,7 +192,7 @@ public:
         const bool ok = Base::safe_resize(requested_capacity);
         if (ok && Base::capacity() != old_cap)
         {
-            ensure_payload_capacity_matches_slots();
+            this->ensure_payload_capacity_matches_slots(Base::capacity());
             // New elements are already zeroed by vector::resize if grown.
         }
         return ok;
@@ -194,7 +204,7 @@ public:
         const bool ok = Base::reserve_empty(slot_count);
         if (ok && Base::capacity() != old_cap)
         {
-            ensure_payload_capacity_matches_slots();
+            this->ensure_payload_capacity_matches_slots(Base::capacity());
         }
         return ok;
     }
@@ -205,7 +215,7 @@ public:
         const bool ok = Base::shrink_to_fit();
         if (ok && Base::capacity() != old_cap)
         {
-            ensure_payload_capacity_matches_slots();
+            this->ensure_payload_capacity_matches_slots(Base::capacity());
         }
         return ok;
     }
@@ -215,8 +225,8 @@ public:
         const int32_t idx = Base::acquire(slot_index);
         if (idx >= 0)
         {
-            ensure_payload_capacity_matches_slots();
-            m_payload[static_cast<size_t>(idx)] = m_next_value++;
+            this->ensure_payload_capacity_matches_slots(Base::capacity());
+            this->m_payload[static_cast<size_t>(idx)] = m_next_value++;
         }
         return idx;
     }
@@ -226,8 +236,8 @@ public:
         const int32_t idx = Base::reserve_and_acquire(slot_index);
         if (idx >= 0)
         {
-            ensure_payload_capacity_matches_slots();
-            m_payload[static_cast<size_t>(idx)] = m_next_value++;
+            this->ensure_payload_capacity_matches_slots(Base::capacity());
+            this->m_payload[static_cast<size_t>(idx)] = m_next_value++;
         }
         return idx;
     }
@@ -237,9 +247,9 @@ public:
         const bool ok = Base::erase(slot_index);
         if (ok)
         {
-            ensure_payload_capacity_matches_slots();
+            this->ensure_payload_capacity_matches_slots(Base::capacity());
             if (static_cast<uint32_t>(slot_index) < Base::capacity())
-                m_payload[static_cast<size_t>(slot_index)] = 0;
+                this->m_payload[static_cast<size_t>(slot_index)] = 0;
         }
         return ok;
     }
@@ -261,24 +271,17 @@ public:
         for (uint32_t i = 0; i < c; ++i)
         {
             if (Base::is_loose_slot(static_cast<int32_t>(i)))
-                m_expected_after_compact.push_back(m_payload[i]);
+                m_expected_after_compact.push_back(this->m_payload[i]);
         }
 
         Base::pack();
 
         // After pack, payload should be packed to [0..loose_count), preserving ascending source index scan order.
-        ensure_payload_capacity_matches_slots();
+        this->ensure_payload_capacity_matches_slots(Base::capacity());
     }
 
     void rebuild_loose_in_index_order() noexcept { Base::rebuild_loose_in_index_order(); }
     void rebuild_empty_in_index_order() noexcept { Base::rebuild_empty_in_index_order(); }
-
-    void clear_visits() noexcept { m_visits.clear(); }
-    const std::vector<VisitRec>& visits() const noexcept { return m_visits; }
-
-    void visit_loose() noexcept { Base::visit_loose(); }
-    void visit_empty() noexcept { Base::visit_empty(); }
-    void visit_all() noexcept { Base::visit_all(); }
 
     // Traverse circular loose list by count (CRITICAL requirement).
     // Returns slot indices in traversal order and enforces circularity + uniqueness within that traversal.
@@ -315,29 +318,37 @@ public:
         return out;
     }
 
-    // Traverse empties via visit_empty count checks (CRITICAL requirement).
-    // Enforces exactly empty_count() callbacks, identifier == -2, and no duplicate slot indices.
-    std::vector<int32_t> empty_slots_via_visit_checked() noexcept
+    // Traverse the empty list by count and validate category and uniqueness.
+    std::vector<int32_t> empty_slots_by_count_checked() const noexcept
     {
         std::vector<int32_t> out;
         const uint32_t n = Base::empty_count();
         out.reserve(n);
 
-        clear_visits();
-        Base::visit_empty();
-        const auto& v = m_visits;
+        if (n == 0) return out;
 
-        if (v.size() != static_cast<size_t>(n))
-            hard_fail_contract("empty_slots_via_visit_checked: callback count != empty_count()");
+        int32_t slot_index = Base::first_empty();
+        if (slot_index < 0) hard_fail_contract("empty_slots_by_count_checked: empty_count>0 but first_empty()<0");
 
-        for (size_t i = 0; i < v.size(); ++i)
+        for (uint32_t i = 0; i < n; ++i)
         {
-            if (v[i].id != -2) hard_fail_contract("empty_slots_via_visit_checked: identifier != -2");
-            if (v[i].slot < 0) hard_fail_contract("empty_slots_via_visit_checked: slot_index < 0");
-            for (size_t j = 0; j < i; ++j)
-                if (v[j].slot == v[i].slot) hard_fail_contract("empty_slots_via_visit_checked: duplicate slot_index observed");
-            out.push_back(v[i].slot);
+            if (!Base::is_empty_slot(slot_index)) hard_fail_contract("empty_slots_by_count_checked: non-empty slot in empty traversal");
+            for (size_t j = 0; j < out.size(); ++j)
+                if (out[j] == slot_index) hard_fail_contract("empty_slots_by_count_checked: duplicate slot_index observed");
+            out.push_back(slot_index);
+            slot_index = Base::next_empty(slot_index);
         }
+
+        if (slot_index != -1) hard_fail_contract("empty_slots_by_count_checked: traversal exceeded empty_count()");
+
+        slot_index = Base::last_empty();
+        if (slot_index != out.back()) hard_fail_contract("empty_slots_by_count_checked: last_empty() mismatch");
+        for (size_t i = out.size(); i != 0; --i)
+        {
+            if (slot_index != out[i - 1u]) hard_fail_contract("empty_slots_by_count_checked: reverse traversal mismatch");
+            slot_index = Base::prev_empty(slot_index);
+        }
+        if (slot_index != -1) hard_fail_contract("empty_slots_by_count_checked: reverse traversal exceeded empty_count()");
 
         return out;
     }
@@ -351,7 +362,7 @@ public:
 
         for (uint32_t i = 0; i < n; ++i)
         {
-            if (m_payload[static_cast<size_t>(i)] != m_expected_after_compact[static_cast<size_t>(i)])
+            if (this->m_payload[static_cast<size_t>(i)] != m_expected_after_compact[static_cast<size_t>(i)])
                 return false;
         }
         return true;
@@ -400,80 +411,59 @@ public:
     }
 
 private:
-    // Derived responsibilities
-    void on_visit(const int32_t slot_index, const int32_t identifier) noexcept override
-    {
-        m_visits.push_back({ slot_index, identifier });
-    }
-
-    void on_move_payload(const int32_t source_index, const int32_t target_index) noexcept override
-    {
-        if (source_index == target_index)
-            hard_fail_contract("on_move_payload: source == target");
-
-        const bool src_is_temp = (source_index < 0);
-        const bool dst_is_temp = (target_index < 0);
-
-        if (src_is_temp && dst_is_temp)
-            hard_fail_contract("on_move_payload: both are temp");
-
-        ensure_payload_capacity_matches_slots();
-
-        if (source_index < 0)
-        {
-            // temp -> target
-            if (!m_temp_valid)
-                hard_fail_contract("on_move_payload: temp->target but temp invalid");
-            m_payload[static_cast<size_t>(target_index)] = m_temp;
-            m_temp_valid = false;
-            return;
-        }
-
-        if (target_index < 0)
-        {
-            // source -> temp
-            m_temp = m_payload[static_cast<size_t>(source_index)];
-            m_temp_valid = true;
-            return;
-        }
-
-        // source -> target
-        m_payload[static_cast<size_t>(target_index)] = m_payload[static_cast<size_t>(source_index)];
-    }
-
-    uint32_t on_reserve_empty(const uint32_t minimum_capacity, const uint32_t recommended_capacity) noexcept override
-    {
-        // Approve the recommendation, but ensure at least minimum_capacity.
-        const uint32_t chosen = (recommended_capacity >= minimum_capacity) ? recommended_capacity : minimum_capacity;
-
-        // Ensure our payload can hold the chosen capacity; Base will then allocate metadata of that size.
-        // NOTE: Base may reject if chosen < minimum_capacity elsewhere; this ensures we can mirror capacity.
-        m_payload.resize(static_cast<size_t>(chosen));
-        return chosen;
-    }
-
-private:
-    void ensure_payload_capacity_matches_slots() noexcept
-    {
-        const uint32_t c = Base::capacity();
-        if (m_payload.size() != static_cast<size_t>(c))
-            m_payload.resize(static_cast<size_t>(c));
-    }
-
-private:
     int m_next_value;
-    std::vector<int> m_payload;
-
-    // Temp for pack moves
-    bool m_temp_valid;
-    int  m_temp;
-
-    // Visit capture
-    std::vector<VisitRec> m_visits;
-
-    // Compact expectation (payload in [0..loose_count) after pack)
     std::vector<int> m_expected_after_compact;
 };
+
+template<typename TIndex>
+void TUnorderedSlots_TestStorage<TIndex>::on_move_payload(const int32_t source_index, const int32_t target_index) noexcept
+{
+    if (source_index == target_index)
+        hard_fail_contract("on_move_payload: source == target");
+
+    const bool src_is_temp = (source_index < 0);
+    const bool dst_is_temp = (target_index < 0);
+
+    if (src_is_temp && dst_is_temp)
+        hard_fail_contract("on_move_payload: both are temp");
+
+    ensure_payload_capacity_matches_slots(static_cast<uint32_t>(m_payload.size()));
+
+    if (source_index < 0)
+    {
+        if (!m_temp_valid)
+            hard_fail_contract("on_move_payload: temp->target but temp invalid");
+        m_payload[static_cast<size_t>(target_index)] = m_temp;
+        m_temp_valid = false;
+        return;
+    }
+
+    if (target_index < 0)
+    {
+        m_temp = m_payload[static_cast<size_t>(source_index)];
+        m_temp_valid = true;
+        return;
+    }
+
+    m_payload[static_cast<size_t>(target_index)] = m_payload[static_cast<size_t>(source_index)];
+}
+
+template<typename TIndex>
+uint32_t TUnorderedSlots_TestStorage<TIndex>::on_reserve_empty(
+    const uint32_t minimum_capacity,
+    const uint32_t recommended_capacity) noexcept
+{
+    const uint32_t chosen = (recommended_capacity >= minimum_capacity) ? recommended_capacity : minimum_capacity;
+    m_payload.resize(static_cast<size_t>(chosen));
+    return chosen;
+}
+
+template<typename TIndex>
+void TUnorderedSlots_TestStorage<TIndex>::ensure_payload_capacity_matches_slots(const uint32_t capacity) noexcept
+{
+    if (m_payload.size() != static_cast<size_t>(capacity))
+        m_payload.resize(static_cast<size_t>(capacity));
+}
 
 // -----------------------------
 // Tests
@@ -552,7 +542,7 @@ static bool test_smoke(const TUnorderedConfig& cfg, TestLogger& log)
 }
 
 template<typename TIndex>
-static bool test_visit_semantics(const TUnorderedConfig& cfg, TestLogger& log)
+static bool test_traversal_semantics(const TUnorderedConfig& cfg, TestLogger& log)
 {
     (void)cfg;
     using H = TUnorderedSlots_Test<TIndex>;
@@ -597,65 +587,11 @@ static bool test_visit_semantics(const TUnorderedConfig& cfg, TestLogger& log)
         }
     }
 
-    // Empty traversal via visit_empty() must produce exactly empty_count, id=-2, no duplicates
-    (void)h.empty_slots_via_visit_checked();
-
-    // visit_loose: id == -1 and count == loose_count; no duplicates
-    h.clear_visits();
-    h.visit_loose();
+    const std::vector<int32_t> empty_by_count = h.empty_slots_by_count_checked();
+    if ((loose_by_count.size() + empty_by_count.size()) != static_cast<size_t>(h.cap()))
     {
-        const auto& v = h.visits();
-        if (v.size() != static_cast<size_t>(h.loose_count()))
-        {
-            log.fail("visit_loose count mismatch");
-            return false;
-        }
-        for (size_t i = 0; i < v.size(); ++i)
-        {
-            if (v[i].id != -1) { log.fail("visit_loose id != -1"); return false; }
-            for (size_t j = 0; j < i; ++j)
-                if (v[j].slot == v[i].slot) { log.fail("visit_loose duplicate slot"); return false; }
-            if (!h.is_loose_slot(v[i].slot)) { log.fail("visit_loose visited non-loose slot"); return false; }
-        }
-    }
-
-    // visit_all: count == capacity; first loose_count with id=-1, remaining empty_count with id=-2
-    h.clear_visits();
-    h.visit_all();
-    {
-        const auto& v = h.visits();
-        if (v.size() != static_cast<size_t>(h.cap()))
-        {
-            log.fail("visit_all count mismatch");
-            return false;
-        }
-
-        const uint32_t L = h.loose_count();
-        const uint32_t E = h.empty_count();
-        if (L + E != h.cap())
-        {
-            log.fail("count sum mismatch in visit_all");
-            return false;
-        }
-
-        // Must be loose then empty (per private_on_visit_dispatcher ordering).
-        // We don't assume specific slot ordering, only correct tagging and correct category membership.
-        for (uint32_t i = 0; i < L; ++i)
-        {
-            if (v[i].id != -1) { log.fail("visit_all: loose prefix id != -1"); return false; }
-            if (!h.is_loose_slot(v[i].slot)) { log.fail("visit_all: loose prefix visited non-loose"); return false; }
-        }
-        for (uint32_t i = 0; i < E; ++i)
-        {
-            const uint32_t at = L + i;
-            if (v[at].id != -2) { log.fail("visit_all: empty suffix id != -2"); return false; }
-            if (!h.is_empty_slot(v[at].slot)) { log.fail("visit_all: empty suffix visited non-empty"); return false; }
-        }
-
-        // No duplicates overall
-        for (size_t i = 0; i < v.size(); ++i)
-            for (size_t j = 0; j < i; ++j)
-                if (v[j].slot == v[i].slot) { log.fail("visit_all: duplicate slot"); return false; }
+        log.fail("traversal count does not match capacity");
+        return false;
     }
 
     return true;
@@ -757,8 +693,8 @@ static bool test_compact_postconditions(const TUnorderedConfig& cfg, TestLogger&
         }
     }
 
-    // Empty traversal via visit_empty count check
-    (void)h.empty_slots_via_visit_checked();
+    // Empty-list traversal count check.
+    (void)h.empty_slots_by_count_checked();
 
     return true;
 }
@@ -868,6 +804,55 @@ static bool test_resize_reserve(const TUnorderedConfig& cfg, TestLogger& log)
     return true;
 }
 
+static bool test_pod_unordered_slots_smoke(TestLogger& log)
+{
+    TPodUnorderedSlots<int> slots;
+    if (!slots.initialise(8u))
+    {
+        log.fail("TPodUnorderedSlots initialise failed");
+        return false;
+    }
+
+    const int32_t a = slots.insert(11);
+    const int32_t b = slots.insert(22);
+    if ((a < 0) || (b < 0))
+    {
+        log.fail("TPodUnorderedSlots insert failed");
+        return false;
+    }
+
+    const int* const a_slot = slots.get_slot(a);
+    const int* const b_slot = slots.get_slot(b);
+    if ((a_slot == nullptr) || (*a_slot != 11) || (b_slot == nullptr) || (*b_slot != 22))
+    {
+        log.fail("TPodUnorderedSlots payload lookup failed");
+        return false;
+    }
+
+    if (!slots.erase(a))
+    {
+        log.fail("TPodUnorderedSlots erase failed");
+        return false;
+    }
+
+    slots.pack();
+    if (!slots.check_integrity())
+    {
+        log.fail("TPodUnorderedSlots integrity failed");
+        return false;
+    }
+
+    slots.deallocate();
+    if (!slots.initialise(4u))
+    {
+        log.fail("TPodUnorderedSlots reinitialise failed");
+        return false;
+    }
+
+    slots.deallocate();
+    return true;
+}
+
 // -----------------------------
 // Fuzz
 // -----------------------------
@@ -937,10 +922,10 @@ static bool test_fuzz(const TUnorderedConfig& cfg, TestLogger& log)
                 return false;
             }
 
-            // Extra checks: list traversal boundedness + visit_empty boundedness.
+            // Extra checks: loose- and empty-list traversal boundedness.
             // Respect circularity: traverse loose by count only.
             (void)h.loose_slots_by_count_checked();
-            (void)h.empty_slots_via_visit_checked();
+            (void)h.empty_slots_by_count_checked();
 
             // Count sanity
             if (h.loose_count() + h.empty_count() != h.cap())
@@ -1157,7 +1142,7 @@ static TUnorderedConfig parse_args(int argc, char** argv)
         if (a == "--fast")
         {
             cfg.run_smoke = true;
-            cfg.run_visit_semantics = true;
+            cfg.run_traversal_semantics = true;
             cfg.run_compact_postconditions = true;
             cfg.run_resize_reserve = true;
             cfg.run_fuzz = false;
@@ -1168,7 +1153,7 @@ static TUnorderedConfig parse_args(int argc, char** argv)
         if (a == "--soak")
         {
             cfg.run_smoke = true;
-            cfg.run_visit_semantics = true;
+            cfg.run_traversal_semantics = true;
             cfg.run_compact_postconditions = true;
             cfg.run_resize_reserve = true;
             cfg.run_fuzz = false;
@@ -1233,11 +1218,11 @@ static bool run_suite_typed(const TUnorderedConfig& cfg, TestLogger& log)
         std::cout << "UNORDERED SMOKE TEST PASSED\n";
     }
 
-    if (cfg.run_visit_semantics)
+    if (cfg.run_traversal_semantics)
     {
-        std::cout << "UNORDERED VISIT SEMANTICS TEST STARTED\n";
-        if (!test_visit_semantics<TIndex>(cfg, log)) return false;
-        std::cout << "UNORDERED VISIT SEMANTICS TEST PASSED\n";
+        std::cout << "UNORDERED TRAVERSAL SEMANTICS TEST STARTED\n";
+        if (!test_traversal_semantics<TIndex>(cfg, log)) return false;
+        std::cout << "UNORDERED TRAVERSAL SEMANTICS TEST PASSED\n";
     }
 
     if (cfg.run_compact_postconditions)
@@ -1274,6 +1259,7 @@ int run_all_tests(const TUnorderedConfig& cfg_in)
     // Run both supported types
     if (!run_suite_typed<int32_t>(cfg, log)) return 1;
     if (!run_suite_typed<int16_t>(cfg, log)) return 1;
+    if (!test_pod_unordered_slots_smoke(log)) return 1;
 
     if (log.failures == 0)
         std::cout << "ALL TESTS PASSED\n";

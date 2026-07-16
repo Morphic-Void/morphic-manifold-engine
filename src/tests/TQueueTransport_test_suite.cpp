@@ -13,11 +13,13 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
+#include <malloc.h>
 #include <string_view>
 
 #include "threading/transports/TQueueTransport.hpp"
 #include "tests/TQueueTransport_test_suite.hpp"
-#include "memory/memory_allocation.hpp"
+#include "memory/memory_context.hpp"
 #include "debug/debug.hpp"
 
 using threading::transports::TQueue;
@@ -98,6 +100,45 @@ struct TTestContext
 inline std::string make_repeated_string(const char c, const std::uint32_t count)
 {
     return std::string(static_cast<std::size_t>(count), c);
+}
+
+struct TAllocationGate
+{
+    bool allow_allocations = true;
+};
+
+struct TThreadContextScope
+{
+    explicit TThreadContextScope(memory::CMemoryContext* const context) noexcept
+        : previous(memory::set_thread_memory_context(context))
+    {
+    }
+
+    TThreadContextScope(const TThreadContextScope&) = delete;
+    TThreadContextScope& operator=(const TThreadContextScope&) = delete;
+
+    ~TThreadContextScope() noexcept
+    {
+        (void)memory::set_thread_memory_context(previous);
+    }
+
+    memory::CMemoryContext* previous = nullptr;
+};
+
+static void* MV_STD_ABI_CALL allocate_test_memory(void* const context, const std::size_t alignment, const std::size_t bytes) noexcept
+{
+    const TAllocationGate* const gate = static_cast<const TAllocationGate*>(context);
+    if ((gate != nullptr) && !gate->allow_allocations)
+    {
+        return nullptr;
+    }
+    return _aligned_malloc(bytes, (alignment < alignof(void*)) ? alignof(void*) : alignment);
+}
+
+static bool MV_STD_ABI_CALL deallocate_test_memory(void*, const std::size_t, void* const ptr) noexcept
+{
+    _aligned_free(ptr);
+    return true;
 }
 
 template<typename TTransport>
@@ -222,13 +263,45 @@ void test_queue_initialise_rejection_and_conditioning(TTestContext& ctx)
     }
 }
 
+void test_queue_respects_byte_ceiling(TTestContext& ctx)
+{
+    struct alignas(256) TLargePod
+    {
+        std::uint8_t bytes[4096];
+    };
+
+    TQueue<TLargePod> queue;
+    constexpr std::uint32_t max_elements =
+        static_cast<std::uint32_t>(std::min<std::size_t>(
+            TQueue<TLargePod>::k_max_capacity,
+            memory::t_max_elements<TLargePod>()));
+
+    TEST_EXPECT_TRUE(ctx, queue.initialise_fixed(TQueue<TLargePod>::k_min_capacity, false));
+    TEST_EXPECT_TRUE(ctx, queue.posting_is_ready());
+    TEST_EXPECT_TRUE(ctx, queue.reading_is_ready());
+    TEST_EXPECT_TRUE(ctx, queue.validate());
+
+    queue.deallocate();
+
+    if (max_elements < std::numeric_limits<std::uint32_t>::max())
+    {
+        TEST_EXPECT_FALSE(ctx, queue.initialise_fixed(max_elements + 1u, false));
+        TEST_EXPECT_FALSE(ctx, queue.posting_is_ready());
+        TEST_EXPECT_FALSE(ctx, queue.reading_is_ready());
+        TEST_EXPECT_TRUE(ctx, queue.validate());
+    }
+}
+
 void test_queue_initial_allocation_failure(TTestContext& ctx)
 {
-    TQueue<char> queue;
+    TAllocationGate gate;
+    gate.allow_allocations = false;
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryContext context(allocator, 1u);
+    const TThreadContextScope thread_context_scope(&context);
 
-    (void)memory::enable_allocation(false);
+    TQueue<char> queue;
     TEST_EXPECT_FALSE(ctx, queue.initialise_fixed(32u, false));
-    (void)memory::enable_allocation(true);
 
     TEST_EXPECT_FALSE(ctx, queue.posting_is_ready());
     TEST_EXPECT_FALSE(ctx, queue.reading_is_ready());
@@ -239,6 +312,11 @@ void test_queue_initial_allocation_failure(TTestContext& ctx)
 void test_queue_zero_and_null_behaviour(TTestContext& ctx)
 {
     TQueue<char> queue;
+    TPodConstView<char> invalid_src;
+    TPodView<char> invalid_dst;
+
+    TEST_EXPECT_FALSE(ctx, queue.post(invalid_src));
+    TEST_EXPECT_FALSE(ctx, queue.read(invalid_dst));
     TEST_EXPECT_TRUE(ctx, queue.initialise_fixed(32u, false));
 
     TEST_EXPECT_TRUE(ctx, queue.post(nullptr, 0u));
@@ -246,6 +324,15 @@ void test_queue_zero_and_null_behaviour(TTestContext& ctx)
 
     TEST_EXPECT_FALSE(ctx, queue.post(nullptr, 1u));
     TEST_EXPECT_FALSE(ctx, queue.read(nullptr, 1u));
+    TEST_EXPECT_FALSE(ctx, queue.post(invalid_src));
+    TEST_EXPECT_FALSE(ctx, queue.read(invalid_dst));
+
+    char src = 'V';
+    char dst = '\0';
+    TEST_EXPECT_TRUE(ctx, queue.post(TPodConstView<char>{ &src, 1u }));
+    TEST_EXPECT_EQ(ctx, queue.refresh_readable_count(), 1u);
+    TEST_EXPECT_TRUE(ctx, queue.read(TPodView<char>{ &dst, 1u }));
+    TEST_EXPECT_EQ(ctx, dst, src);
 }
 
 void test_queue_basic_publication_and_read(TTestContext& ctx)
@@ -361,6 +448,11 @@ void run_queue_resize_success_script(tests::TTestContext& ctx,
     constexpr std::uint32_t requested_initial_capacity = 8u;
     constexpr std::uint32_t max_capacity = 128u;
 
+    TAllocationGate gate;
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryContext context(allocator, 1u);
+    const TThreadContextScope thread_context_scope(&context);
+
     TQueue<char> queue;
     TEST_CASE_EXPECT_TRUE(ctx, case_name, queue.initialise_growable(requested_initial_capacity, max_capacity));
 
@@ -406,6 +498,11 @@ void run_queue_resize_failure_script(tests::TTestContext& ctx,
     constexpr std::uint32_t requested_initial_capacity = 8u;
     constexpr std::uint32_t max_capacity = 128u;
 
+    TAllocationGate gate;
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryContext context(allocator, 1u);
+    const TThreadContextScope thread_context_scope(&context);
+
     TQueue<char> queue;
     TEST_CASE_EXPECT_TRUE(ctx, case_name, queue.initialise_growable(requested_initial_capacity, max_capacity));
 
@@ -425,9 +522,9 @@ void run_queue_resize_failure_script(tests::TTestContext& ctx,
 
         if (positive_reallocation && (current_positive_point == fail_point_ordinal))
         {
-            (void)memory::enable_allocation(false);
+            gate.allow_allocations = false;
             TEST_CASE_EXPECT_FALSE(ctx, case_name, queue.post(payload.data(), step.count));
-            (void)memory::enable_allocation(true);
+            gate.allow_allocations = true;
 
             TEST_CASE_EXPECT_TRUE(ctx, case_name, queue.posting_poisoned());
             TEST_CASE_EXPECT_FALSE(ctx, case_name, queue.posting_is_ready());
@@ -507,6 +604,11 @@ void test_queue_growable_resize_matrix(tests::TTestContext& ctx)
 
 void test_queue_reading_can_drain_after_poison(tests::TTestContext& ctx)
 {
+    TAllocationGate gate;
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryContext context(allocator, 1u);
+    const TThreadContextScope thread_context_scope(&context);
+
     TQueue<char> queue;
     TEST_EXPECT_TRUE(ctx, queue.initialise_growable(8u, 128u));
 
@@ -515,9 +617,9 @@ void test_queue_reading_can_drain_after_poison(tests::TTestContext& ctx)
     const std::string growth_payload = tests::make_repeated_string('G', 27u);
     TEST_EXPECT_TRUE(ctx, queue.post_would_reallocate(static_cast<std::uint32_t>(growth_payload.size())));
 
-    (void)memory::enable_allocation(false);
+    gate.allow_allocations = false;
     TEST_EXPECT_FALSE(ctx, queue.post(growth_payload.data(), static_cast<std::uint32_t>(growth_payload.size())));
-    (void)memory::enable_allocation(true);
+    gate.allow_allocations = true;
 
     TEST_EXPECT_TRUE(ctx, queue.posting_poisoned());
     TEST_EXPECT_EQ(ctx, tests::drain_queue(queue), std::string("ABCDEF"));
@@ -545,9 +647,14 @@ void test_queue_deallocate_restores_empty(TTestContext& ctx)
 int test_queue_transport()
 {
     TTestContext ctx;
+    TAllocationGate gate;
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryContext context(allocator, 1u);
+    const TThreadContextScope thread_context_scope(&context);
 
     test_queue_uninitialised_state(ctx);
     test_queue_initialise_rejection_and_conditioning(ctx);
+    test_queue_respects_byte_ceiling(ctx);
     test_queue_initial_allocation_failure(ctx);
     test_queue_zero_and_null_behaviour(ctx);
     test_queue_basic_publication_and_read(ctx);

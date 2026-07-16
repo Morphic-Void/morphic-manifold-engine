@@ -5,13 +5,13 @@ File:   TOrderedSlots.md
 Author: Ritchie Brannan  
 Date:   1 Apr 26  
 
-# TOrderedSlots<TIndex, TMeta>
+# TOrderedSlots<TSlotBacking, TIndex, TMeta>
 
 ## Purpose
 
-TOrderedSlots<TIndex, TMeta> is a general-purpose ordering and
+TOrderedSlots<TSlotBacking, TIndex, TMeta> is a general-purpose ordering and
 slot-management toolkit that maintains an ordered index over selected
-occupied slots.
+occupied slots for a lower slot-backing layer.
 
 It provides:
 
@@ -28,22 +28,27 @@ This template is intended as a base class, not a concrete container.
 
 TOrderedSlots is a composable structural layer.
 
-The derived class:
+The slot-backing layer:
 
 - owns payload storage
 - defines key comparison
 - implements payload movement
 - controls capacity approval
-- exposes the public API
 
-Ordering and traversal are optional and depend on derived usage.
+The public facade:
+
+- exposes the public API
+- coordinates whole-container lifetime
+
+Ordering and traversal are optional and depend on facade usage.
 
 ## Interface model
 
 The interface is primarily protected.
 
-The base provides metadata and structure. The derived class defines
-public behaviour.
+The lower TSlotBacking provides container-specific state and primitive
+operations. TOrderedSlots provides metadata and structure. The upper facade
+defines public behaviour.
 
 ## Structural model
 
@@ -76,7 +81,7 @@ Slot index domain:
 
     [0, capacity())
 
-- identifies metadata and derived payload
+- identifies metadata and slot-backing payload
 - stable except during sort_and_pack()
 
 Sentinel:
@@ -95,7 +100,7 @@ Rank index is defined by traversal order.
 
 - lexed: [0, lexed_count())
 - loose: [lexed_count(), lexed_count() + loose_count())
-- empty: no rank
+- empty: [lexed_count() + loose_count(), capacity())
 
 Traversal order defines rank.
 
@@ -115,24 +120,28 @@ Equal-key runs are stable across:
 
 ## Ownership boundary
 
-Base owns:
-
-- metadata
-- structure
-- lifecycle
-
-Derived owns:
+The slot-backing layer owns:
 
 - payload
 - key definition
 - payload movement
-- capacity policy
+- payload reserve coordination
 
-## Virtual callbacks
+TOrderedSlots owns:
 
-Derived provides:
+- metadata
+- tree and list structures
+- metadata lifecycle
 
-- on_visit(slot_index, rank_index)
+The public facade owns:
+
+- public API
+- coordinated container lifecycle
+
+## Slot-backing responsibilities
+
+TSlotBacking provides:
+
 - on_move_payload(source_index, target_index)
 - on_reserve_empty(minimum_capacity, recommended_capacity)
 - on_compare_keys(source_index, target_index)
@@ -160,28 +169,17 @@ Capacity negotiation.
 
 Must satisfy minimum_capacity.
 
-### on_visit
+## Re-entry contract
 
-Called during traversal with slot_index and rank_index.
-
-## Re-entry guard
-
-Structural re-entry during callbacks is prohibited.
-
-Safe accessor subset only.
-
-- Debug: hard fail
-- Release: soft fail
+The slot-backing responsibility functions must not re-enter the slot manager.
+This is a usage contract rather than a runtime locking mechanism.
 
 No thread safety.
 
 ## Internal layering
 
-- protected interface
-- safe_* wrappers
-- private_* helpers
-
-Mutation occurs under a single guard.
+- direct compile-time calls to the protected lower slot-backing layer
+- private structural helpers
 
 ## Mutation model
 
@@ -227,17 +225,11 @@ Non-destructive:
 - acquire
 - erase
 
-## Visit operations
+## Traversal operations
 
-Visit order:
-
-    lexed -> loose -> empty
-
-Rank ranges:
-
-- lexed: ordered
-- loose: appended
-- empty: trailing
+Lexed, loose, and empty slots expose direct first, last, previous, and next
+traversal functions. Full-domain traversal order is lexed, then loose, then
+empty, and is also available through rank mapping.
 
 ## Invariants
 

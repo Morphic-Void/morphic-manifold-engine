@@ -213,7 +213,7 @@
 #include <utility>      //  std::move
 
 #include "image/codec/tga.hpp"
-#include "memory/memory_allocation.hpp"
+#include "memory/memory_policies.hpp"
 #include "containers/ByteBuffers.hpp"
 #include "debug/debug.hpp"
 
@@ -693,7 +693,7 @@ CByteBuffer encode(const CByteRectConstView& view, const EncodeOptions& options)
     const std::uint32_t tga_element_bytes = state.use_clut ? 1u : wide_element_bytes;
 
     //  construct the tga file memory image
-    if (MV_FAIL_SAFE_ASSERT((tga_file_bytes <= memory::k_max_elements) && buffer.allocate(static_cast<std::size_t>(tga_file_bytes))))
+    if (MV_FAIL_SAFE_ASSERT((tga_file_bytes <= memory::k_byte_size_ceiling) && buffer.allocate(static_cast<std::size_t>(tga_file_bytes))))
     {
         (void)buffer.set_size(static_cast<std::size_t>(tga_file_bytes));
 

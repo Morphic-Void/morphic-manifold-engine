@@ -46,8 +46,8 @@
 #include <type_traits>  //  std::is_const_v, std::is_trivially_copyable_v
 
 #include "containers/TPodVector.hpp"
-#include "memory/memory_allocation.hpp"
-#include "memory/memory_primitives.hpp"
+#include "memory/memory_policies.hpp"
+#include "memory/memory_token.hpp"
 #include "bit_utils/bit_ops.hpp"
 #include "debug/debug.hpp"
 
@@ -69,6 +69,8 @@ private:
 public:
     static constexpr std::uint32_t k_max_capacity = 0x00100000u;
     static constexpr std::uint32_t k_min_capacity = static_cast<std::uint32_t>(memory::k_vector_growth_policy_min_capacity);
+    static constexpr std::size_t k_element_size = sizeof(T);
+    static constexpr std::size_t k_align = memory::t_default_align<T>();
 
 public:
     TQueue() noexcept = default;
@@ -86,7 +88,7 @@ public:
     [[nodiscard]] bool posting_poisoned() const noexcept;
     [[nodiscard]] bool post(const T& src) noexcept { return post(&src, 1u); }
     [[nodiscard]] bool post(const T* const src, const std::uint32_t count = 1u) noexcept;
-    [[nodiscard]] bool post(const TPodConstView<T>& src) noexcept { return post(src.data(), static_cast<std::uint32_t>(src.size())); }
+    [[nodiscard]] bool post(const TPodConstView<T>& src) noexcept { return src.is_valid() && post(src.data(), static_cast<std::uint32_t>(src.size())); }
     [[nodiscard]] bool post_would_reallocate(const std::uint32_t count) const noexcept;
 
     //  Consumer status and operations
@@ -95,7 +97,7 @@ public:
     [[nodiscard]] bool reading_is_ready() const noexcept;
     [[nodiscard]] bool read(T& dst) noexcept { return read(&dst, 1u); }
     [[nodiscard]] bool read(T* const dst, const std::uint32_t count = 1u) noexcept;
-    [[nodiscard]] bool read(const TPodView<T>& dst) noexcept { return read(dst.data(), static_cast<std::uint32_t>(dst.size())); }
+    [[nodiscard]] bool read(const TPodView<T>& dst) noexcept { return dst.is_valid() && read(dst.data(), static_cast<std::uint32_t>(dst.size())); }
     [[nodiscard]] std::uint32_t current_readable_count() const noexcept;
     [[nodiscard]] std::uint32_t refresh_readable_count() noexcept;
 
@@ -112,6 +114,10 @@ public:
     [[nodiscard]] bool validate() const noexcept;
 
 private:
+    static constexpr std::uint32_t k_token_max_capacity = static_cast<std::uint32_t>(memory::t_max_elements<T>());
+    static_assert(k_element_size <= 0xffffu, "TQueue<T> element size exceeds the memory token stride field.");
+    static_assert(k_element_size <= memory::k_byte_size_ceiling, "TQueue<T> element size exceeds the shared byte ceiling.");
+
     static std::uint32_t growth_policy(const std::uint32_t capacity) noexcept;
     bool growth_and_discard_policy(const std::uint32_t count, const std::uint32_t buffer_size, std::uint32_t& target_capacity, bool& discard) const noexcept;
     bool is_canonical_empty() const noexcept;
@@ -131,7 +137,25 @@ private:
     //  Buffer state
     struct Buffer
     {
-        memory::TMemoryToken<T> storage;
+        [[nodiscard]] T* data() noexcept
+        {
+            return static_cast<T*>(storage.data());
+        }
+
+        [[nodiscard]] const T* data() const noexcept
+        {
+            return static_cast<const T*>(storage.data());
+        }
+
+        [[nodiscard]] bool storage_is_valid() const noexcept
+        {
+            return storage.is_relocatable() &&
+                (storage.stride() == k_element_size) &&
+                (storage.storage_alignment() == k_align) &&
+                (storage.count() == capacity);
+        }
+
+        memory::CMemoryToken storage{ k_element_size, k_align };
         std::uint32_t capacity = 0u;
         std::uint32_t size = 0u;
     };
@@ -172,7 +196,11 @@ inline bool TQueue<T>::posting_is_valid() const noexcept
     for (std::uint32_t buffer_index = 0u; buffer_index < 3; ++buffer_index)
     {
         const Buffer& buffer = m_buffers[buffer_index];
-        if ((buffer.storage.data() == nullptr) || (buffer.capacity < buffer.size) || (buffer.capacity < k_min_capacity) || (buffer.capacity > m_capacity))
+        if (!buffer.storage_is_valid() ||
+            (buffer.data() == nullptr) ||
+            (buffer.capacity < buffer.size) ||
+            (buffer.capacity < k_min_capacity) ||
+            (buffer.capacity > m_capacity))
         {
             return false;
         }
@@ -230,7 +258,7 @@ inline bool TQueue<T>::post(const T* const src, const std::uint32_t count) noexc
 
         //  Prepare the buffer for publication
         const std::size_t byte_count = (static_cast<std::size_t>(count) * sizeof(T));
-        if ((output_buffer.capacity != m_capacity) && !output_buffer.storage.reallocate(output_buffer.size, m_capacity))
+        if ((output_buffer.capacity != m_capacity) && !output_buffer.storage.reallocate(m_capacity, output_buffer.size))
         {   //  reallocation failed, the buffer is unchanged but the post() operation cannot continue
             m_allocation_failed = true;
             return MV_FAIL_SAFE_ASSERT(false);
@@ -240,7 +268,7 @@ inline bool TQueue<T>::post(const T* const src, const std::uint32_t count) noexc
         {
             output_buffer.size = 0u;
         }
-        std::memcpy((output_buffer.storage.data() + output_buffer.size), src, byte_count);
+        std::memcpy((output_buffer.data() + output_buffer.size), src, byte_count);
         output_buffer.size += count;
 
         //  Publish and classify returned staged state
@@ -248,14 +276,14 @@ inline bool TQueue<T>::post(const T* const src, const std::uint32_t count) noexc
         if (received == 0u)
         {   //  Staged publication already consumed: rebase and republish
             m_posting_phase = !m_posting_phase;
-            if ((locked_buffer.capacity != m_capacity) && !locked_buffer.storage.reallocate(locked_buffer.size, m_capacity))
+            if ((locked_buffer.capacity != m_capacity) && !locked_buffer.storage.reallocate(m_capacity, locked_buffer.size))
             {   //  reallocation failed, the buffer is unchanged but the post() operation cannot continue
                 m_allocation_failed = true;
                 return MV_FAIL_SAFE_ASSERT(false);
             }
             locked_buffer.capacity = m_capacity;
-            std::memcpy(output_buffer.storage.data(), src, byte_count);  //  safe to use because the publish of it will be ignored
-            std::memcpy(locked_buffer.storage.data(), src, byte_count);  //  safe to use because it has been consumed
+            std::memcpy(output_buffer.data(), src, byte_count);  //  safe to use because the publish of it will be ignored
+            std::memcpy(locked_buffer.data(), src, byte_count);  //  safe to use because it has been consumed
             output_buffer.size = locked_buffer.size = count;
             m_staged_word.store((m_posting_locked_buffer_index + (m_posting_phase ? 5u : 1u)), std::memory_order_release);
             const std::uint32_t buffer_index_swap = m_posting_locked_buffer_index;
@@ -264,7 +292,7 @@ inline bool TQueue<T>::post(const T* const src, const std::uint32_t count) noexc
         }
         else
         {   //  Staged publication still pending: extend staged backlog
-            if ((staged_buffer.capacity != m_capacity) && !staged_buffer.storage.reallocate(staged_buffer.size, m_capacity))
+            if ((staged_buffer.capacity != m_capacity) && !staged_buffer.storage.reallocate(m_capacity, staged_buffer.size))
             {   //  reallocation failed, the buffer is unchanged but the post() operation cannot continue
                 m_allocation_failed = true;
                 return MV_FAIL_SAFE_ASSERT(false);
@@ -274,7 +302,7 @@ inline bool TQueue<T>::post(const T* const src, const std::uint32_t count) noexc
             {
                 staged_buffer.size = 0u;
             }
-            std::memcpy((staged_buffer.storage.data() + staged_buffer.size), src, byte_count);
+            std::memcpy((staged_buffer.data() + staged_buffer.size), src, byte_count);
             staged_buffer.size += count;
             const std::uint32_t buffer_index_swap = m_posting_output_buffer_index;
             m_posting_output_buffer_index = m_posting_staged_buffer_index;
@@ -318,7 +346,11 @@ inline bool TQueue<T>::reading_is_valid() const noexcept
             return false;
         }
         const Buffer& buffer = m_buffers[m_reading_buffer_index];
-        if ((buffer.storage.data() == nullptr) || (buffer.capacity < buffer.size) || (buffer.capacity < k_min_capacity) || (buffer.size < m_reading_read_index))
+        if (!buffer.storage_is_valid() ||
+            (buffer.data() == nullptr) ||
+            (buffer.capacity < buffer.size) ||
+            (buffer.capacity < k_min_capacity) ||
+            (buffer.size < m_reading_read_index))
         {
             return false;
         }
@@ -347,7 +379,7 @@ inline bool TQueue<T>::read(T* const dst, const std::uint32_t count) noexcept
             return false;
         }
         Buffer& buffer = m_buffers[m_reading_buffer_index];
-        std::memcpy(dst, (buffer.storage.data() + m_reading_read_index), (static_cast<std::size_t>(count) * sizeof(T)));
+        std::memcpy(dst, (buffer.data() + m_reading_read_index), (static_cast<std::size_t>(count) * sizeof(T)));
         m_reading_read_index += count;
         if (m_reading_read_index == buffer.size)
         {   //  buffer exhausted
@@ -399,7 +431,7 @@ inline std::uint32_t TQueue<T>::refresh_readable_count() noexcept
 template<typename T>
 inline bool TQueue<T>::initialise_fixed(const std::uint32_t capacity, const bool allow_discard) noexcept
 {
-    if (capacity > k_max_capacity)
+    if ((capacity > k_max_capacity) || (capacity > k_token_max_capacity))
     {   //  requested capacity not supported
         return false;
     }
@@ -407,7 +439,9 @@ inline bool TQueue<T>::initialise_fixed(const std::uint32_t capacity, const bool
     {   //  re-initialisation is not allowed without deallocation
         return false;
     }
-    const std::uint32_t conditioned_capacity = std::min(std::max((bit_ops::is_pow2(capacity) ? capacity : growth_policy(capacity)), k_min_capacity), k_max_capacity);
+    const std::uint32_t conditioned_capacity = std::max(
+        std::min((bit_ops::is_pow2(capacity) ? capacity : growth_policy(capacity)), std::min(k_max_capacity, k_token_max_capacity)),
+        k_min_capacity);
     m_allow_discard = allow_discard;
     m_capacity = m_max_capacity = conditioned_capacity;
     for (std::uint32_t buffer_index = 0u; buffer_index < 3; ++buffer_index)
@@ -434,7 +468,10 @@ inline bool TQueue<T>::initialise_fixed(const std::uint32_t capacity, const bool
 template<typename T>
 inline bool TQueue<T>::initialise_growable(const std::uint32_t capacity, const std::uint32_t max_capacity) noexcept
 {
-    if ((max_capacity > k_max_capacity) || ((capacity > max_capacity) && (max_capacity != 0u)))
+    if ((capacity > k_token_max_capacity) ||
+        (max_capacity > k_max_capacity) ||
+        (max_capacity > k_token_max_capacity) ||
+        ((capacity > max_capacity) && (max_capacity != 0u)))
     {   //  requested capacity not supported
         return false;
     }
@@ -444,7 +481,9 @@ inline bool TQueue<T>::initialise_growable(const std::uint32_t capacity, const s
     }
     if (max_capacity != capacity)
     {   //  the user did not specify matching capacities, growth is expected
-        m_max_capacity = (max_capacity == 0u) ? k_max_capacity : std::max(max_capacity, m_capacity);
+        m_max_capacity = (max_capacity == 0u)
+            ? std::min(k_max_capacity, k_token_max_capacity)
+            : std::max(max_capacity, m_capacity);
     }
     return true;
 }
@@ -479,7 +518,9 @@ inline bool TQueue<T>::validate() const noexcept
 template<typename T>
 inline std::uint32_t TQueue<T>::growth_policy(const std::uint32_t capacity) noexcept
 {
-    return static_cast<std::uint32_t>(memory::vector_growth_policy(static_cast<std::size_t>(capacity)));
+    return static_cast<std::uint32_t>(memory::vector_growth_policy(
+        static_cast<std::size_t>(capacity),
+        static_cast<std::size_t>(std::min(k_max_capacity, k_token_max_capacity))));
 }
 
 template<typename T>
@@ -528,7 +569,7 @@ inline bool TQueue<T>::is_canonical_empty() const noexcept
     for (std::uint32_t buffer_index = 0u; buffer_index < 3; ++buffer_index)
     {
         const Buffer& buffer = m_buffers[buffer_index];
-        if ((buffer.storage.data() != nullptr) || ((buffer.capacity | buffer.size) != 0u))
+        if ((buffer.data() != nullptr) || ((buffer.capacity | buffer.size) != 0u))
         {
             return false;
         }

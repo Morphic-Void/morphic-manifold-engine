@@ -17,7 +17,7 @@
 //
 //  IMPORTANT TERMINOLOGY NOTE
 //  --------------------------
-//  "lexed" means ordered by on_compare_keys().
+//  "lexed" means ordered by the derived key comparator.
 //
 //  Ordering is entirely defined by the derived class comparator.
 //
@@ -43,10 +43,11 @@
 #include <cstring>      //  std::memcpy
 #include <limits>       //  std::numeric_limits
 #include <type_traits>  //  std::is_trivially_copyable_v, std::is_signed_v, std::is_same_v
+#include <utility>      //  std::move
 
 #include "SlotsRankMap.hpp"
-#include "memory/memory_allocation.hpp"
-#include "memory/memory_primitives.hpp"
+#include "memory/memory_policies.hpp"
+#include "memory/memory_token.hpp"
 #include "debug/debug.hpp"
 
 namespace slots
@@ -59,15 +60,25 @@ namespace slots
 /// how payload items are moved between slots.
 ///
 /// See docs/TOrderedSlots.md for full terminology and usage patterns.
-template<typename TIndex = std::int32_t, typename TMeta = std::int16_t>
-class TOrderedSlots
+template<typename TSlotBacking, typename TIndex = std::int32_t, typename TMeta = std::int16_t>
+class TOrderedSlots : protected TSlotBacking
 {
 public:
     TOrderedSlots() noexcept = default;
-    TOrderedSlots(TOrderedSlots&& src) noexcept { set_empty(); (void)move_from(src); }
-    TOrderedSlots(const TOrderedSlots& src) noexcept { set_empty(); (void)copy_from(src); }
+    TOrderedSlots(TOrderedSlots&& src) noexcept
+        : TSlotBacking(std::move(src))
+    {
+        set_empty();
+        (void)move_from(src);
+    }
+    TOrderedSlots(const TOrderedSlots& src) noexcept
+        : TSlotBacking(src)
+    {
+        set_empty();
+        (void)copy_from(src);
+    }
     TOrderedSlots(const std::uint32_t capacity) noexcept { (void)initialise(capacity); }
-    virtual ~TOrderedSlots() noexcept { (void)shutdown(); }
+    ~TOrderedSlots() noexcept { (void)shutdown(); }
 
 public:
 
@@ -83,36 +94,30 @@ private:
 
 protected:
 
-    //  These functions are safe to call during virtual calls from this template.
-
-    [[nodiscard]] bool is_initialised() const noexcept;
-
-    [[nodiscard]] bool is_empty() const noexcept;
-
-    [[nodiscard]] std::uint32_t capacity() const noexcept;
-    [[nodiscard]] std::uint32_t minimum_safe_capacity() const noexcept;
-
-    [[nodiscard]] std::uint32_t peak_usage() const noexcept;
-    [[nodiscard]] std::int32_t  peak_index() const noexcept;
-    [[nodiscard]] std::int32_t  high_index() const noexcept;
-
-    [[nodiscard]] std::uint32_t lexed_count() const noexcept;
-    [[nodiscard]] std::uint32_t loose_count() const noexcept;
-    [[nodiscard]] std::uint32_t empty_count() const noexcept;
-    [[nodiscard]] std::uint32_t occupied_count() const noexcept;
-
-    [[nodiscard]] static constexpr std::uint32_t index_limit() { return k_index_limit; }
-    [[nodiscard]] static constexpr std::uint32_t capacity_limit() { return k_capacity_limit; }
-
-protected:
-
-    //  These functions are unsafe to call during virtual calls from this template.
-
     TOrderedSlots& operator=(TOrderedSlots&& src) noexcept;
     TOrderedSlots& operator=(const TOrderedSlots& src) noexcept;
 
     [[nodiscard]] bool take(TOrderedSlots& src) noexcept;
     [[nodiscard]] bool clone(const TOrderedSlots& src) noexcept;
+
+    //  Limits
+    [[nodiscard]] static constexpr std::uint32_t index_limit() { return k_index_limit; }
+    [[nodiscard]] static constexpr std::uint32_t capacity_limit() { return k_capacity_limit; }
+
+    //  Status
+    [[nodiscard]] bool is_initialised() const noexcept;
+    [[nodiscard]] bool is_empty() const noexcept;
+
+    //  Simple accessors
+    [[nodiscard]] std::uint32_t capacity() const noexcept;
+    [[nodiscard]] std::uint32_t minimum_safe_capacity() const noexcept;
+    [[nodiscard]] std::uint32_t peak_usage() const noexcept;
+    [[nodiscard]] std::int32_t  peak_index() const noexcept;
+    [[nodiscard]] std::int32_t  high_index() const noexcept;
+    [[nodiscard]] std::uint32_t lexed_count() const noexcept;
+    [[nodiscard]] std::uint32_t loose_count() const noexcept;
+    [[nodiscard]] std::uint32_t empty_count() const noexcept;
+    [[nodiscard]] std::uint32_t occupied_count() const noexcept;
 
     //  Reset all management state and return every slot to the empty category.
     [[nodiscard]] bool clear() noexcept;
@@ -189,6 +194,14 @@ protected:
     [[nodiscard]] std::int32_t prev_loose(const std::int32_t slot_index) const noexcept;
     [[nodiscard]] std::int32_t next_loose(const std::int32_t slot_index) const noexcept;
 
+    //  Empty-list traversal by slot index.
+    //
+    //  These functions mirror loose-list traversal for the empty-slot domain.
+    [[nodiscard]] std::int32_t first_empty() const noexcept;
+    [[nodiscard]] std::int32_t last_empty() const noexcept;
+    [[nodiscard]] std::int32_t prev_empty(const std::int32_t slot_index) const noexcept;
+    [[nodiscard]] std::int32_t next_empty(const std::int32_t slot_index) const noexcept;
+
     //  Duplicate-key queries.
     //
     //  slot_index == -1 compares the currently staged query key.
@@ -245,7 +258,7 @@ protected:
     //      - Lexed metadata is rebuilt as a balanced AVL tree.
     //      - Loose and empty metadata are rebuilt as linear lists.
     //
-    //  Uses on_move_payload() to coordinate derived payload movement.
+    //  Uses derived payload movement to coordinate reordering.
     //  In-place mode uses cycle resolution with derived temporary storage (-1).
     //  External mode performs a single pass to a complete external payload domain.
     //
@@ -273,7 +286,7 @@ protected:
     //  Lexed search and bound queries.
     //
     //  These functions search the lexed subset only.
-    //  They use on_compare_keys(-1, slot_index), where -1 denotes the derived
+    //  They use the staged query key against slot_index, where -1 denotes the derived
     //  class's currently staged query key.
     //
     //  They return a matching or bound slot index, or -1 if no such lexed slot exists.
@@ -292,22 +305,6 @@ protected:
     [[nodiscard]] std::int32_t lower_bound_by_lex() const noexcept;
     [[nodiscard]] std::int32_t upper_bound_by_lex() const noexcept;
 
-    //  Visit one or more slot categories.
-    //
-    //  For each visited slot, calls on_visit(slot_index, rank_index).
-    //
-    //  visit_occupied() visits lexed then loose.
-    //  visit_all() visits lexed, then loose, then empty.
-    //
-    //  For lexed slots, rank_index is in [0, lexed_count()).
-    //  For loose slots, rank_index is in [lexed_count(), lexed_count() + loose_count()).
-    //  For empty slots, rank_index is in [lexed_count() + loose_count(), capacity()).
-    void visit_occupied() noexcept;
-    void visit_lexed() noexcept;
-    void visit_loose() noexcept;
-    void visit_empty() noexcept;
-    void visit_all() noexcept;
-
     //  Tree-shape diagnostics over the lexed AVL subset.
     [[nodiscard]] std::uint32_t tree_height() const noexcept;
     [[nodiscard]] std::uint32_t tree_weight() const noexcept;
@@ -316,7 +313,7 @@ protected:
     //
     //  Validates AVL structure and balance.
     //  If lex_check is not LexCheck::None, also validates comparator-defined
-    //  in-order semantics via on_compare_keys().
+    //  in-order semantics via the derived comparator.
     enum class LexCheck : std::int32_t { InOrder = 0, Unique = 1, None = 2 };
     [[nodiscard]] bool validate_tree(const LexCheck lex_check = LexCheck::None) const noexcept;
 
@@ -326,95 +323,11 @@ protected:
     //  and index ranges. Comparator-defined lex order is not checked here.
     [[nodiscard]] bool check_integrity() const noexcept;
 
-protected:
-
-    //  Protected virtual functions represent the derived class responsibility interface.
-    //
-    //  The following functions are safe to call during these virtual function calls:
-    //
-    //      is_initialised(),
-    //      capacity(), capacity_limit(), minimum_safe_capacity(),
-    //      peak_usage(), peak_index(), high_index(), index_limit(),
-    //      lexed_count(), loose_count(), empty_count(), occupied_count()
-    //
-    //  All other functions are unsafe when called from these virtual functions,
-    //  and calling them will result in a soft-fail (hard-fail in debug).
-
-    /// Visit callback for category traversal.
-    ///
-    /// rank_index is traversal-derived:
-    ///
-    ///     - lexed: [0, lexed_count())
-    ///     - loose: [lexed_count(), lexed_count() + loose_count())
-    ///     - empty: [lexed_count() + loose_count(), capacity())
-    virtual void on_visit(const std::int32_t slot_index, const std::int32_t rank_index) noexcept
-    {
-        (void)slot_index;
-        (void)rank_index;
-    }
-
-    /// Move derived payload during coordinated reordering.
-    ///
-    /// Contract:
-    ///   - source_index != target_index
-    ///   - exactly one of {source_index, target_index} may be -1
-    ///   - -1 denotes derived temporary storage
-    ///
-    /// Called only by sort_and_pack().
-    virtual void on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
-    {
-        (void)source_index;
-        (void)target_index;
-    }
-
-    /// Approve and finalise growth for reserve_empty() or reserve_and_acquire().
-    ///
-    /// Returns the absolute capacity to apply.
-    /// Returning a value less than minimum_capacity causes the caller to fail.
-    virtual [[nodiscard]] std::uint32_t on_reserve_empty(const std::uint32_t minimum_capacity, const std::uint32_t recommended_capacity) noexcept
-    {
-        (void)minimum_capacity;
-        return recommended_capacity;
-    }
-
-    /// Compare payload keys for two slots.
-    ///
-    /// Returns:
-    ///   < 0  if key(source_index) < key(target_index)
-    ///   = 0  if key(source_index) == key(target_index)
-    ///   > 0  if key(source_index) > key(target_index)
-    ///
-    /// Special case:
-    ///   source_index == -1 means "compare the current staged query/insert key against key(target_index)".
-    virtual [[nodiscard]] std::int32_t on_compare_keys(const std::int32_t source_index, const std::int32_t target_index) const noexcept
-    {
-        (void)source_index;
-        (void)target_index;
-        return 0;
-    }
-
 private:
 
-    //  Private virtual call re-entry guard structures and functions.
-
-    enum class LockState : std::uint32_t { none = 0, on_visit, on_move_payload, on_reserve_empty, on_compare_keys };
-
     inline [[nodiscard]] bool is_safe(const bool allow_null = false) const noexcept;
-    inline [[nodiscard]] bool lock(const LockState lock, const bool allow_null = false) const noexcept;
-    inline void unlock(const LockState unlock) const noexcept;
-
-    //  Private guarded virtual-call helpers.
-    //
-    //  safe_on_visit() and safe_on_move_payload() are available single-call wrappers.
-    //  Batched dispatch is usually preferable.
-    void safe_on_visit(const std::int32_t slot_index, const std::int32_t rank_index) noexcept;
-    void safe_on_visit_dispatcher(const bool visit_lexed, const bool visit_loose, const bool visit_empty) noexcept;
-    void safe_on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept;
-    [[nodiscard]] std::uint32_t safe_on_reserve_empty(const std::uint32_t minimum_capacity, const std::uint32_t recommended_capacity) noexcept;
-    [[nodiscard]] std::int32_t safe_on_compare_keys(const std::int32_t source_index, const std::int32_t target_index) const noexcept;
-    [[nodiscard]] bool safe_has_duplicate_key(const std::int32_t slot_index) const noexcept;
-    [[nodiscard]] bool safe_has_duplicate_key_in_lexed(const std::int32_t slot_index) const noexcept;
-    [[nodiscard]] bool safe_has_duplicate_key_in_loose(const std::int32_t slot_index) const noexcept;
+    inline [[nodiscard]] TSlotBacking& slot_backing() noexcept;
+    inline [[nodiscard]] const TSlotBacking& slot_backing() const noexcept;
 
 private:
 
@@ -466,6 +379,10 @@ private:
         }
     };
 
+    //  Typed access helpers for slot metadata storage.
+    [[nodiscard]] Slot* meta_slots() noexcept { return static_cast<Slot*>(m_meta_slot_array.data()); }
+    [[nodiscard]] const Slot* meta_slots() const noexcept { return static_cast<const Slot*>(m_meta_slot_array.data()); }
+
 private:
 
     //  Private AVL management functions
@@ -476,7 +393,7 @@ private:
 
     //  Insert a slot into the lexed AVL subset.
     //
-    //  key_index is forwarded as the source operand to on_compare_keys().
+    //  key_index is forwarded as the source operand to the derived comparator.
     //  It may be -1 or a slot index.
     void avl_insert(const std::int32_t slot_index, const std::int32_t key_index) noexcept;
 
@@ -502,9 +419,6 @@ private:
     //  Integrity-check helpers.
     static inline [[nodiscard]] bool failed_integrity_check() noexcept;
     [[nodiscard]] bool private_integrity_check() const noexcept;
-
-    //  Dispatch batched on_visit() calls for the selected categories.
-    void private_on_visit_dispatcher(const bool visit_lexed, const bool visit_loose, const bool visit_empty) noexcept;
 
     //  Resize implementation after precondition validation.
     [[nodiscard]] bool private_resize(const std::uint32_t requested_capacity) noexcept;
@@ -587,7 +501,7 @@ private:
     //  Returns the corresponding slot index, or -1 if rank_index is out of range.
     [[nodiscard]] std::int32_t locate_by_rank_index(const std::int32_t rank_index) const noexcept;
 
-    //  Search the lexed tree using the current staged query key via on_compare_keys().
+    //  Search the lexed tree using the current staged query key via the derived comparator.
     //
     //  key_index may be -1 to indicate the staged query key.
     //  Returns a lexed slot index, or -1 if no matching/bound slot exists.
@@ -626,10 +540,7 @@ private:
     std::int32_t  m_loose_list_head = -1;   //  index of the loose slot list head (or -1)
     std::int32_t  m_empty_list_head = -1;   //  index of the empty slot list head (or -1)
 
-    memory::TMemoryToken<Slot>  m_meta_slot_array;  //  slot meta data array
-
-    //  Private lock state.
-    mutable LockState m_lock = LockState::none;
+    memory::CMemoryToken m_meta_slot_array{ sizeof(Slot), memory::t_default_align<Slot>() };  //  slot meta data array
 
     //  Constants
     static constexpr std::uint32_t k_capacity_limit =
@@ -646,6 +557,9 @@ private:
     //  Verify that Slot is trivially copyable (it should be, so just defending against compiler variants)
     static_assert(std::is_trivially_copyable_v<Slot>,
         "TOrderedSlots: Slot must be trivially copyable.");
+
+    static_assert(sizeof(Slot) <= 0xffffu,
+        "TOrderedSlots: Slot metadata stride exceeds the memory token stride field.");
 
     //  Enforce std::size_t has at least 32 bits
     static_assert(sizeof(std::size_t) >= sizeof(std::uint32_t),
@@ -669,100 +583,120 @@ private:
 
 //! Protected function bodies
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::is_initialised() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline TOrderedSlots<TSlotBacking, TIndex, TMeta>& TOrderedSlots<TSlotBacking, TIndex, TMeta>::operator=(TOrderedSlots&& src) noexcept
 {
-    return m_meta_slot_array.data() != nullptr;
+    if (this != &src)
+    {
+        (void)shutdown();
+        slot_backing() = std::move(src.slot_backing());
+        (void)move_from(src);
+    }
+    return *this;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::is_empty() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline TOrderedSlots<TSlotBacking, TIndex, TMeta>& TOrderedSlots<TSlotBacking, TIndex, TMeta>::operator=(const TOrderedSlots& src) noexcept
+{
+    if (this != &src)
+    {
+        (void)shutdown();
+        slot_backing() = src.slot_backing();
+        (void)copy_from(src);
+    }
+    return *this;
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::take(TOrderedSlots& src) noexcept
+{
+    if (!shutdown())
+    {
+        return false;
+    }
+    slot_backing() = std::move(src.slot_backing());
+    return move_from(src);
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::clone(const TOrderedSlots& src) noexcept
+{
+    if (!shutdown())
+    {
+        return false;
+    }
+    slot_backing() = src.slot_backing();
+    return copy_from(src);
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::is_initialised() const noexcept
+{
+    return meta_slots() != nullptr;
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::is_empty() const noexcept
 {
     return occupied_count() == 0u;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::capacity() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::capacity() const noexcept
 {
     return m_capacity;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::minimum_safe_capacity() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::minimum_safe_capacity() const noexcept
 {
     return static_cast<std::uint32_t>(m_high_index) + 1u;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::peak_usage() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::peak_usage() const noexcept
 {
     return m_peak_usage;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::peak_index() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::peak_index() const noexcept
 {
     return m_peak_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::high_index() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::high_index() const noexcept
 {
     return m_high_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::lexed_count() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::lexed_count() const noexcept
 {
     return m_lexed_count;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::loose_count() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::loose_count() const noexcept
 {
     return m_loose_count;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::empty_count() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::empty_count() const noexcept
 {
     return m_empty_count;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::occupied_count() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::occupied_count() const noexcept
 {
     return m_lexed_count + m_loose_count;
 }
 
-template<typename TIndex, typename TMeta>
-inline TOrderedSlots<TIndex, TMeta>& TOrderedSlots<TIndex, TMeta>::operator=(TOrderedSlots&& src) noexcept
-{
-    (void)take(src);
-    return *this;
-}
-
-template<typename TIndex, typename TMeta>
-inline TOrderedSlots<TIndex, TMeta>& TOrderedSlots<TIndex, TMeta>::operator=(const TOrderedSlots& src) noexcept
-{
-    (void)clone(src);
-    return *this;
-}
-
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::take(TOrderedSlots& src) noexcept
-{
-    return shutdown() ? move_from(src) : false;
-}
-
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::clone(const TOrderedSlots& src) noexcept
-{
-    return shutdown() ? copy_from(src) : false;
-}
-
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::clear() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::clear() noexcept
 {
     if (is_safe())
     {
@@ -775,14 +709,13 @@ inline bool TOrderedSlots<TIndex, TMeta>::clear() noexcept
         m_lexed_tree_root = -1;
         m_loose_list_head = -1;
         m_empty_list_head = range_to_list(0, static_cast<std::int32_t>(m_empty_count - 1), SlotState::is_empty_slot);
-        m_lock = LockState::none;
         return true;
     }
     return false;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::shutdown() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::shutdown() noexcept
 {
     if (is_safe(true))
     {
@@ -793,20 +726,20 @@ inline bool TOrderedSlots<TIndex, TMeta>::shutdown() noexcept
     return false;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::initialise(const std::uint32_t capacity) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::initialise(const std::uint32_t capacity) noexcept
 {
     return shutdown() ? private_resize(capacity) : false;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::safe_resize(const std::uint32_t requested_capacity) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::safe_resize(const std::uint32_t requested_capacity) noexcept
 {
     return is_safe(true) ? private_resize(requested_capacity) : false;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::reserve_empty(const std::uint32_t slot_count) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::reserve_empty(const std::uint32_t slot_count) noexcept
 {
     bool reserved = false;
     if (is_safe(true))
@@ -821,7 +754,7 @@ inline bool TOrderedSlots<TIndex, TMeta>::reserve_empty(const std::uint32_t slot
             if (slot_limit >= slot_count)
             {
                 std::uint32_t minimum_capacity = m_lexed_count + m_loose_count + slot_count;
-                std::uint32_t reserve_capacity = safe_on_reserve_empty(minimum_capacity, apply_growth_policy(minimum_capacity));
+                std::uint32_t reserve_capacity = slot_backing().on_reserve_empty(minimum_capacity, apply_growth_policy(minimum_capacity));
                 if (reserve_capacity >= minimum_capacity)
                 {
                     reserved = private_resize(reserve_capacity);
@@ -832,26 +765,26 @@ inline bool TOrderedSlots<TIndex, TMeta>::reserve_empty(const std::uint32_t slot
     return reserved;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::shrink_to_fit() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::shrink_to_fit() noexcept
 {
     return (is_safe() && (m_high_index >= 0)) ? private_resize(static_cast<std::uint32_t>(m_high_index) + 1u) : false;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::acquire(const std::int32_t slot_index, const bool lex, const bool require_unique) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::acquire(const std::int32_t slot_index, const bool lex, const bool require_unique) noexcept
 {
     return is_safe() ? private_acquire(slot_index, lex, require_unique, false) : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::reserve_and_acquire(const std::int32_t slot_index, const bool lex, const bool require_unique) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::reserve_and_acquire(const std::int32_t slot_index, const bool lex, const bool require_unique) noexcept
 {
     return is_safe() ? private_acquire(slot_index, lex, require_unique, true) : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::erase(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::erase(const std::int32_t slot_index) noexcept
 {
     if (is_occupied(slot_index))
     {
@@ -864,7 +797,7 @@ inline bool TOrderedSlots<TIndex, TMeta>::erase(const std::int32_t slot_index) n
             }
             else
             {
-                const Slot* const meta = m_meta_slot_array.data();
+                const Slot* const meta = meta_slots();
                 for (--m_high_index; !meta[m_high_index].is_occupied(); --m_high_index) {}
             }
         }
@@ -873,100 +806,100 @@ inline bool TOrderedSlots<TIndex, TMeta>::erase(const std::int32_t slot_index) n
     return false;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::is_occupied(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::is_occupied(const std::int32_t slot_index) const noexcept
 {
-    return is_safe_slot(slot_index) && m_meta_slot_array.data()[slot_index].is_occupied();
+    return is_safe_slot(slot_index) && meta_slots()[slot_index].is_occupied();
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::is_safe_slot(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::is_safe_slot(const std::int32_t slot_index) const noexcept
 {
     return is_safe() && (static_cast<std::uint32_t>(slot_index) < m_capacity);
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::is_lexed_slot(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::is_lexed_slot(const std::int32_t slot_index) const noexcept
 {
-    return is_safe_slot(slot_index) && m_meta_slot_array.data()[slot_index].is_lexed_slot();
+    return is_safe_slot(slot_index) && meta_slots()[slot_index].is_lexed_slot();
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::is_loose_slot(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::is_loose_slot(const std::int32_t slot_index) const noexcept
 {
-    return is_safe_slot(slot_index) && m_meta_slot_array.data()[slot_index].is_loose_slot();
+    return is_safe_slot(slot_index) && meta_slots()[slot_index].is_loose_slot();
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::is_empty_slot(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::is_empty_slot(const std::int32_t slot_index) const noexcept
 {
-    return is_safe_slot(slot_index) && m_meta_slot_array.data()[slot_index].is_empty_slot();
+    return is_safe_slot(slot_index) && meta_slots()[slot_index].is_empty_slot();
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::first_lexed() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::first_lexed() const noexcept
 {
     std::int32_t first_index = -1;
     if (is_safe())
     {
-        const Slot* const meta = m_meta_slot_array.data();
+        const Slot* const meta = meta_slots();
         for (std::int32_t scan_index = m_lexed_tree_root; scan_index >= 0; scan_index = meta[first_index].child_index[0]) first_index = scan_index;
     }
     return first_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::last_lexed() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::last_lexed() const noexcept
 {
     std::int32_t last_index = -1;
     if (is_safe())
     {
-        const Slot* const meta = m_meta_slot_array.data();
+        const Slot* const meta = meta_slots();
         for (std::int32_t scan_index = m_lexed_tree_root; scan_index >= 0; scan_index = meta[last_index].child_index[1]) last_index = scan_index;
     }
     return last_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::prev_lexed(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::prev_lexed(const std::int32_t slot_index) const noexcept
 {
     return is_lexed_slot(slot_index) ? private_prev_lexed(slot_index) : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::next_lexed(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::next_lexed(const std::int32_t slot_index) const noexcept
 {
     return is_lexed_slot(slot_index) ? private_next_lexed(slot_index) : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::first_loose() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::first_loose() const noexcept
 {
     return is_safe() ? m_loose_list_head : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::last_loose() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::last_loose() const noexcept
 {
-    return (is_safe() && (m_loose_list_head != -1)) ? m_meta_slot_array.data()[m_loose_list_head].child_index[0] : -1;
+    return (is_safe() && (m_loose_list_head != -1)) ? meta_slots()[m_loose_list_head].child_index[0] : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::prev_loose(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::prev_loose(const std::int32_t slot_index) const noexcept
 {
     if (is_loose_slot(slot_index) && (slot_index != m_loose_list_head))
     {
-        return m_meta_slot_array.data()[slot_index].child_index[0];
+        return meta_slots()[slot_index].child_index[0];
     }
     return -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::next_loose(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::next_loose(const std::int32_t slot_index) const noexcept
 {
     if (is_loose_slot(slot_index))
     {
-        const std::int32_t next_index = m_meta_slot_array.data()[slot_index].child_index[1];
+        const std::int32_t next_index = meta_slots()[slot_index].child_index[1];
         if (next_index != m_loose_list_head)
         {
             return next_index;
@@ -975,38 +908,73 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::next_loose(const std::int32_t 
     return -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::has_duplicate_key(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::first_empty() const noexcept
 {
-    return safe_has_duplicate_key(slot_index);
+    return is_safe() ? m_empty_list_head : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::has_duplicate_key_in_lexed(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::last_empty() const noexcept
 {
-    return safe_has_duplicate_key_in_lexed(slot_index);
+    return (is_safe() && (m_empty_list_head != -1)) ? meta_slots()[m_empty_list_head].child_index[0] : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::has_duplicate_key_in_loose(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::prev_empty(const std::int32_t slot_index) const noexcept
 {
-    return safe_has_duplicate_key_in_loose(slot_index);
+    if (is_empty_slot(slot_index) && (slot_index != m_empty_list_head))
+    {
+        return meta_slots()[slot_index].child_index[0];
+    }
+    return -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::lex(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::next_empty(const std::int32_t slot_index) const noexcept
 {
-    if (is_loose_slot(slot_index) && lock(LockState::on_compare_keys))
+    if (is_empty_slot(slot_index))
+    {
+        const std::int32_t next_index = meta_slots()[slot_index].child_index[1];
+        if (next_index != m_empty_list_head)
+        {
+            return next_index;
+        }
+    }
+    return -1;
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::has_duplicate_key(const std::int32_t slot_index) const noexcept
+{
+    return is_safe() ? private_has_duplicate_key(slot_index) : false;
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::has_duplicate_key_in_lexed(const std::int32_t slot_index) const noexcept
+{
+    return is_safe() ? private_has_duplicate_key_in_lexed(slot_index) : false;
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::has_duplicate_key_in_loose(const std::int32_t slot_index) const noexcept
+{
+    return is_safe() ? private_has_duplicate_key_in_loose(slot_index) : false;
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::lex(const std::int32_t slot_index) noexcept
+{
+    if (is_loose_slot(slot_index))
     {
         move_to_lexed_tree(slot_index);
-        unlock(LockState::on_compare_keys);
         return true;
     }
     return false;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::unlex(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::unlex(const std::int32_t slot_index) noexcept
 {
     if (is_lexed_slot(slot_index))
     {
@@ -1016,29 +984,28 @@ inline bool TOrderedSlots<TIndex, TMeta>::unlex(const std::int32_t slot_index) n
     return false;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::relex(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::relex(const std::int32_t slot_index) noexcept
 {
-    if (is_lexed_slot(slot_index) && lock(LockState::on_compare_keys))
+    if (is_lexed_slot(slot_index))
     {
         avl_remove(slot_index);
-        Slot& slot = m_meta_slot_array.data()[slot_index];
+        Slot& slot = meta_slots()[slot_index];
         slot.parent_index = -1;
         slot.child_index[0] = slot.child_index[1] = -1;
         slot.balance_factor = 0;
         avl_insert(slot_index);
-        unlock(LockState::on_compare_keys);
         return true;
     }
     return false;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::lex_all() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::lex_all() noexcept
 {
-    if (lock(LockState::on_compare_keys) && (m_loose_count != 0))
+    if (is_safe() && (m_loose_count != 0))
     {
-        Slot* const meta = m_meta_slot_array.data();
+        Slot* const meta = meta_slots();
         std::int32_t slot_index = m_loose_list_head;
         meta[meta[slot_index].child_index[0]].child_index[1] = -1;
         while (slot_index != -1)
@@ -1053,16 +1020,15 @@ inline void TOrderedSlots<TIndex, TMeta>::lex_all() noexcept
         m_loose_list_head = -1;
         m_lexed_count += m_loose_count;
         m_loose_count = 0;
-        unlock(LockState::on_compare_keys);
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::unlex_all() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::unlex_all() noexcept
 {
     if (is_safe() && (m_lexed_count != 0))
     {
-        Slot* const meta = m_meta_slot_array.data();
+        Slot* const meta = meta_slots();
         std::int32_t lexed_list_head = lexed_to_list();
         std::int32_t slot_index = lexed_list_head;
         for (std::uint32_t slot_count = m_lexed_count; slot_count != 0; --slot_count)
@@ -1078,12 +1044,12 @@ inline void TOrderedSlots<TIndex, TMeta>::unlex_all() noexcept
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::relex_all() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::relex_all() noexcept
 {
-    if (lock(LockState::on_compare_keys) && (m_lexed_count != 0))
+    if (is_safe() && (m_lexed_count != 0))
     {
-        Slot* const meta = m_meta_slot_array.data();
+        Slot* const meta = meta_slots();
         std::int32_t lexed_list_head = lexed_to_list();
         m_lexed_tree_root = -1;
         std::int32_t slot_index = lexed_list_head;
@@ -1095,12 +1061,11 @@ inline void TOrderedSlots<TIndex, TMeta>::relex_all() noexcept
             avl_insert(slot_index);
             slot_index = next_index;
         }
-        unlock(LockState::on_compare_keys);
     }
 }
 
-template<typename TIndex, typename TMeta>
-[[nodiscard]] RankMap TOrderedSlots<TIndex, TMeta>::build_rank_map() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+[[nodiscard]] RankMap TOrderedSlots<TSlotBacking, TIndex, TMeta>::build_rank_map() const noexcept
 {
     RankMap rank_map;
     if (is_safe() && (m_capacity != 0u))
@@ -1109,7 +1074,7 @@ template<typename TIndex, typename TMeta>
         {
             (void)rank_map.set_size(static_cast<std::size_t>(m_capacity));
             RankMapEntry* const map = rank_map.data();
-            const Slot* const meta = m_meta_slot_array.data();
+            const Slot* const meta = meta_slots();
             std::int32_t rank_index = 0;
             if (m_lexed_count != 0)
             {
@@ -1159,18 +1124,17 @@ template<typename TIndex, typename TMeta>
     return rank_map;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::sort_and_pack(const bool use_external_payload) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::sort_and_pack(const bool use_external_payload) noexcept
 {
-    if (lock(LockState::on_move_payload))
+    if (is_safe())
     {
         private_sort_and_compact(use_external_payload);
-        unlock(LockState::on_move_payload);
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::rebuild_loose_in_index_order() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::rebuild_loose_in_index_order() noexcept
 {
     if (is_safe() && (m_loose_count != 0))
     {
@@ -1178,8 +1142,8 @@ inline void TOrderedSlots<TIndex, TMeta>::rebuild_loose_in_index_order() noexcep
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::rebuild_empty_in_index_order() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::rebuild_empty_in_index_order() noexcept
 {
     if (is_safe() && (m_empty_count != 0))
     {
@@ -1189,158 +1153,86 @@ inline void TOrderedSlots<TIndex, TMeta>::rebuild_empty_in_index_order() noexcep
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::rank_index_of(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::rank_index_of(const std::int32_t slot_index) const noexcept
 {
     return is_safe_slot(slot_index) ? convert_to_rank_index(slot_index) : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::find_by_rank_index(const std::int32_t rank_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::find_by_rank_index(const std::int32_t rank_index) const noexcept
 {
     return is_safe() ? locate_by_rank_index(rank_index) : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::find_any_equal() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::find_any_equal() const noexcept
 {
-    std::int32_t slot_index = -1;
-    if (lock(LockState::on_compare_keys))
-    {
-        slot_index = locate_any_equal();
-        unlock(LockState::on_compare_keys);
-    }
-    return slot_index;
+    return is_safe() ? locate_any_equal() : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::find_first_equal() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::find_first_equal() const noexcept
 {
-    std::int32_t slot_index = -1;
-    if (lock(LockState::on_compare_keys))
-    {
-        slot_index = locate_first_equal();
-        unlock(LockState::on_compare_keys);
-    }
-    return slot_index;
+    return is_safe() ? locate_first_equal() : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::find_first_greater() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::find_first_greater() const noexcept
 {
-    std::int32_t slot_index = -1;
-    if (lock(LockState::on_compare_keys))
-    {
-        slot_index = locate_first_greater();
-        unlock(LockState::on_compare_keys);
-    }
-    return slot_index;
+    return is_safe() ? locate_first_greater() : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::find_first_greater_equal() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::find_first_greater_equal() const noexcept
 {
-    std::int32_t slot_index = -1;
-    if (lock(LockState::on_compare_keys))
-    {
-        slot_index = locate_first_greater_equal();
-        unlock(LockState::on_compare_keys);
-    }
-    return slot_index;
+    return is_safe() ? locate_first_greater_equal() : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::find_last_equal() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::find_last_equal() const noexcept
 {
-    std::int32_t slot_index = -1;
-    if (lock(LockState::on_compare_keys))
-    {
-        slot_index = locate_last_equal();
-        unlock(LockState::on_compare_keys);
-    }
-    return slot_index;
+    return is_safe() ? locate_last_equal() : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::find_last_less() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::find_last_less() const noexcept
 {
-    std::int32_t slot_index = -1;
-    if (lock(LockState::on_compare_keys))
-    {
-        slot_index = locate_last_less();
-        unlock(LockState::on_compare_keys);
-    }
-    return slot_index;
+    return is_safe() ? locate_last_less() : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::find_last_less_equal() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::find_last_less_equal() const noexcept
 {
-    std::int32_t slot_index = -1;
-    if (lock(LockState::on_compare_keys))
-    {
-        slot_index = locate_last_less_equal();
-        unlock(LockState::on_compare_keys);
-    }
-    return slot_index;
+    return is_safe() ? locate_last_less_equal() : -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::lower_bound_by_lex() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::lower_bound_by_lex() const noexcept
 {
     return find_first_greater_equal();
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::upper_bound_by_lex() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::upper_bound_by_lex() const noexcept
 {
     return find_first_greater();
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::visit_occupied() noexcept
-{
-    safe_on_visit_dispatcher(true, true, false);
-}
-
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::visit_lexed() noexcept
-{
-    safe_on_visit_dispatcher(true, false, false);
-}
-
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::visit_loose() noexcept
-{
-    safe_on_visit_dispatcher(false, true, false);
-}
-
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::visit_empty() noexcept
-{
-    safe_on_visit_dispatcher(false, false, true);
-}
-
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::visit_all() noexcept
-{
-    safe_on_visit_dispatcher(true, true, true);
-}
-
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::tree_height() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::tree_height() const noexcept
 {
     return is_safe() ? subtree_height(m_lexed_tree_root) : 0;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::tree_weight() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::tree_weight() const noexcept
 {
     return is_safe() ? subtree_weight(m_lexed_tree_root) : 0;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::validate_tree(const LexCheck lex_check) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::validate_tree(const LexCheck lex_check) const noexcept
 {
     bool valid = false;
     if (is_safe())
@@ -1348,14 +1240,6 @@ inline bool TOrderedSlots<TIndex, TMeta>::validate_tree(const LexCheck lex_check
         if (m_lexed_count == 0)
         {
             valid = m_lexed_tree_root == -1;
-        }
-        else if (lex_check != LexCheck::None)
-        {
-            if (lock(LockState::on_compare_keys))
-            {
-                valid = private_validate_subtree(m_lexed_tree_root, lex_check) > 0;
-                unlock(LockState::on_compare_keys);
-            }
         }
         else
         {
@@ -1365,135 +1249,36 @@ inline bool TOrderedSlots<TIndex, TMeta>::validate_tree(const LexCheck lex_check
     return valid;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::check_integrity() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::check_integrity() const noexcept
 {
     return is_safe() ? private_integrity_check() : false;
 }
 
 //! Private function bodies
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::is_safe(const bool allow_null) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::is_safe(const bool allow_null) const noexcept
 {
-    return MV_FAIL_SAFE_ASSERT(m_lock == LockState::none) && (allow_null || (m_meta_slot_array.data() != nullptr));
+    return allow_null || (meta_slots() != nullptr);
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::lock(const LockState lock, const bool allow_null) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline TSlotBacking& TOrderedSlots<TSlotBacking, TIndex, TMeta>::slot_backing() noexcept
 {
-    bool success = false;
-    if (MV_FAIL_SAFE_ASSERT(m_lock == LockState::none) && (allow_null || (m_meta_slot_array.data() != nullptr)))
-    {
-        m_lock = lock;
-        success = true;
-    }
-    return success;
+    return static_cast<TSlotBacking&>(*this);
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::unlock(const LockState unlock) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline const TSlotBacking& TOrderedSlots<TSlotBacking, TIndex, TMeta>::slot_backing() const noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_lock == unlock))
-    {
-        m_lock = LockState::none;
-    }
+    return static_cast<const TSlotBacking&>(*this);
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::safe_on_visit(const std::int32_t slot_index, const std::int32_t rank_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::avl_single_rotate(const std::int32_t slot_index, const std::int32_t heavy_side) noexcept
 {
-    if (lock(LockState::on_visit))
-    {
-        on_visit(slot_index, rank_index);
-        unlock(LockState::on_visit);
-    }
-}
-
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::safe_on_visit_dispatcher(const bool visit_lexed, const bool visit_loose, const bool visit_empty) noexcept
-{
-    if (lock(LockState::on_visit))
-    {
-        private_on_visit_dispatcher(visit_lexed, visit_loose, visit_empty);
-        unlock(LockState::on_visit);
-    }
-}
-
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::safe_on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
-{
-    if (lock(LockState::on_move_payload))
-    {
-        on_move_payload(source_index, target_index);
-        unlock(LockState::on_move_payload);
-    }
-}
-
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::safe_on_reserve_empty(const std::uint32_t minimum_capacity, const std::uint32_t recommended_capacity) noexcept
-{
-    std::uint32_t reserve_capacity = 0u;
-    if (lock(LockState::on_reserve_empty))
-    {
-        reserve_capacity = on_reserve_empty(minimum_capacity, recommended_capacity);
-        unlock(LockState::on_reserve_empty);
-    }
-    return reserve_capacity;
-}
-
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::safe_on_compare_keys(const std::int32_t source_index, const std::int32_t target_index) const noexcept
-{
-    std::int32_t relationship = 0;
-    if (lock(LockState::on_compare_keys))
-    {
-        relationship = on_compare_keys(source_index, target_index);
-        unlock(LockState::on_compare_keys);
-    }
-    return relationship;
-}
-
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::safe_has_duplicate_key(const std::int32_t slot_index) const noexcept
-{
-    bool has_duplicate = false;
-    if (lock(LockState::on_compare_keys))
-    {
-        has_duplicate = private_has_duplicate_key(slot_index);
-        unlock(LockState::on_compare_keys);
-    }
-    return has_duplicate;
-}
-
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::safe_has_duplicate_key_in_lexed(const std::int32_t slot_index) const noexcept
-{
-    bool has_duplicate = false;
-    if (lock(LockState::on_compare_keys))
-    {
-        has_duplicate = private_has_duplicate_key_in_lexed(slot_index);
-        unlock(LockState::on_compare_keys);
-    }
-    return has_duplicate;
-}
-
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::safe_has_duplicate_key_in_loose(const std::int32_t slot_index) const noexcept
-{
-    bool has_duplicate = false;
-    if (lock(LockState::on_compare_keys))
-    {
-        has_duplicate = private_has_duplicate_key_in_loose(slot_index);
-        unlock(LockState::on_compare_keys);
-    }
-    return has_duplicate;
-}
-
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::avl_single_rotate(const std::int32_t slot_index, const std::int32_t heavy_side) noexcept
-{
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
 
     const std::int32_t light_side = heavy_side ^ 1;
 
@@ -1529,10 +1314,10 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::avl_single_rotate(const std::i
     return child_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::avl_double_rotate(const std::int32_t slot_index, const std::int32_t heavy_side) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::avl_double_rotate(const std::int32_t slot_index, const std::int32_t heavy_side) noexcept
 {
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
 
     const std::int32_t light_side = heavy_side ^ 1;
 
@@ -1621,12 +1406,10 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::avl_double_rotate(const std::i
     return grandchild_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::avl_insert(const std::int32_t slot_index, const std::int32_t key_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::avl_insert(const std::int32_t slot_index, const std::int32_t key_index) noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
     Slot& slot = meta[slot_index];
     slot.parent_index = -1;
     slot.child_index[0] = -1;
@@ -1646,7 +1429,7 @@ inline void TOrderedSlots<TIndex, TMeta>::avl_insert(const std::int32_t slot_ind
         for (std::int32_t scan_index = m_lexed_tree_root; scan_index >= 0; scan_index = meta[walk_index].child_index[walk_side])
         {
             walk_index = scan_index;
-            walk_side = (on_compare_keys(key_index, walk_index) >= 0) ? 1 : 0;
+            walk_side = (slot_backing().on_compare_keys(key_index, walk_index) >= 0) ? 1 : 0;
         }
         meta[walk_index].child_index[walk_side] = slot_index;
         slot.parent_index = walk_index;
@@ -1690,16 +1473,16 @@ inline void TOrderedSlots<TIndex, TMeta>::avl_insert(const std::int32_t slot_ind
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::avl_insert(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::avl_insert(const std::int32_t slot_index) noexcept
 {
     avl_insert(slot_index, slot_index);
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::avl_remove(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::avl_remove(const std::int32_t slot_index) noexcept
 {
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
     Slot& slot = meta[slot_index];
 
     const std::int32_t parent_index = slot.parent_index;
@@ -1837,28 +1620,30 @@ inline void TOrderedSlots<TIndex, TMeta>::avl_remove(const std::int32_t slot_ind
     slot.set_is_unassigned();
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::apply_growth_policy(const std::uint32_t capacity) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::apply_growth_policy(const std::uint32_t capacity) noexcept
 {
-    return static_cast<std::uint32_t>(std::min(memory::vector_growth_policy(static_cast<std::size_t>(capacity)), static_cast<std::size_t>(k_capacity_limit)));
+    return static_cast<std::uint32_t>(memory::vector_growth_policy(
+        static_cast<std::size_t>(capacity),
+        static_cast<std::size_t>(k_capacity_limit)));
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::failed_validate_subtree() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::failed_validate_subtree() noexcept
 {
     MV_HARD_ASSERT(false);
     return -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const std::int32_t slot_index, const LexCheck lex_check) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_validate_subtree(const std::int32_t slot_index, const LexCheck lex_check) const noexcept
 {
     if (static_cast<std::uint32_t>(slot_index) >= m_capacity)
     {   //  early out on an invalid slot_index
         return failed_validate_subtree();
     }
 
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     const Slot& slot = meta[slot_index];
 
     if (!slot.is_lexed_slot())
@@ -1920,7 +1705,6 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
 
     if (lex_check != LexCheck::None)
     {
-        MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
         const std::int32_t unique_bias = static_cast<std::int32_t>(lex_check);
 
         std::int32_t prev_index = private_prev_lexed(slot_index);
@@ -1930,7 +1714,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
             {
                 return failed_validate_subtree();
             }
-            if ((on_compare_keys(slot_index, prev_index) - unique_bias) < 0)
+            if ((slot_backing().on_compare_keys(slot_index, prev_index) - unique_bias) < 0)
             {
                 return failed_validate_subtree();
             }
@@ -1943,7 +1727,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
             {
                 return failed_validate_subtree();
             }
-            if ((on_compare_keys(slot_index, next_index) + unique_bias) > 0)
+            if ((slot_backing().on_compare_keys(slot_index, next_index) + unique_bias) > 0)
             {
                 return failed_validate_subtree();
             }
@@ -1955,17 +1739,25 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_validate_subtree(const
 
 //  This function only exists as a debug convenience to help capture integrity check failure causes.
 //  It may be expanded on in the future as a potential logging site.
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::failed_integrity_check() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::failed_integrity_check() noexcept
 {
     MV_HARD_ASSERT(false);
     return false;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::private_integrity_check() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_integrity_check() const noexcept
 {
-    const Slot* const meta = m_meta_slot_array.data();
+    if (!m_meta_slot_array.is_relocatable() ||
+        (m_meta_slot_array.stride() != sizeof(Slot)) ||
+        (m_meta_slot_array.storage_alignment() != memory::t_default_align<Slot>()) ||
+        (m_meta_slot_array.count() != m_capacity))
+    {
+        return failed_integrity_check();
+    }
+
+    const Slot* const meta = meta_slots();
     if (meta != nullptr)
     {
         if ((std::uintptr_t(meta) % alignof(Slot)) != 0u)
@@ -2314,55 +2106,8 @@ inline bool TOrderedSlots<TIndex, TMeta>::private_integrity_check() const noexce
     return true;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::private_on_visit_dispatcher(const bool visit_lexed, const bool visit_loose, const bool visit_empty) noexcept
-{
-    MV_HARD_ASSERT(m_lock == LockState::on_visit);
-    const Slot* const meta = m_meta_slot_array.data();
-    if (visit_lexed)
-    {
-        std::int32_t slot_index = m_lexed_tree_root;
-        for (std::int32_t to_index = slot_index; to_index >= 0; to_index = meta[slot_index].child_index[0]) slot_index = to_index;
-        for (std::int32_t rank_index = 0; slot_index >= 0; ++rank_index)
-        {
-            on_visit(slot_index, rank_index);
-            std::int32_t from_index = meta[slot_index].child_index[1];
-            if (from_index < 0)
-            {
-                for (from_index = slot_index; (((slot_index = meta[from_index].parent_index) >= 0) && (meta[slot_index].child_index[0] != from_index)); from_index = slot_index) {}
-            }
-            else
-            {
-                for (slot_index = from_index; ((from_index = meta[slot_index].child_index[0]) >= 0); slot_index = from_index) {}
-            }
-        }
-    }
-    if (visit_loose)
-    {
-        std::int32_t rank_index = static_cast<std::int32_t>(m_lexed_count);
-        std::int32_t slot_index = m_loose_list_head;
-        for (std::uint32_t loose_count = m_loose_count; loose_count != 0; --loose_count)
-        {
-            on_visit(slot_index, rank_index);
-            slot_index = meta[slot_index].child_index[1];
-            ++rank_index;
-        }
-    }
-    if (visit_empty)
-    {
-        std::int32_t rank_index = static_cast<std::int32_t>(m_lexed_count + m_loose_count);
-        std::int32_t slot_index = m_empty_list_head;
-        for (std::uint32_t empty_count = m_empty_count; empty_count != 0; --empty_count)
-        {
-            on_visit(slot_index, rank_index);
-            slot_index = meta[slot_index].child_index[1];
-            ++rank_index;
-        }
-    }
-}
-
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::private_resize(const std::uint32_t requested_capacity) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_resize(const std::uint32_t requested_capacity) noexcept
 {
     bool resized = false;
     if ((requested_capacity != 0) && (requested_capacity <= k_capacity_limit))
@@ -2371,7 +2116,7 @@ inline bool TOrderedSlots<TIndex, TMeta>::private_resize(const std::uint32_t req
         {
             resized = true;
         }
-        else if (m_meta_slot_array.data() == nullptr)
+        else if (meta_slots() == nullptr)
         {   //  initialisation
             if (m_meta_slot_array.allocate(static_cast<std::size_t>(requested_capacity), false))
             {
@@ -2382,7 +2127,7 @@ inline bool TOrderedSlots<TIndex, TMeta>::private_resize(const std::uint32_t req
         }
         else if (requested_capacity >= minimum_safe_capacity())
         {
-            if (m_meta_slot_array.reallocate(static_cast<std::size_t>(std::min(requested_capacity, m_capacity)), static_cast<std::size_t>(requested_capacity), false))
+            if (m_meta_slot_array.reallocate(static_cast<std::size_t>(requested_capacity), static_cast<std::size_t>(std::min(requested_capacity, m_capacity)), false))
             {
                 if (requested_capacity > m_capacity)
                 {   //  grow
@@ -2403,13 +2148,13 @@ inline bool TOrderedSlots<TIndex, TMeta>::private_resize(const std::uint32_t req
     return resized;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_acquire(const std::int32_t slot_index, const bool lex, const bool require_unique, const bool allow_reserve) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_acquire(const std::int32_t slot_index, const bool lex, const bool require_unique, const bool allow_reserve) noexcept
 {
     std::int32_t acquired_index = -1;
     if ((static_cast<std::uint32_t>(slot_index) + 1u) <= k_capacity_limit)
     {
-        if (!require_unique || !safe_has_duplicate_key(slot_index))
+        if (!require_unique || !private_has_duplicate_key(slot_index))
         {
             if (slot_index == -1)
             {
@@ -2417,7 +2162,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_acquire(const std::int
                 if (allow_reserve && (acquired_index == -1) && (m_capacity < k_capacity_limit))
                 {   //  need to reserve
                     std::uint32_t minimum_capacity = m_capacity + 1u;
-                    std::uint32_t reserve_capacity = safe_on_reserve_empty(minimum_capacity, apply_growth_policy(minimum_capacity));
+                    std::uint32_t reserve_capacity = slot_backing().on_reserve_empty(minimum_capacity, apply_growth_policy(minimum_capacity));
                     if (reserve_capacity >= minimum_capacity)
                     {
                         if (private_resize(reserve_capacity))
@@ -2432,7 +2177,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_acquire(const std::int
                 if (allow_reserve)
                 {
                     std::uint32_t minimum_capacity = static_cast<std::uint32_t>(slot_index) + 1u;
-                    std::uint32_t reserve_capacity = safe_on_reserve_empty(minimum_capacity, minimum_capacity);
+                    std::uint32_t reserve_capacity = slot_backing().on_reserve_empty(minimum_capacity, minimum_capacity);
                     if (reserve_capacity >= minimum_capacity)
                     {
                         if (private_resize(reserve_capacity))
@@ -2442,7 +2187,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_acquire(const std::int
                     }
                 }
             }
-            else if ((static_cast<std::uint32_t>(slot_index) < m_capacity) && m_meta_slot_array.data()[slot_index].is_empty_slot())
+            else if ((static_cast<std::uint32_t>(slot_index) < m_capacity) && meta_slots()[slot_index].is_empty_slot())
             {
                 acquired_index = slot_index;
             }
@@ -2452,14 +2197,9 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_acquire(const std::int
                 {
                     move_to_loose_list(acquired_index);
                 }
-                else if (lock(LockState::on_compare_keys))
-                {
-                    move_to_lexed_tree(acquired_index, slot_index);
-                    unlock(LockState::on_compare_keys);
-                }
                 else
                 {
-                    acquired_index = -1;
+                    move_to_lexed_tree(acquired_index, slot_index);
                 }
                 const std::uint32_t occupied_count = m_lexed_count + m_loose_count;
                 if (m_peak_usage < occupied_count)
@@ -2480,10 +2220,10 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_acquire(const std::int
     return acquired_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_prev_lexed(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_prev_lexed(const std::int32_t slot_index) const noexcept
 {
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t prev_index = -1;
     std::int32_t from_index = meta[slot_index].child_index[0];
     if (from_index < 0)
@@ -2497,10 +2237,10 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_prev_lexed(const std::
     return prev_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_next_lexed(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_next_lexed(const std::int32_t slot_index) const noexcept
 {
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t next_index = -1;
     std::int32_t from_index = meta[slot_index].child_index[1];
     if (from_index < 0)
@@ -2514,23 +2254,22 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::private_next_lexed(const std::
     return next_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::private_has_duplicate_key(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_has_duplicate_key(const std::int32_t slot_index) const noexcept
 {
     return private_has_duplicate_key_in_lexed(slot_index) || private_has_duplicate_key_in_loose(slot_index);
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::private_has_duplicate_key_in_lexed(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_has_duplicate_key_in_lexed(const std::int32_t slot_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     bool has_duplicate = false;
     std::int32_t lexed_index = -1;
     std::int32_t check_index = m_lexed_tree_root;
     while (check_index >= 0)
     {   //  find the first instance by lex of a matching slot
-        std::int32_t relationship = on_compare_keys(slot_index, check_index);
+        std::int32_t relationship = slot_backing().on_compare_keys(slot_index, check_index);
         if (relationship == 0)
         {
             lexed_index = check_index;
@@ -2551,7 +2290,7 @@ inline bool TOrderedSlots<TIndex, TMeta>::private_has_duplicate_key_in_lexed(con
             {
                 for (lexed_index = check_index; ((check_index = meta[lexed_index].child_index[0]) >= 0); lexed_index = check_index) {}
             }
-            if ((lexed_index < 0) || (on_compare_keys(slot_index, lexed_index) != 0))
+            if ((lexed_index < 0) || (slot_backing().on_compare_keys(slot_index, lexed_index) != 0))
             {   //  there is no non-excluded match
                 has_duplicate = false;
             }
@@ -2560,18 +2299,17 @@ inline bool TOrderedSlots<TIndex, TMeta>::private_has_duplicate_key_in_lexed(con
     return has_duplicate;
 }
 
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::private_has_duplicate_key_in_loose(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_has_duplicate_key_in_loose(const std::int32_t slot_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     bool has_duplicate = false;
     std::int32_t loose_index = m_loose_list_head;
     for (std::uint32_t loose_count = m_loose_count; loose_count != 0; --loose_count)
     {
         if (loose_index != slot_index)
         {
-            std::int32_t relationship = on_compare_keys(slot_index, loose_index);
+            std::int32_t relationship = slot_backing().on_compare_keys(slot_index, loose_index);
             if (relationship == 0)
             {
                 has_duplicate = true;
@@ -2583,13 +2321,12 @@ inline bool TOrderedSlots<TIndex, TMeta>::private_has_duplicate_key_in_loose(con
     return has_duplicate;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::private_sort_and_compact(const bool use_external_payload) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_sort_and_compact(const bool use_external_payload) noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_move_payload);
     if (m_capacity != 0u)
     {
-        Slot* const meta = m_meta_slot_array.data();
+        Slot* const meta = meta_slots();
         std::int32_t list_head = combine_lists(lexed_to_list(), combine_lists(m_loose_list_head, m_empty_list_head));
         if (use_external_payload)
         {
@@ -2597,7 +2334,7 @@ inline void TOrderedSlots<TIndex, TMeta>::private_sort_and_compact(const bool us
             std::int32_t rank_index = 0;
             for (std::uint32_t count = m_capacity; count != 0; --count)
             {
-                on_move_payload(slot_index, rank_index);
+                slot_backing().on_move_payload(slot_index, rank_index);
                 slot_index = meta[slot_index].child_index[1];
                 ++rank_index;
             }
@@ -2633,12 +2370,12 @@ inline void TOrderedSlots<TIndex, TMeta>::private_sort_and_compact(const bool us
                 if (meta[slot_index].child_index[1] >= 0)
                 {   //  process a multi-slot cycle
 
-                    on_move_payload(slot_index, -1);
+                    slot_backing().on_move_payload(slot_index, -1);
 
                     while ((rank_index = slot_index) >= 0)
                     {
                         slot_index = meta[rank_index].child_index[1];
-                        on_move_payload(slot_index, rank_index);
+                        slot_backing().on_move_payload(slot_index, rank_index);
                     }
                 }
             }
@@ -2661,8 +2398,8 @@ inline void TOrderedSlots<TIndex, TMeta>::private_sort_and_compact(const bool us
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::build_balanced_subtree(const std::int32_t lower_index, const std::int32_t upper_index, const std::int32_t parent_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::build_balanced_subtree(const std::int32_t lower_index, const std::int32_t upper_index, const std::int32_t parent_index) noexcept
 {
     std::int32_t split_index = -1;
     if (lower_index <= upper_index)
@@ -2672,7 +2409,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::build_balanced_subtree(const s
         for (std::int32_t children = upper_index - split_index; children; children >>= 1) ++balance_factor;
         for (std::int32_t children = split_index - lower_index; children; children >>= 1) --balance_factor;
 
-        Slot& slot = m_meta_slot_array.data()[split_index];
+        Slot& slot = meta_slots()[split_index];
         slot.parent_index = static_cast<TIndex>(parent_index);
         slot.child_index[0] = static_cast<TIndex>(build_balanced_subtree(lower_index, (split_index - 1), split_index));
         slot.child_index[1] = static_cast<TIndex>(build_balanced_subtree((split_index + 1), upper_index, split_index));
@@ -2686,10 +2423,10 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::build_balanced_subtree(const s
 //  using Slot::child_index[] as prev/next links. Returns the list head slot index.
 //
 //  Note: This does not move payload items.
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::lexed_to_list() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::lexed_to_list() noexcept
 {
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
     std::int32_t list_index = -1;
     std::int32_t scan_index = -1;
     for (list_index = m_lexed_tree_root; list_index >= 0; list_index = meta[scan_index = list_index].child_index[1]) {}
@@ -2728,13 +2465,13 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::lexed_to_list() noexcept
     return list_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::state_to_list(const std::int32_t lower_index, const std::int32_t upper_index, const SlotState state) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::state_to_list(const std::int32_t lower_index, const std::int32_t upper_index, const SlotState state) noexcept
 {
     std::int32_t head_index = -1;
     if ((lower_index <= upper_index) && (lower_index >= 0))
     {
-        Slot* const meta = m_meta_slot_array.data();
+        Slot* const meta = meta_slots();
         std::int32_t prev_index = -1;
         std::int32_t next_index = -1;
         for (std::int32_t scan_index = upper_index; scan_index >= lower_index; --scan_index)
@@ -2765,12 +2502,12 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::state_to_list(const std::int32
     return head_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::range_to_list(const std::int32_t lower_index, const std::int32_t upper_index, SlotState state) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::range_to_list(const std::int32_t lower_index, const std::int32_t upper_index, SlotState state) noexcept
 {
     if ((lower_index <= upper_index) && (lower_index >= 0))
     {
-        Slot* const meta = m_meta_slot_array.data();
+        Slot* const meta = meta_slots();
         for (std::int32_t scan_index = lower_index; scan_index <= upper_index; ++scan_index)
         {   //  scan the range creating new list members
             Slot& slot = meta[scan_index];
@@ -2790,8 +2527,8 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::range_to_list(const std::int32
 }
 
 //  Convert a range of slot indices to a bi-directional list (slot metadata only).
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::combine_lists(const std::int32_t list1_head_index, const std::int32_t list2_head_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::combine_lists(const std::int32_t list1_head_index, const std::int32_t list2_head_index) noexcept
 {
     if (list1_head_index < 0)
     {
@@ -2799,7 +2536,7 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::combine_lists(const std::int32
     }
     if (list2_head_index >= 0)
     {
-        Slot* const meta = m_meta_slot_array.data();
+        Slot* const meta = meta_slots();
         std::int32_t list1_tail_index = meta[list1_head_index].child_index[0];
         std::int32_t list2_tail_index = meta[list2_head_index].child_index[0];
         meta[list1_head_index].child_index[0] = static_cast<TIndex>(list2_tail_index);
@@ -2811,10 +2548,10 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::combine_lists(const std::int32
 }
 
 //  Set the parent_index of slots in a list to be an ordinal index
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::set_list_ordinals(const std::int32_t list_index, const std::uint32_t list_count, const std::int32_t ordinal_start) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::set_list_ordinals(const std::int32_t list_index, const std::uint32_t list_count, const std::int32_t ordinal_start) noexcept
 {
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
     std::int32_t ordinal_index = ordinal_start;
     std::int32_t slot_index = list_index;
     for (std::uint32_t slot_count = list_count; slot_count > 0; --slot_count)
@@ -2826,24 +2563,24 @@ inline void TOrderedSlots<TIndex, TMeta>::set_list_ordinals(const std::int32_t l
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::append_range_to_loose_list(const std::int32_t lower_index, const std::int32_t upper_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::append_range_to_loose_list(const std::int32_t lower_index, const std::int32_t upper_index) noexcept
 {
     m_loose_count += static_cast<std::uint32_t>(upper_index - lower_index) + 1u;
     m_loose_list_head = combine_lists(m_loose_list_head, range_to_list(lower_index, upper_index, SlotState::is_loose_slot));
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::append_range_to_empty_list(const std::int32_t lower_index, const std::int32_t upper_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::append_range_to_empty_list(const std::int32_t lower_index, const std::int32_t upper_index) noexcept
 {
     m_empty_count += static_cast<std::uint32_t>(upper_index - lower_index) + 1u;
     m_empty_list_head = combine_lists(m_empty_list_head, range_to_list(lower_index, upper_index, SlotState::is_empty_slot));
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::attach_to_lexed(const std::int32_t slot_index, const std::int32_t key_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::attach_to_lexed(const std::int32_t slot_index, const std::int32_t key_index) noexcept
 {
-    Slot& slot = m_meta_slot_array.data()[slot_index];
+    Slot& slot = meta_slots()[slot_index];
     slot.parent_index = -1;
     slot.balance_factor = 0;
     slot.child_index[0] = slot.child_index[1] = -1;
@@ -2852,16 +2589,16 @@ inline void TOrderedSlots<TIndex, TMeta>::attach_to_lexed(const std::int32_t slo
     ++m_lexed_count;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::attach_to_lexed(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::attach_to_lexed(const std::int32_t slot_index) noexcept
 {
     attach_to_lexed(slot_index, slot_index);
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::attach_to_loose(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::attach_to_loose(const std::int32_t slot_index) noexcept
 {
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
     Slot& slot = meta[slot_index];
     slot.parent_index = -1;
     slot.balance_factor = 0;
@@ -2881,10 +2618,10 @@ inline void TOrderedSlots<TIndex, TMeta>::attach_to_loose(const std::int32_t slo
     ++m_loose_count;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::attach_to_empty(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::attach_to_empty(const std::int32_t slot_index) noexcept
 {
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
     Slot& slot = meta[slot_index];
     slot.parent_index = -1;
     slot.balance_factor = 0;
@@ -2904,10 +2641,10 @@ inline void TOrderedSlots<TIndex, TMeta>::attach_to_empty(const std::int32_t slo
     ++m_empty_count;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::remove_from_lexed(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::remove_from_lexed(const std::int32_t slot_index) noexcept
 {
-    Slot& slot = m_meta_slot_array.data()[slot_index];
+    Slot& slot = meta_slots()[slot_index];
     --m_lexed_count;
     avl_remove(slot_index);
     slot.parent_index = -1;
@@ -2916,10 +2653,10 @@ inline void TOrderedSlots<TIndex, TMeta>::remove_from_lexed(const std::int32_t s
     slot.set_is_unassigned();
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::remove_from_loose(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::remove_from_loose(const std::int32_t slot_index) noexcept
 {
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
     Slot& slot = meta[slot_index];
     --m_loose_count;
     if (m_loose_list_head == slot_index)
@@ -2937,10 +2674,10 @@ inline void TOrderedSlots<TIndex, TMeta>::remove_from_loose(const std::int32_t s
     slot.set_is_unassigned();
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::remove_from_empty(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::remove_from_empty(const std::int32_t slot_index) noexcept
 {
-    Slot* const meta = m_meta_slot_array.data();
+    Slot* const meta = meta_slots();
     Slot& slot = meta[slot_index];
     --m_empty_count;
     if (m_empty_list_head == slot_index)
@@ -2958,10 +2695,10 @@ inline void TOrderedSlots<TIndex, TMeta>::remove_from_empty(const std::int32_t s
     slot.set_is_unassigned();
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::move_to_lexed_tree(const std::int32_t slot_index, const std::int32_t key_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::move_to_lexed_tree(const std::int32_t slot_index, const std::int32_t key_index) noexcept
 {
-    switch (m_meta_slot_array.data()[slot_index].get_slot_state())
+    switch (meta_slots()[slot_index].get_slot_state())
     {
         case (SlotState::is_loose_slot):
         {
@@ -2982,16 +2719,16 @@ inline void TOrderedSlots<TIndex, TMeta>::move_to_lexed_tree(const std::int32_t 
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::move_to_lexed_tree(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::move_to_lexed_tree(const std::int32_t slot_index) noexcept
 {
     move_to_lexed_tree(slot_index, slot_index);
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::move_to_loose_list(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::move_to_loose_list(const std::int32_t slot_index) noexcept
 {
-    switch (m_meta_slot_array.data()[slot_index].get_slot_state())
+    switch (meta_slots()[slot_index].get_slot_state())
     {
         case (SlotState::is_lexed_slot):
         {
@@ -3012,10 +2749,10 @@ inline void TOrderedSlots<TIndex, TMeta>::move_to_loose_list(const std::int32_t 
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::move_to_empty_list(const std::int32_t slot_index) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::move_to_empty_list(const std::int32_t slot_index) noexcept
 {
-    switch (m_meta_slot_array.data()[slot_index].get_slot_state())
+    switch (meta_slots()[slot_index].get_slot_state())
     {
         case (SlotState::is_lexed_slot):
         {
@@ -3036,11 +2773,11 @@ inline void TOrderedSlots<TIndex, TMeta>::move_to_empty_list(const std::int32_t 
     }
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::convert_to_rank_index(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::convert_to_rank_index(const std::int32_t slot_index) const noexcept
 {
     std::int32_t rank_index = -1;
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     const SlotState state = meta[slot_index].get_slot_state();
     if (state == SlotState::is_lexed_slot)
     {
@@ -3078,13 +2815,13 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::convert_to_rank_index(const st
     return rank_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_by_rank_index(const std::int32_t rank_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::locate_by_rank_index(const std::int32_t rank_index) const noexcept
 {
     std::int32_t slot_index = -1;
     if (rank_index >= 0)
     {
-        const Slot* const meta = m_meta_slot_array.data();
+        const Slot* const meta = meta_slots();
         std::uint32_t search_count = static_cast<std::uint32_t>(rank_index);
         if (search_count < m_lexed_count)
         {
@@ -3144,15 +2881,14 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_by_rank_index(const std
     return slot_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_any_equal(const std::int32_t key_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::locate_any_equal(const std::int32_t key_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t found_index = m_lexed_tree_root;
     while (found_index >= 0)
     {
-        std::int32_t relationship = on_compare_keys(key_index, found_index);
+        std::int32_t relationship = slot_backing().on_compare_keys(key_index, found_index);
         if (relationship == 0)
         {
             break;
@@ -3162,16 +2898,15 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_any_equal(const std::in
     return found_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_first_equal(const std::int32_t key_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::locate_first_equal(const std::int32_t key_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t found_index = -1;
     std::int32_t check_index = m_lexed_tree_root;
     while (check_index >= 0)
     {
-        std::int32_t relationship = on_compare_keys(key_index, check_index);
+        std::int32_t relationship = slot_backing().on_compare_keys(key_index, check_index);
         if (relationship == 0)
         {
             found_index = check_index;
@@ -3181,16 +2916,15 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_first_equal(const std::
     return found_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_first_greater(const std::int32_t key_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::locate_first_greater(const std::int32_t key_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t found_index = -1;
     std::int32_t check_index = m_lexed_tree_root;
     while (check_index >= 0)
     {
-        std::int32_t relationship = on_compare_keys(key_index, check_index);
+        std::int32_t relationship = slot_backing().on_compare_keys(key_index, check_index);
         if (relationship < 0)
         {
             found_index = check_index;
@@ -3200,16 +2934,15 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_first_greater(const std
     return found_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_first_greater_equal(const std::int32_t key_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::locate_first_greater_equal(const std::int32_t key_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t found_index = -1;
     std::int32_t check_index = m_lexed_tree_root;
     while (check_index >= 0)
     {
-        std::int32_t relationship = on_compare_keys(key_index, check_index);
+        std::int32_t relationship = slot_backing().on_compare_keys(key_index, check_index);
         if (relationship <= 0)
         {
             found_index = check_index;
@@ -3219,16 +2952,15 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_first_greater_equal(con
     return found_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_last_equal(const std::int32_t key_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::locate_last_equal(const std::int32_t key_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t found_index = -1;
     std::int32_t check_index = m_lexed_tree_root;
     while (check_index >= 0)
     {
-        std::int32_t relationship = on_compare_keys(key_index, check_index);
+        std::int32_t relationship = slot_backing().on_compare_keys(key_index, check_index);
         if (relationship == 0)
         {
             found_index = check_index;
@@ -3238,16 +2970,15 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_last_equal(const std::i
     return found_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_last_less(const std::int32_t key_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::locate_last_less(const std::int32_t key_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t found_index = -1;
     std::int32_t check_index = m_lexed_tree_root;
     while (check_index >= 0)
     {
-        std::int32_t relationship = on_compare_keys(key_index, check_index);
+        std::int32_t relationship = slot_backing().on_compare_keys(key_index, check_index);
         if (relationship > 0)
         {
             found_index = check_index;
@@ -3257,16 +2988,15 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_last_less(const std::in
     return found_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_last_less_equal(const std::int32_t key_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::locate_last_less_equal(const std::int32_t key_index) const noexcept
 {
-    MV_HARD_ASSERT(m_lock == LockState::on_compare_keys);
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t found_index = -1;
     std::int32_t check_index = m_lexed_tree_root;
     while (check_index >= 0)
     {
-        std::int32_t relationship = on_compare_keys(key_index, check_index);
+        std::int32_t relationship = slot_backing().on_compare_keys(key_index, check_index);
         if (relationship >= 0)
         {
             found_index = check_index;
@@ -3276,10 +3006,10 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::locate_last_less_equal(const s
     return found_index;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::min_occupied_index() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::min_occupied_index() const noexcept
 {
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t slot_index = 0;
     for (std::uint32_t slot_count = m_capacity; slot_count > 0; --slot_count)
     {
@@ -3293,10 +3023,10 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::min_occupied_index() const noe
     return -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::int32_t TOrderedSlots<TIndex, TMeta>::max_occupied_index() const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::max_occupied_index() const noexcept
 {
-    const Slot* const meta = m_meta_slot_array.data();
+    const Slot* const meta = meta_slots();
     std::int32_t slot_index = static_cast<std::int32_t>(m_capacity - 1u);
     for (std::uint32_t slot_count = m_capacity; slot_count > 0; --slot_count)
     {
@@ -3310,31 +3040,31 @@ inline std::int32_t TOrderedSlots<TIndex, TMeta>::max_occupied_index() const noe
     return -1;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::subtree_height(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::subtree_height(const std::int32_t slot_index) const noexcept
 {
     if (slot_index >= 0)
     {
-        Slot& slot = m_meta_slot_array.data()[slot_index];
+        Slot& slot = meta_slots()[slot_index];
         return std::max(subtree_height(slot.child_index[0]), subtree_height(slot.child_index[1])) + 1u;
     }
     return 0;
 }
 
-template<typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TIndex, TMeta>::subtree_weight(const std::int32_t slot_index) const noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::subtree_weight(const std::int32_t slot_index) const noexcept
 {
     if (slot_index >= 0)
     {
-        Slot& slot = m_meta_slot_array.data()[slot_index];
+        Slot& slot = meta_slots()[slot_index];
         return subtree_weight(slot.child_index[0]) + subtree_weight(slot.child_index[1]) + 1;
     }
     return 0;
 }
 
 //  This function should only be called on construction or after a call to shutdown().
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::move_from(TOrderedSlots& src) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::move_from(TOrderedSlots& src) noexcept
 {
     m_capacity = src.m_capacity;
     m_peak_usage = src.m_peak_usage;
@@ -3347,14 +3077,13 @@ inline bool TOrderedSlots<TIndex, TMeta>::move_from(TOrderedSlots& src) noexcept
     m_loose_list_head = src.m_loose_list_head;
     m_empty_list_head = src.m_empty_list_head;
     m_meta_slot_array = std::move(src.m_meta_slot_array);
-    m_lock = LockState::none;
     src.set_empty();
     return true;
 }
 
 //  This function should only be called on construction or after a call to shutdown().
-template<typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TIndex, TMeta>::copy_from(const TOrderedSlots& src) noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::copy_from(const TOrderedSlots& src) noexcept
 {
     if (src.is_initialised())
     {
@@ -3373,7 +3102,6 @@ inline bool TOrderedSlots<TIndex, TMeta>::copy_from(const TOrderedSlots& src) no
         m_lexed_tree_root = src.m_lexed_tree_root;
         m_loose_list_head = src.m_loose_list_head;
         m_empty_list_head = src.m_empty_list_head;
-        m_lock = LockState::none;
     }
     else
     {
@@ -3382,8 +3110,8 @@ inline bool TOrderedSlots<TIndex, TMeta>::copy_from(const TOrderedSlots& src) no
     return true;
 }
 
-template<typename TIndex, typename TMeta>
-inline void TOrderedSlots<TIndex, TMeta>::set_empty() noexcept
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::set_empty() noexcept
 {
     m_capacity = 0;
     m_peak_usage = 0;
@@ -3396,12 +3124,9 @@ inline void TOrderedSlots<TIndex, TMeta>::set_empty() noexcept
     m_loose_list_head = -1;
     m_empty_list_head = -1;
     m_meta_slot_array.deallocate();
-    m_lock = LockState::none;
 }
-
-using COrderedSlots_int16 = TOrderedSlots<std::int16_t, std::int8_t>;
-using COrderedSlots_int32 = TOrderedSlots<std::int32_t, std::int16_t>;
 
 }   //  namespace slots
 
 #endif  //  TORDERED_SLOTS_HPP_INCLUDED
+

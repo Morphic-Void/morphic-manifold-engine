@@ -152,4 +152,14 @@
 #define MV_PLATFORM_NATIVE_WAIT_WORD_EXPERIMENTAL 1
 #endif
 
+//==============================================================================
+//  Platform ABI
+//==============================================================================
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define MV_STD_ABI_CALL __stdcall
+#else
+#define MV_STD_ABI_CALL
+#endif
+
 #endif  //  #ifndef PLATFORM_DEFINES_HPP_INCLUDED

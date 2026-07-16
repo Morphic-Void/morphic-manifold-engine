@@ -36,8 +36,9 @@
 #include <cstring>      //  std::memcpy, std::memset
 #include <utility>      //  std::move
 
-#include "memory/memory_allocation.hpp"
-#include "memory/memory_primitives.hpp"
+#include "memory/memory_policies.hpp"
+#include "memory/memory_token.hpp"
+#include "memory/memory_view.hpp"
 #include "bit_utils/bit_ops.hpp"
 #include "debug/debug.hpp"
 
@@ -59,16 +60,16 @@ class CByteRectConstView;
 //  State model:
 //  - size is the logical byte extent.
 //  - size == 0 is the canonical empty state.
-//  - ready requires size != 0 and size <= memory::k_max_elements.
+//  - ready requires size != 0 and size <= memory::k_byte_size_ceiling.
 //==============================================================================
 
 struct MetaByteView
 {
     std::size_t size = 0u;
     void reset() noexcept { size = 0u; }
-    [[nodiscard]] bool is_valid() const noexcept { return size <= memory::k_max_elements; }
+    [[nodiscard]] bool is_valid() const noexcept { return size <= memory::k_byte_size_ceiling; }
     [[nodiscard]] bool is_empty() const noexcept { return size == 0u; }
-    [[nodiscard]] bool is_ready() const noexcept { return memory::in_non_empty_range(size, memory::k_max_elements); }
+    [[nodiscard]] bool is_ready() const noexcept { return memory::in_non_empty_range(size, memory::k_byte_size_ceiling); }
 };
 
 //==============================================================================
@@ -80,7 +81,7 @@ struct MetaByteView
 //  - capacity is the allocated byte extent.
 //  - {size == 0, capacity == 0} is the canonical empty state.
 //  - {size == 0, capacity != 0} is a valid ready state.
-//  - ready requires size <= capacity <= memory::k_max_elements.
+//  - ready requires size <= capacity <= memory::k_byte_size_ceiling.
 //==============================================================================
 
 struct MetaByteBuffer
@@ -88,9 +89,9 @@ struct MetaByteBuffer
     std::size_t size = 0u;
     std::size_t capacity = 0u;
     void reset() noexcept { size = capacity = 0u; }
-    [[nodiscard]] bool is_valid() const noexcept { return (size <= capacity) && (capacity <= memory::k_max_elements); }
+    [[nodiscard]] bool is_valid() const noexcept { return (size <= capacity) && (capacity <= memory::k_byte_size_ceiling); }
     [[nodiscard]] bool is_empty() const noexcept { return (size == 0u) || (capacity == 0u); }
-    [[nodiscard]] bool is_ready() const noexcept { return (size <= capacity) && memory::in_non_empty_range(capacity, memory::k_max_elements); }
+    [[nodiscard]] bool is_ready() const noexcept { return (size <= capacity) && memory::in_non_empty_range(capacity, memory::k_byte_size_ceiling); }
     [[nodiscard]] MetaByteView byte_view() const noexcept { return MetaByteView{ size }; }
 };
 
@@ -114,17 +115,23 @@ public:
     ~CByteBuffer() noexcept { deallocate(); };
 
     //  Status
-    [[nodiscard]] bool is_valid() const noexcept { return m_token.is_valid() && m_meta.is_valid(); }
-    [[nodiscard]] bool is_empty() const noexcept { return m_token.is_empty() || m_meta.is_empty(); }
-    [[nodiscard]] bool is_ready() const noexcept { return m_token.is_ready() && m_meta.is_ready(); }
+    [[nodiscard]] bool is_valid() const noexcept;
+    [[nodiscard]] bool is_empty() const noexcept;
+    [[nodiscard]] bool is_ready() const noexcept;
 
     //  Views
     [[nodiscard]] CByteView view() const noexcept;
     [[nodiscard]] CByteConstView const_view() const noexcept;
 
     //  Accessors
-    [[nodiscard]] std::uint8_t* data() const noexcept { return m_meta.is_ready() ? m_token.data() : nullptr; }
-    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_token.align() : std::size_t{ 0 }; }
+    [[nodiscard]] std::uint8_t* data() const noexcept
+    {
+        return m_meta.is_ready() ? static_cast<std::uint8_t*>(const_cast<void*>(m_token.data())) : nullptr;
+    }
+    [[nodiscard]] std::size_t align() const noexcept
+    {
+        return m_meta.is_ready() ? m_token.storage_alignment() : std::size_t{ 0 };
+    }
     [[nodiscard]] std::size_t size() const noexcept { return is_ready() ? m_meta.size : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t capacity() const noexcept { return is_ready() ? m_meta.capacity : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t available() const noexcept { return is_ready() ? (m_meta.capacity - m_meta.size) : std::size_t{ 0 }; }
@@ -148,10 +155,15 @@ public:
     void zero_fill() const noexcept;
 
     //  Handoff
-    memory::CMemoryToken disown(MetaByteBuffer& meta) noexcept { meta = m_meta; m_meta.reset(); return std::move(m_token); }
+    memory::CMemoryToken disown(MetaByteBuffer& meta) noexcept
+    {
+        meta = m_meta;
+        m_meta.reset();
+        return std::move(m_token);
+    }
 
 private:
-    memory::CMemoryToken m_token;
+    memory::CMemoryToken m_token{ 1u, 1u };
     MetaByteBuffer m_meta;
 };
 
@@ -184,7 +196,7 @@ public:
     //  Status
     [[nodiscard]] bool is_valid() const noexcept { return m_view.is_valid() && m_meta.is_valid(); }
     [[nodiscard]] bool is_empty() const noexcept { return m_view.is_empty() || m_meta.is_empty(); }
-    [[nodiscard]] bool is_ready() const noexcept { return m_view.is_ready() && m_meta.is_ready(); }
+    [[nodiscard]] bool is_ready() const noexcept { return m_view.is_valid() && m_meta.is_ready(); }
 
     //  Derived views
     [[nodiscard]] CByteConstView const_view() const noexcept;
@@ -193,8 +205,11 @@ public:
     [[nodiscard]] CByteView tail_from(const std::size_t offset) const noexcept;
 
     //  Accessors
-    [[nodiscard]] std::uint8_t* data() const noexcept { return m_meta.is_ready() ? m_view.data() : nullptr; }
-    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.align() : std::size_t{ 0 }; }
+    [[nodiscard]] std::uint8_t* data() const noexcept
+    {
+        return m_meta.is_ready() ? static_cast<std::uint8_t*>(m_view.data()) : nullptr;
+    }
+    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t size() const noexcept { return is_ready() ? m_meta.size : std::size_t{ 0 }; }
 
     //  Utilities
@@ -234,7 +249,7 @@ public:
     //  Status
     [[nodiscard]] bool is_valid() const noexcept { return m_view.is_valid() && m_meta.is_valid(); }
     [[nodiscard]] bool is_empty() const noexcept { return m_view.is_empty() || m_meta.is_empty(); }
-    [[nodiscard]] bool is_ready() const noexcept { return m_view.is_ready() && m_meta.is_ready(); }
+    [[nodiscard]] bool is_ready() const noexcept { return m_view.is_valid() && m_meta.is_ready(); }
 
     //  Derived views
     [[nodiscard]] CByteConstView subview(const std::size_t offset, const std::size_t count) const noexcept;
@@ -242,8 +257,11 @@ public:
     [[nodiscard]] CByteConstView tail_from(const std::size_t offset) const noexcept;
 
     //  Accessors
-    [[nodiscard]] const std::uint8_t* data() const noexcept { return m_meta.is_ready() ? m_view.data() : nullptr; }
-    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.align() : std::size_t{ 0 }; }
+    [[nodiscard]] const std::uint8_t* data() const noexcept
+    {
+        return m_meta.is_ready() ? static_cast<const std::uint8_t*>(m_view.data()) : nullptr;
+    }
+    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t size() const noexcept { return is_ready() ? m_meta.size : std::size_t{ 0 }; }
 
 private:
@@ -265,7 +283,7 @@ private:
 //  - {0, 0, 0} is the canonical empty state.
 //  - non-empty states require all three fields to be non-zero.
 //  - ready requires row_width <= row_pitch and
-//    row_pitch * row_count <= memory::k_max_elements.
+//    row_pitch * row_count <= memory::k_byte_size_ceiling.
 //==============================================================================
 
 struct MetaByteRectView
@@ -279,6 +297,7 @@ struct MetaByteRectView
     [[nodiscard]] bool is_empty() const noexcept { return any_zero(); }
     [[nodiscard]] bool is_ready() const noexcept { return any_zero() ? false : range_ok(); }
     [[nodiscard]] bool is_contiguous() const noexcept { return is_ready() && (row_width == row_pitch); }
+    [[nodiscard]] std::size_t span_bytes() const noexcept { return is_ready() ? (row_width + (row_pitch * (row_count - 1u))) : std::size_t{ 0u }; }
     [[nodiscard]] std::size_t size_as_buffer() const noexcept { return is_contiguous() ? (row_pitch * row_count) : std::size_t{ 0 }; }
     [[nodiscard]] MetaByteView byte_view() const noexcept { return MetaByteView{ size_as_buffer() }; }
     [[nodiscard]] MetaByteRectView subview(const std::size_t x, const std::size_t y, const std::size_t width, const std::size_t height) const noexcept;
@@ -315,23 +334,38 @@ public:
     ~CByteRectBuffer() noexcept { deallocate(); };
 
     //  Status
-    [[nodiscard]] bool is_valid() const noexcept { return m_token.is_valid() && m_meta.is_valid(); }
-    [[nodiscard]] bool is_empty() const noexcept { return m_token.is_empty() || m_meta.is_empty(); }
-    [[nodiscard]] bool is_ready() const noexcept { return m_token.is_ready() && m_meta.is_ready(); }
-    [[nodiscard]] bool is_contiguous() const noexcept { return m_token.is_ready() && m_meta.is_contiguous(); }
+    [[nodiscard]] bool is_valid() const noexcept;
+    [[nodiscard]] bool is_empty() const noexcept;
+    [[nodiscard]] bool is_ready() const noexcept;
+    [[nodiscard]] bool is_contiguous() const noexcept { return is_ready() && m_meta.is_contiguous(); }
 
     //  Views
     [[nodiscard]] CByteRectView view() const noexcept;
     [[nodiscard]] CByteRectConstView const_view() const noexcept;
 
     //  Contiguous byte views
-    [[nodiscard]] CByteView byte_view() const noexcept { return is_contiguous() ? CByteView{ m_token.view(), m_meta.byte_view() } : CByteView{}; }
-    [[nodiscard]] CByteConstView byte_const_view() const noexcept { return is_contiguous() ? CByteConstView{ m_token.const_view(), m_meta.byte_view() } : CByteConstView{}; }
+    [[nodiscard]] CByteView byte_view() const noexcept
+    {
+        return is_contiguous() ? CByteView{ data(), m_meta.size_as_buffer(), align() } : CByteView{};
+    }
+    [[nodiscard]] CByteConstView byte_const_view() const noexcept
+    {
+        return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{};
+    }
 
     //  Accessors
-    [[nodiscard]] std::uint8_t* data() const noexcept { return m_meta.is_ready() ? m_token.data() : nullptr; }
-    [[nodiscard]] std::uint8_t* row_data(const std::size_t y) const noexcept { return (is_ready() && (y < m_meta.row_count)) ? (m_token.data() + (y * m_meta.row_pitch)) : nullptr; }
-    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_token.align() : std::size_t{ 0 }; }
+    [[nodiscard]] std::uint8_t* data() const noexcept
+    {
+        return m_meta.is_ready() ? static_cast<std::uint8_t*>(const_cast<void*>(m_token.data())) : nullptr;
+    }
+    [[nodiscard]] std::uint8_t* row_data(const std::size_t y) const noexcept
+    {
+        return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr;
+    }
+    [[nodiscard]] std::size_t align() const noexcept
+    {
+        return m_meta.is_ready() ? m_token.storage_alignment() : std::size_t{ 0 };
+    }
     [[nodiscard]] std::size_t row_pitch() const noexcept { return is_ready() ? m_meta.row_pitch : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_width() const noexcept { return is_ready() ? m_meta.row_width : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_count() const noexcept { return is_ready() ? m_meta.row_count : std::size_t{ 0 }; }
@@ -346,10 +380,15 @@ public:
     void zero_fill() const noexcept;
 
     //  Handoff
-    memory::CMemoryToken disown(MetaByteRectBuffer& meta) noexcept { meta = m_meta; m_meta.reset(); return std::move(m_token); }
+    memory::CMemoryToken disown(MetaByteRectBuffer& meta) noexcept
+    {
+        meta = m_meta;
+        m_meta.reset();
+        return std::move(m_token);
+    }
 
 private:
-    memory::CMemoryToken m_token;
+    memory::CMemoryToken m_token{ 1u, 1u };
     MetaByteRectBuffer m_meta;
 };
 
@@ -382,21 +421,33 @@ public:
     //  Status
     [[nodiscard]] bool is_valid() const noexcept { return m_view.is_valid() && m_meta.is_valid(); }
     [[nodiscard]] bool is_empty() const noexcept { return m_view.is_empty() || m_meta.is_empty(); }
-    [[nodiscard]] bool is_ready() const noexcept { return m_view.is_ready() && m_meta.is_ready(); }
-    [[nodiscard]] bool is_contiguous() const noexcept { return m_view.is_ready() && m_meta.is_contiguous(); }
+    [[nodiscard]] bool is_ready() const noexcept { return m_view.is_valid() && m_meta.is_ready(); }
+    [[nodiscard]] bool is_contiguous() const noexcept { return m_view.is_valid() && m_meta.is_contiguous(); }
 
     //  Derived views
     [[nodiscard]] CByteRectConstView const_view() const noexcept;
     [[nodiscard]] CByteRectView subview(const std::size_t x, const std::size_t y, const std::size_t width, const std::size_t height) const noexcept;
 
     //  Contiguous byte views
-    [[nodiscard]] CByteView byte_view() const noexcept { return is_contiguous() ? CByteView{ m_view, m_meta.byte_view() } : CByteView{}; }
-    [[nodiscard]] CByteConstView byte_const_view() const noexcept { return is_contiguous() ? CByteConstView{ m_view.const_view(), m_meta.byte_view() } : CByteConstView{}; }
+    [[nodiscard]] CByteView byte_view() const noexcept
+    {
+        return is_contiguous() ? CByteView{ data(), m_meta.size_as_buffer(), align() } : CByteView{};
+    }
+    [[nodiscard]] CByteConstView byte_const_view() const noexcept
+    {
+        return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{};
+    }
 
     //  Accessors
-    [[nodiscard]] std::uint8_t* data() const noexcept { return m_meta.is_ready() ? m_view.data() : nullptr; }
-    [[nodiscard]] std::uint8_t* row_data(const std::size_t y) const noexcept { return (is_ready() && (y < m_meta.row_count)) ? (m_view.data() + (y * m_meta.row_pitch)) : nullptr; }
-    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.align() : std::size_t{ 0 }; }
+    [[nodiscard]] std::uint8_t* data() const noexcept
+    {
+        return m_meta.is_ready() ? static_cast<std::uint8_t*>(m_view.data()) : nullptr;
+    }
+    [[nodiscard]] std::uint8_t* row_data(const std::size_t y) const noexcept
+    {
+        return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr;
+    }
+    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_pitch() const noexcept { return is_ready() ? m_meta.row_pitch : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_width() const noexcept { return is_ready() ? m_meta.row_width : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_count() const noexcept { return is_ready() ? m_meta.row_count : std::size_t{ 0 }; }
@@ -438,19 +489,28 @@ public:
     //  Status
     [[nodiscard]] bool is_valid() const noexcept { return m_view.is_valid() && m_meta.is_valid(); }
     [[nodiscard]] bool is_empty() const noexcept { return m_view.is_empty() || m_meta.is_empty(); }
-    [[nodiscard]] bool is_ready() const noexcept { return m_view.is_ready() && m_meta.is_ready(); }
-    [[nodiscard]] bool is_contiguous() const noexcept { return m_view.is_ready() && m_meta.is_contiguous(); }
+    [[nodiscard]] bool is_ready() const noexcept { return m_view.is_valid() && m_meta.is_ready(); }
+    [[nodiscard]] bool is_contiguous() const noexcept { return m_view.is_valid() && m_meta.is_contiguous(); }
 
     //  Derived views
     [[nodiscard]] CByteRectConstView subview(const std::size_t x, const std::size_t y, const std::size_t width, const std::size_t height) const noexcept;
 
     //  Contiguous byte views
-    [[nodiscard]] CByteConstView byte_view() const noexcept { return is_contiguous() ? CByteConstView{ m_view, m_meta.byte_view() } : CByteConstView{}; }
+    [[nodiscard]] CByteConstView byte_view() const noexcept
+    {
+        return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{};
+    }
 
     //  Accessors
-    [[nodiscard]] const std::uint8_t* data() const noexcept { return m_meta.is_ready() ? m_view.data() : nullptr; }
-    [[nodiscard]] const std::uint8_t* row_data(const std::size_t y) const noexcept { return (is_ready() && (y < m_meta.row_count)) ? (m_view.data() + (y * m_meta.row_pitch)) : nullptr; }
-    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.align() : std::size_t{ 0 }; }
+    [[nodiscard]] const std::uint8_t* data() const noexcept
+    {
+        return m_meta.is_ready() ? static_cast<const std::uint8_t*>(m_view.data()) : nullptr;
+    }
+    [[nodiscard]] const std::uint8_t* row_data(const std::size_t y) const noexcept
+    {
+        return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr;
+    }
+    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_pitch() const noexcept { return is_ready() ? m_meta.row_pitch : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_width() const noexcept { return is_ready() ? m_meta.row_width : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_count() const noexcept { return is_ready() ? m_meta.row_count : std::size_t{ 0 }; }
@@ -467,7 +527,7 @@ private:
 [[nodiscard]] inline bool MetaByteRectView::set(const std::size_t pitch, const std::size_t width, const std::size_t count) noexcept
 {
     using memory::in_non_empty_range;
-    if (in_non_empty_range(width, pitch) && in_non_empty_range(count, (memory::k_max_elements / pitch)))
+    if (in_non_empty_range(width, pitch) && in_non_empty_range(count, memory::max_elements(pitch)))
     {
         row_pitch = pitch;
         row_width = width;
@@ -492,9 +552,9 @@ private:
 {
     using memory::in_non_empty_range;
     return
-        in_non_empty_range(row_pitch, memory::k_max_elements) &&
+        in_non_empty_range(row_pitch, memory::k_byte_size_ceiling) &&
         in_non_empty_range(row_width, row_pitch) &&
-        in_non_empty_range(row_count, (memory::k_max_elements / row_pitch));
+        in_non_empty_range(row_count, memory::max_elements(row_pitch));
 }
 
 //==============================================================================
@@ -517,12 +577,12 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
 
 [[nodiscard]] inline CByteView CByteBuffer::view() const noexcept
 {
-    return is_ready() ? CByteView{ m_token.view(), m_meta.byte_view() } : CByteView{};
+    return (is_ready() && (m_meta.size != 0u)) ? CByteView{ data(), m_meta.size, align() } : CByteView{};
 }
 
 [[nodiscard]] inline CByteConstView CByteBuffer::const_view() const noexcept
 {
-    return is_ready() ? CByteConstView{ m_token.const_view(), m_meta.byte_view() } : CByteConstView{};
+    return (is_ready() && (m_meta.size != 0u)) ? CByteConstView{ data(), m_meta.size, align() } : CByteConstView{};
 }
 
 [[nodiscard]] inline bool CByteBuffer::append(const std::uint8_t* const data, const std::size_t size) noexcept
@@ -534,7 +594,7 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
 
     if (ensure_free(size))
     {
-        std::memcpy((m_token.data() + m_meta.size), data, size);
+        std::memcpy((this->data() + m_meta.size), data, size);
         m_meta.size += size;
         return true;
     }
@@ -552,7 +612,7 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
     {
         if (zero)
         {
-            std::memset((m_token.data() + m_meta.size), 0, size);
+            std::memset((data() + m_meta.size), 0, size);
         }
         m_meta.size += size;
         return true;
@@ -577,7 +637,7 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
 
 [[nodiscard]] inline bool CByteBuffer::reallocate(const std::size_t size, const std::size_t capacity, const std::size_t align) noexcept
 {
-    if (is_valid() && (size <= capacity) && (capacity <= memory::k_max_elements))
+    if (is_valid() && (size <= capacity) && (capacity <= memory::k_byte_size_ceiling))
     {
         if (capacity == 0u)
         {
@@ -585,12 +645,12 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
             return true;
         }
 
-        const std::size_t norm_align = memory::util::norm_align((align == 0u) ? m_token.align() : align);
-        if ((capacity == m_meta.capacity) && (norm_align <= m_token.align()))
+        const std::size_t norm_align = bit_ops::reduce_alignment_to_pow2((align == 0u) ? m_token.storage_alignment() : align);
+        if ((capacity == m_meta.capacity) && (norm_align <= m_token.storage_alignment()))
         {
             if (size > m_meta.size)
             {
-                std::memset((m_token.data() + m_meta.size), 0, (size - m_meta.size));
+                std::memset((data() + m_meta.size), 0, (size - m_meta.size));
             }
             m_meta.size = size;
             return true;
@@ -598,22 +658,22 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
 
         //  Reallocation path
         {
-            memory::CMemoryToken token;
-            if (token.allocate(capacity, norm_align, false))
+            memory::CMemoryToken token{ 1u, norm_align };
+            if (token.allocate(capacity, false))
             {
                 const std::size_t copy_size = std::min(size, m_meta.size);
                 if (copy_size != 0u)
                 {
-                    std::memcpy(token.data(), m_token.data(), copy_size);
+                    std::memcpy(token.data(), data(), copy_size);
                 }
                 if (size > m_meta.size)
                 {
-                    std::memset((token.data() + m_meta.size), 0, (size - m_meta.size));
+                    std::memset(static_cast<std::uint8_t*>(token.data()) + m_meta.size, 0, (size - m_meta.size));
                 }
                 MetaByteBuffer meta{ size, capacity };
                 m_token = std::move(token);
                 m_meta = meta;
-                MV_HARD_ASSERT(m_token.align() == norm_align);
+                MV_HARD_ASSERT(m_token.storage_alignment() == norm_align);
                 MV_HARD_ASSERT(m_meta.size == size);
                 MV_HARD_ASSERT(m_meta.capacity == capacity);
                 MV_HARD_ASSERT(is_ready());
@@ -627,22 +687,28 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
 
 [[nodiscard]] inline bool CByteBuffer::resize(const std::size_t size, const std::size_t align) noexcept
 {
-    return (size <= memory::k_max_elements) ? reallocate(size, ((size > m_meta.capacity) ? memory::buffer_growth_policy(size) : m_meta.capacity), align) : false;
+    return (size <= memory::k_byte_size_ceiling) ?
+        reallocate(size, ((size > m_meta.capacity) ?
+            memory::buffer_growth_policy(size, memory::k_byte_size_ceiling) : m_meta.capacity), align) :
+        false;
 }
 
 [[nodiscard]] inline bool CByteBuffer::reserve(const std::size_t minimum_capacity, const std::size_t align) noexcept
 {
-    return (minimum_capacity <= memory::k_max_elements) ? reallocate(m_meta.size, std::max(memory::buffer_growth_policy(minimum_capacity), m_meta.capacity), align) : false;
+    return (minimum_capacity <= memory::k_byte_size_ceiling) ?
+        reallocate(m_meta.size, std::max(
+            memory::buffer_growth_policy(minimum_capacity, memory::k_byte_size_ceiling), m_meta.capacity), align) :
+        false;
 }
 
 [[nodiscard]] inline bool CByteBuffer::ensure_free(const std::size_t extra, const std::size_t align) noexcept
 {
-    return (extra <= (memory::k_max_elements - m_meta.size)) ? reserve((m_meta.size + extra), align) : false;
+    return (extra <= (memory::k_byte_size_ceiling - m_meta.size)) ? reserve((m_meta.size + extra), align) : false;
 }
 
 [[nodiscard]] inline bool CByteBuffer::shrink_to_fit() noexcept
 {
-    return reallocate(m_meta.size, m_meta.size, m_token.align());
+    return reallocate(m_meta.size, m_meta.size, align());
 }
 
 [[nodiscard]] inline bool CByteBuffer::construct_and_copy_from(const CByteConstView& view) noexcept
@@ -660,14 +726,14 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
 
     //  Construction and copy path
     {
-        memory::CMemoryToken token;
-        if (token.allocate(view.size(), view.align(), false))
+        memory::CMemoryToken token{ 1u, view.align() };
+        if (token.allocate(view.size(), false))
         {
             std::memcpy(token.data(), view.data(), view.size());
             MetaByteBuffer meta{ view.size(), view.size() };
             m_token = std::move(token);
             m_meta = meta;
-            MV_HARD_ASSERT(m_token.align() == view.align());
+            MV_HARD_ASSERT(m_token.storage_alignment() == view.align());
             MV_HARD_ASSERT(m_meta.size == view.size());
             MV_HARD_ASSERT(m_meta.capacity == view.size());
             MV_HARD_ASSERT(is_ready());
@@ -692,15 +758,30 @@ inline void CByteBuffer::zero_fill() const noexcept
     }
 }
 
+inline bool CByteBuffer::is_valid() const noexcept
+{
+    return m_meta.is_valid() && m_token.is_relocatable() &&
+        (m_token.stride() == 1u) && (m_token.count() == m_meta.capacity);
+}
+
+inline bool CByteBuffer::is_empty() const noexcept
+{
+    return (m_token.data() == nullptr) || m_meta.is_empty();
+}
+
+inline bool CByteBuffer::is_ready() const noexcept
+{
+    return is_valid() && (m_token.data() != nullptr);
+}
+
 //==============================================================================
 //  CByteView out of class function bodies
 //==============================================================================
 
 inline CByteView& CByteView::set(std::uint8_t* const data, const std::size_t size, const std::size_t align) noexcept
 {
-    if ((data != nullptr) && (size != 0u))
+    if (m_view.set(data, size, 1u, align))
     {
-        m_view.set(data, align);
         m_meta.size = size;
     }
     else
@@ -712,9 +793,9 @@ inline CByteView& CByteView::set(std::uint8_t* const data, const std::size_t siz
 
 inline CByteView& CByteView::set(const memory::CMemoryView& view, const MetaByteView& meta) noexcept
 {
-    if (view.is_ready() && meta.is_ready())
+    if (meta.is_ready() && view.is_valid() && (view.stride() == 1u) && view.contains_range(0u, meta.size))
     {
-        m_view = view;
+        m_view = view.subview(0u, meta.size);
         m_meta = meta;
     }
     else
@@ -731,12 +812,16 @@ inline CByteView& CByteView::set(const memory::CMemoryView& view, const MetaByte
 
 [[nodiscard]] inline CByteView CByteView::subview(const std::size_t offset, const std::size_t count) const noexcept
 {
-    return (is_ready() && (m_meta.size > offset) && (count <= (m_meta.size - offset))) ? CByteView{ m_view.subview(offset), MetaByteView{ count } } : CByteView{};
+    return (is_ready() && m_view.contains_range(offset, count))
+        ? CByteView{ m_view.subview(offset, count), MetaByteView{ count } }
+        : CByteView{};
 }
 
 [[nodiscard]] inline CByteView CByteView::head_to(const std::size_t count) const noexcept
 {
-    return (is_ready() && (m_meta.size > (count - 1u))) ? CByteView{ m_view, MetaByteView{ count } } : CByteView{};
+    return (is_ready() && m_view.contains_range(0u, count))
+        ? CByteView{ m_view.subview(0u, count), MetaByteView{ count } }
+        : CByteView{};
 }
 
 [[nodiscard]] inline CByteView CByteView::tail_from(const std::size_t offset) const noexcept
@@ -759,9 +844,8 @@ inline void CByteView::zero_fill() const noexcept
 
 inline CByteConstView& CByteConstView::set(const std::uint8_t* const data, const std::size_t size, const std::size_t align) noexcept
 {
-    if ((data != nullptr) && (size != 0u))
+    if (m_view.set(data, size, 1u, align))
     {
-        m_view.set(data, align);
         m_meta.size = size;
     }
     else
@@ -773,9 +857,9 @@ inline CByteConstView& CByteConstView::set(const std::uint8_t* const data, const
 
 inline CByteConstView& CByteConstView::set(const memory::CMemoryConstView& view, const MetaByteView& meta) noexcept
 {
-    if (view.is_ready() && meta.is_ready())
+    if (meta.is_ready() && view.is_valid() && (view.stride() == 1u) && view.contains_range(0u, meta.size))
     {
-        m_view = view;
+        m_view = view.subview(0u, meta.size);
         m_meta = meta;
     }
     else
@@ -787,12 +871,16 @@ inline CByteConstView& CByteConstView::set(const memory::CMemoryConstView& view,
 
 [[nodiscard]] inline CByteConstView CByteConstView::subview(const std::size_t offset, const std::size_t count) const noexcept
 {
-    return (is_ready() && (m_meta.size > offset) && (count <= (m_meta.size - offset))) ? CByteConstView{ m_view.subview(offset), MetaByteView{ count } } : CByteConstView{};
+    return (is_ready() && m_view.contains_range(offset, count))
+        ? CByteConstView{ m_view.subview(offset, count), MetaByteView{ count } }
+        : CByteConstView{};
 }
 
 [[nodiscard]] inline CByteConstView CByteConstView::head_to(const std::size_t count) const noexcept
 {
-    return (is_ready() && (m_meta.size > (count - 1u))) ? CByteConstView{ m_view, MetaByteView{ count } } : CByteConstView{};
+    return (is_ready() && m_view.contains_range(0u, count))
+        ? CByteConstView{ m_view.subview(0u, count), MetaByteView{ count } }
+        : CByteConstView{};
 }
 
 [[nodiscard]] inline CByteConstView CByteConstView::tail_from(const std::size_t offset) const noexcept
@@ -820,12 +908,12 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
 
 [[nodiscard]] inline CByteRectView CByteRectBuffer::view() const noexcept
 {
-    return is_ready() ? CByteRectView{ m_token.view(), m_meta } : CByteRectView{};
+    return is_ready() ? CByteRectView{ data(), m_meta.row_pitch, m_meta.row_width, m_meta.row_count, align() } : CByteRectView{};
 }
 
 [[nodiscard]] inline CByteRectConstView CByteRectBuffer::const_view() const noexcept
 {
-    return is_ready() ? CByteRectConstView{ m_token.const_view(), m_meta } : CByteRectConstView{};
+    return is_ready() ? CByteRectConstView{ data(), m_meta.row_pitch, m_meta.row_width, m_meta.row_count, align() } : CByteRectConstView{};
 }
 
 [[nodiscard]] inline bool CByteRectBuffer::allocate(const std::size_t row_width, const std::size_t row_count, const std::size_t row_align, const bool zero) noexcept
@@ -834,7 +922,7 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
     {
         if (zero)
         {
-            std::memset(m_token.data(), 0, (m_meta.row_pitch * m_meta.row_count));
+            std::memset(data(), 0, (m_meta.row_pitch * m_meta.row_count));
         }
         return true;
     }
@@ -850,13 +938,13 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
         return true;
     }
 
-    if (in_non_empty_range(row_width, memory::k_max_elements))
+    if (in_non_empty_range(row_width, memory::k_byte_size_ceiling))
     {   //  row_width is valid
-        const std::size_t use_align = memory::util::norm_align((row_align != 0u) ? row_align : m_token.align());
+        const std::size_t use_align = bit_ops::reduce_alignment_to_pow2((row_align != 0u) ? row_align : m_token.storage_alignment());
         const std::size_t row_pitch = bit_ops::round_up_to_pow2_multiple(row_width, use_align);
-        if (in_non_empty_range(row_count, (memory::k_max_elements / row_pitch)))
+        if (in_non_empty_range(row_count, memory::max_elements(row_pitch)))
         {   //  row_count is valid
-            if ((use_align <= m_token.align()) && (row_pitch == m_meta.row_pitch) && (row_width == m_meta.row_width) && (row_count == m_meta.row_count))
+            if ((use_align <= m_token.storage_alignment()) && (row_pitch == m_meta.row_pitch) && (row_width == m_meta.row_width) && (row_count == m_meta.row_count))
             {   //  nothing meaningful has changed that requires reallocation
                 return true;
             }
@@ -864,13 +952,13 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
             //  Reallocation path
             {   //  something meaningful has changed that requires reallocation
                 const std::size_t bytes = row_pitch * row_count;
-                memory::CMemoryToken token;
-                if (token.allocate(bytes, use_align, false))
+                memory::CMemoryToken token{ 1u, use_align };
+                if (token.allocate(bytes, false))
                 {   //  the allocation succeeded
                     if (is_ready())
                     {   //  true reallocation
-                        const std::uint8_t* src_data = m_token.data();
-                        std::uint8_t* dst_data = token.data();
+                        const std::uint8_t* src_data = data();
+                        std::uint8_t* dst_data = static_cast<std::uint8_t*>(token.data());
                         if ((row_width == row_pitch) && (row_width == m_meta.row_width) && (row_pitch == m_meta.row_pitch))
                         {   //  a single copy is possible
                             std::memcpy(dst_data, src_data, (row_pitch * std::min(row_count, m_meta.row_count)));
@@ -892,7 +980,7 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
                         }
                         if (zero_uninitialised && (row_count > m_meta.row_count))
                         {   //  there is extra accessible space to zero below the image
-                            std::memset((token.data() + (row_pitch * m_meta.row_count)), 0, (row_pitch * (row_count - m_meta.row_count)));
+                            std::memset(static_cast<std::uint8_t*>(token.data()) + (row_pitch * m_meta.row_count), 0, (row_pitch * (row_count - m_meta.row_count)));
                         }
                     }
                     else if (zero_uninitialised)
@@ -902,7 +990,7 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
                     MetaByteRectBuffer meta{ row_pitch, row_width, row_count };
                     m_token = std::move(token);
                     m_meta = meta;
-                    MV_HARD_ASSERT(m_token.align() == use_align);
+                    MV_HARD_ASSERT(m_token.storage_alignment() == use_align);
                     MV_HARD_ASSERT(m_meta.row_pitch == row_pitch);
                     MV_HARD_ASSERT(m_meta.row_width == row_width);
                     MV_HARD_ASSERT(m_meta.row_count == row_count);
@@ -930,16 +1018,16 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
 
     //  Construction and copy path
     {
-        memory::CMemoryToken token;
         const std::size_t row_align = view.align();
         const std::size_t row_width = view.row_width();
         const std::size_t row_count = view.row_count();
         const std::size_t row_pitch = bit_ops::round_up_to_pow2_multiple(row_width, row_align);
-        if (token.allocate((row_pitch * row_count), row_align, false))
+        memory::CMemoryToken token{ 1u, row_align };
+        if (token.allocate((row_pitch * row_count), false))
         {
             const std::size_t src_pitch = view.row_pitch();
             const std::uint8_t* src_data = view.data();
-            std::uint8_t* dst_data = token.data();
+            std::uint8_t* dst_data = static_cast<std::uint8_t*>(token.data());
             if ((row_width == row_pitch) && (row_pitch == src_pitch))
             {   //  a single copy is possible
                 std::memcpy(dst_data, src_data, (row_pitch * row_count));
@@ -961,7 +1049,7 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
             MetaByteRectBuffer meta{ row_pitch, row_width, row_count };
             m_token = std::move(token);
             m_meta = meta;
-            MV_HARD_ASSERT(m_token.align() == row_align);
+            MV_HARD_ASSERT(m_token.storage_alignment() == row_align);
             MV_HARD_ASSERT(m_meta.row_pitch == row_pitch);
             MV_HARD_ASSERT(m_meta.row_width == row_width);
             MV_HARD_ASSERT(m_meta.row_count == row_count);
@@ -998,28 +1086,42 @@ inline void CByteRectBuffer::zero_fill() const noexcept
     }
 }
 
+inline bool CByteRectBuffer::is_valid() const noexcept
+{
+    return m_meta.is_valid() && m_token.is_relocatable() &&
+        (m_token.stride() == 1u) && (m_token.count() == (m_meta.row_pitch * m_meta.row_count));
+}
+
+inline bool CByteRectBuffer::is_empty() const noexcept
+{
+    return (m_token.data() == nullptr) || m_meta.is_empty();
+}
+
+inline bool CByteRectBuffer::is_ready() const noexcept
+{
+    return is_valid() && (m_token.data() != nullptr);
+}
+
 //==============================================================================
 //  CByteRectView out of class function bodies
 //==============================================================================
 
 inline CByteRectView& CByteRectView::set(std::uint8_t* const data, const std::size_t row_pitch, const std::size_t row_width, const std::size_t row_count, const std::size_t align) noexcept
 {
-    if ((data != nullptr) && m_meta.set(row_pitch, row_width, row_count))
+    if (m_meta.set(row_pitch, row_width, row_count) &&
+        m_view.set(data, m_meta.span_bytes(), 1u, align))
     {
-        m_view.set(data, align);
+        return *this;
     }
-    else
-    {
-        reset();
-    }
-    return *this;
+    return reset();
 }
 
 inline CByteRectView& CByteRectView::set(const memory::CMemoryView& view, const MetaByteRectView& meta) noexcept
 {
-    if (view.is_ready() && meta.is_ready())
+    const std::size_t byte_count = meta.span_bytes();
+    if (meta.is_ready() && view.is_valid() && (view.stride() == 1u) && view.contains_range(0u, byte_count))
     {
-        m_view = view;
+        m_view = view.subview(0u, byte_count);
         m_meta = meta;
     }
     else
@@ -1031,7 +1133,7 @@ inline CByteRectView& CByteRectView::set(const memory::CMemoryView& view, const 
 
 [[nodiscard]] inline CByteRectConstView CByteRectView::const_view() const noexcept
 {
-    return is_ready() ? CByteRectConstView{ m_view.const_view(), m_meta } : CByteRectConstView{};
+    return is_ready() ? CByteRectConstView{ data(), m_meta.row_pitch, m_meta.row_width, m_meta.row_count, align() } : CByteRectConstView{};
 }
 
 [[nodiscard]] inline CByteRectView CByteRectView::subview(const std::size_t x, const std::size_t y, const std::size_t width, const std::size_t height) const noexcept
@@ -1042,7 +1144,7 @@ inline CByteRectView& CByteRectView::set(const memory::CMemoryView& view, const 
         if (meta.is_ready())
         {
             const std::size_t offset = x + (y * m_meta.row_pitch);
-            return CByteRectView{ m_view.subview(offset), meta };
+            return CByteRectView{ m_view.subview(offset, meta.span_bytes()), meta };
         }
     }
     return CByteRectView{};
@@ -1074,22 +1176,20 @@ inline void CByteRectView::zero_fill() const noexcept
 
 inline CByteRectConstView& CByteRectConstView::set(const std::uint8_t* const data, const std::size_t row_pitch, const std::size_t row_width, const std::size_t row_count, const std::size_t align) noexcept
 {
-    if ((data != nullptr) && m_meta.set(row_pitch, row_width, row_count))
+    if (m_meta.set(row_pitch, row_width, row_count) &&
+        m_view.set(data, m_meta.span_bytes(), 1u, align))
     {
-        m_view.set(data, align);
+        return *this;
     }
-    else
-    {
-        reset();
-    }
-    return *this;
+    return reset();
 }
 
 inline CByteRectConstView& CByteRectConstView::set(const memory::CMemoryConstView& view, const MetaByteRectView& meta) noexcept
 {
-    if (view.is_ready() && meta.is_ready())
+    const std::size_t byte_count = meta.span_bytes();
+    if (meta.is_ready() && view.is_valid() && (view.stride() == 1u) && view.contains_range(0u, byte_count))
     {
-        m_view = view;
+        m_view = view.subview(0u, byte_count);
         m_meta = meta;
     }
     else
@@ -1107,11 +1207,10 @@ inline CByteRectConstView& CByteRectConstView::set(const memory::CMemoryConstVie
         if (meta.is_ready())
         {
             const std::size_t offset = x + (y * m_meta.row_pitch);
-            return CByteRectConstView{ m_view.subview(offset), meta };
+            return CByteRectConstView{ m_view.subview(offset, meta.span_bytes()), meta };
         }
     }
     return CByteRectConstView{};
 }
 
 #endif  //  #ifndef BYTE_BUFFERS_HPP_INCLUDED
-

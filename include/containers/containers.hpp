@@ -30,6 +30,5 @@
 #include "containers/TPodUnorderedSlots.hpp"
 #include "containers/TOrderedCollection.hpp"
 #include "containers/TUnorderedCollection.hpp"
-#include "containers/TStableStorage.hpp"
 
 #endif  //  #ifndef CONTAINERS_HPP_INCLUDED

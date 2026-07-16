@@ -37,7 +37,7 @@
 #include <utility>      //  std::move
 #include <new>          //  ::new
 
-#include "memory_allocation.hpp"
+#include "memory_token.hpp"
 #include "debug/debug.hpp"
 
 namespace memory
@@ -60,12 +60,12 @@ public:
     ~CTypeless() noexcept { destroy_and_deallocate(); }
 
     //  Ownership state
-    bool is_empty() const noexcept { return m_typeless == nullptr; }
-    bool is_ready() const noexcept { return m_typeless != nullptr; }
-    explicit operator bool() const noexcept { return m_typeless != nullptr; }
+    bool is_empty() const noexcept { return node() == nullptr; }
+    bool is_ready() const noexcept { return node() != nullptr; }
+    explicit operator bool() const noexcept { return node() != nullptr; }
 
     //  Type identity
-    std::size_t query_type_id() const noexcept { return (m_typeless != nullptr) ? m_typeless->query_type_id() : std::size_t{ 0u }; }
+    std::size_t query_type_id() const noexcept { return is_ready() ? node()->query_type_id() : std::size_t{ 0u }; }
 
     //  Creation
     template<typename T, std::size_t type_id>
@@ -78,7 +78,7 @@ public:
     class ITypeless
     {
     public:
-        virtual void destroy_and_deallocate() noexcept = 0;
+        virtual void destroy() noexcept = 0;
         virtual std::size_t query_type_id() const noexcept = 0;
 
     protected:
@@ -86,7 +86,10 @@ public:
     };
 
 private:
-    ITypeless* m_typeless = nullptr;
+    ITypeless* node() noexcept { return static_cast<ITypeless*>(m_storage.data()); }
+    const ITypeless* node() const noexcept { return static_cast<const ITypeless*>(m_storage.data()); }
+
+    CMemoryToken m_storage;
 
 private:
     template<typename T, std::size_t type_id>
@@ -123,11 +126,9 @@ public:
 private:
     ~TTypeless() noexcept = default;
 
-    void destroy_and_deallocate() noexcept override final
+    void destroy() noexcept override final
     {
-        using node_type = TTypeless<T, type_id>;
         this->~TTypeless();
-        byte_deallocate(this, alignof(node_type));
     }
 
     std::size_t query_type_id() const noexcept override final
@@ -145,21 +146,21 @@ private:
 template<typename T, std::size_t type_id>
 T* typeless_cast(CTypeless& typeless) noexcept
 {
-    if ((typeless.m_typeless == nullptr) || (typeless.m_typeless->query_type_id() != type_id))
+    if (!typeless.is_ready() || (typeless.node()->query_type_id() != type_id))
     {
         return nullptr;
     }
-    return static_cast<TTypeless<T, type_id>*>(typeless.m_typeless)->payload_ptr();
+    return static_cast<TTypeless<T, type_id>*>(typeless.node())->payload_ptr();
 }
 
 template<typename T, std::size_t type_id>
 const T* typeless_cast(const CTypeless& typeless) noexcept
 {
-    if ((typeless.m_typeless == nullptr) || (typeless.m_typeless->query_type_id() != type_id))
+    if (!typeless.is_ready() || (typeless.node()->query_type_id() != type_id))
     {
         return nullptr;
     }
-    return static_cast<TTypeless<T, type_id>*>(typeless.m_typeless)->payload_ptr();
+    return static_cast<const TTypeless<T, type_id>*>(typeless.node())->payload_ptr();
 }
 
 //==============================================================================
@@ -167,9 +168,8 @@ const T* typeless_cast(const CTypeless& typeless) noexcept
 //==============================================================================
 
 inline CTypeless::CTypeless(CTypeless&& typeless) noexcept
+    : m_storage(std::move(typeless.m_storage))
 {
-    m_typeless = typeless.m_typeless;
-    typeless.m_typeless = nullptr;
 }
 
 inline CTypeless& CTypeless::operator=(CTypeless&& typeless) noexcept
@@ -177,8 +177,7 @@ inline CTypeless& CTypeless::operator=(CTypeless&& typeless) noexcept
     if (this != &typeless)
     {
         destroy_and_deallocate();
-        m_typeless = typeless.m_typeless;
-        typeless.m_typeless = nullptr;
+        m_storage = std::move(typeless.m_storage);
     }
     return *this;
 }
@@ -188,22 +187,23 @@ inline CTypeless CTypeless::create() noexcept
 {
     using node_type = TTypeless<T, type_id>;
     CTypeless typeless;
-    void* const memory = byte_allocate(sizeof(node_type), alignof(node_type));
-    MV_HARD_ASSERT(memory != nullptr);
-    if (memory != nullptr)
+    const bool configured = typeless.m_storage.configure_relocatable(1u, alignof(node_type));
+    const bool allocated = configured && typeless.m_storage.allocate(sizeof(node_type), false);
+    MV_HARD_ASSERT(allocated);
+    if (allocated)
     {
-        typeless.m_typeless = ::new (memory) node_type();
+        ::new (typeless.m_storage.data()) node_type();
     }
     return typeless;
 }
 
 inline void CTypeless::destroy_and_deallocate() noexcept
 {
-    if (m_typeless != nullptr)
+    if (ITypeless* const typeless = node())
     {
-        m_typeless->destroy_and_deallocate();
-        m_typeless = nullptr;
+        typeless->destroy();
     }
+    m_storage.deallocate();
 }
 
 }   //  namespace memory

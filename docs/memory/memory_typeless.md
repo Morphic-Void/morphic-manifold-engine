@@ -55,7 +55,8 @@ At the `CTypeless` level:
 Carrier emptiness is not payload semantic emptiness.
 
 A non-empty `CTypeless` owns exactly one heap-allocated typed node
-implementing `ITypeless`.
+implementing `ITypeless`. The node storage is owned by an external relocatable
+`CMemoryToken` configured as aligned byte storage.
 
 ## Type identity model
 
@@ -112,12 +113,13 @@ Typed operations occur through the recovered `T` pointer, not through
 
 ## Lifetime and destruction model
 
-`CTypeless` owns and destroys the typed node through
-`ITypeless::destroy_and_deallocate()`.
+`CTypeless` owns the typed node storage through its memory token and destroys
+the typed node through `ITypeless::destroy()`.
 
 `create<T, type_id>()`:
 
-- allocates raw storage for `TTypeless<T, type_id>`
+- configures byte-stride token storage with the node alignment
+- allocates `sizeof(TTypeless<T, type_id>)` bytes through that token
 - placement-constructs that node in the allocated storage
 - default-constructs the payload as part of node construction
 
@@ -128,8 +130,8 @@ The payload remains live until:
 
 Final node teardown:
 
-- destroys the full `TTypeless<T, type_id>` object
-- deallocates its storage using the node alignment
+- destroys the full `TTypeless<T, type_id>` object through the erased protocol
+- deallocates its token storage after the object lifetime has ended
 
 The explicit destructor call in `TTypeless` is intentional. It marks the
 actual lifetime boundary and preserves correctness if the node becomes
@@ -141,11 +143,16 @@ more non-trivial in the future.
 
 Current protocol surface:
 
-- `destroy_and_deallocate() noexcept`
+- `destroy() noexcept`
 - `type_id() const noexcept`
 
 This layer is not intended to grow into a broader runtime
 polymorphism framework.
+
+The token deliberately remains in the outer carrier rather than inside the
+allocation it owns. This prevents self-deallocation from invalidating the token
+and the active destruction path. Replacing the virtual protocol with a static
+type descriptor remains a separate later design phase.
 
 ## TTypeless role
 

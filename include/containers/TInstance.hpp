@@ -6,7 +6,7 @@
 //  Author: Ritchie Brannan
 //  Date:   01 Apr 26
 //
-//  Move-only owning single-object wrapper over TMemoryToken<T>.
+//  Move-only owning single-object wrapper over a relocatable memory token.
 //
 //  TInstance<T> is the unique owning wrapper for a single constructed T.
 //  Non-empty state implies exactly one live object.
@@ -43,7 +43,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "memory/memory_primitives.hpp"
+#include "memory/memory_policies.hpp"
+#include "memory/memory_token.hpp"
 
 #include "debug/debug.hpp"
 
@@ -55,6 +56,8 @@ class TInstance final
     static_assert(!std::is_const_v<T>, "TInstance<T> should not own const-qualified types.");
     static_assert(!std::is_volatile_v<T>, "TInstance<T> should not own volatile-qualified types.");
     static_assert(std::is_nothrow_destructible_v<T>, "TInstance<T> requires T to be nothrow destructible.");
+    static_assert(sizeof(T) <= 0xffffu, "TInstance<T> element size exceeds the memory token stride field.");
+    static_assert(sizeof(T) <= memory::k_byte_size_ceiling, "TInstance<T> element size exceeds the shared byte ceiling.");
 
 public:
 
@@ -71,9 +74,10 @@ public:
     ~TInstance() noexcept { destroy_and_deallocate(); }
 
     //  Status
+    [[nodiscard]] bool is_valid() const noexcept;
     [[nodiscard]] bool is_empty() const noexcept { return m_token.is_empty(); }
-    [[nodiscard]] bool is_ready() const noexcept { return m_token.is_ready(); }
-    [[nodiscard]] explicit operator bool() const noexcept { return m_token.is_ready(); }
+    [[nodiscard]] bool is_ready() const noexcept { return is_valid() && (object_ptr() != nullptr); }
+    [[nodiscard]] explicit operator bool() const noexcept { return is_ready(); }
 
     //  Accessors
     [[nodiscard]] T& operator*() noexcept;
@@ -89,8 +93,13 @@ public:
 
 private:
     void destroy_and_deallocate() noexcept;
+    [[nodiscard]] T* object_ptr() noexcept { return static_cast<T*>(m_token.data()); }
+    [[nodiscard]] const T* object_ptr() const noexcept { return static_cast<const T*>(m_token.data()); }
 
-    memory::TMemoryToken<T> m_token;
+    static constexpr std::size_t k_element_size = sizeof(T);
+    static constexpr std::size_t k_align = memory::t_default_align<T>();
+
+    memory::CMemoryToken m_token{ k_element_size, k_align };
 };
 
 //==============================================================================
@@ -127,29 +136,41 @@ inline TInstance<T>& TInstance<T>::operator=(TInstance<T>&& other) noexcept
 template<typename T>
 inline T& TInstance<T>::operator*() noexcept
 {
-    MV_HARD_ASSERT(m_token.data() != nullptr);
-    return *m_token.data();
+    MV_HARD_ASSERT(object_ptr() != nullptr);
+    return *object_ptr();
 }
 
 template<typename T>
 inline const T& TInstance<T>::operator*() const noexcept
 {
-    MV_HARD_ASSERT(m_token.data() != nullptr);
-    return *m_token.data();
+    MV_HARD_ASSERT(object_ptr() != nullptr);
+    return *object_ptr();
 }
 
 template<typename T>
 inline T* TInstance<T>::operator->() noexcept
 {
-    MV_HARD_ASSERT(m_token.data() != nullptr);
-    return m_token.data();
+    MV_HARD_ASSERT(object_ptr() != nullptr);
+    return object_ptr();
 }
 
 template<typename T>
 inline const T* TInstance<T>::operator->() const noexcept
 {
-    MV_HARD_ASSERT(m_token.data() != nullptr);
-    return m_token.data();
+    MV_HARD_ASSERT(object_ptr() != nullptr);
+    return object_ptr();
+}
+
+template<typename T>
+inline bool TInstance<T>::is_valid() const noexcept
+{
+    if (!m_token.is_relocatable() ||
+        (m_token.stride() != k_element_size) || (m_token.storage_alignment() != k_align) ||
+        (m_token.count() > 1u))
+    {
+        return false;
+    }
+    return (object_ptr() != nullptr) ? (m_token.count() == 1u) : (m_token.count() == 0u);
 }
 
 template<typename T>
@@ -171,14 +192,14 @@ inline bool TInstance<T>::emplace(TArgs&&... args) noexcept
     static_assert(std::is_nothrow_constructible_v<T, TArgs&&...>,
         "TInstance<T>::emplace(...) requires T to be nothrow constructible.");
 
-    T* ptr = m_token.data();
+    T* ptr = object_ptr();
     if (ptr != nullptr)
     {   //  existing storage - preserve owner identity, deconstruct and reconstruct in-place
         ptr->~T();
     }
     else if (m_token.allocate(1u))
     {   //  storage allocated
-        ptr = m_token.data();
+        ptr = object_ptr();
     }
     else
     {
@@ -191,7 +212,7 @@ inline bool TInstance<T>::emplace(TArgs&&... args) noexcept
 template<typename T>
 inline void TInstance<T>::destroy_and_deallocate() noexcept
 {
-    T* const ptr = m_token.data();
+    T* const ptr = object_ptr();
     if (ptr != nullptr)
     {
         ptr->~T();
@@ -214,4 +235,3 @@ inline void TInstance<T>::swap(TInstance& other) noexcept
 }
 
 #endif  //  TINSTANCE_HPP_INCLUDED
-

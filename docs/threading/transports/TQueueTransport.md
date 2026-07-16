@@ -294,6 +294,9 @@ A `post()` fails if:
 `src == nullptr` with `count == 0` succeeds when the producer
 side is ready.
 
+The view overload requires a valid view. A zero-length invalid view fails
+rather than being treated as a pointer-count zero operation.
+
 A `post()` may also fail after partial internal progress if a
 producer-side reallocation fails. In that case:
 
@@ -335,6 +338,9 @@ For a bulk read to succeed:
 
 Reads always consume from the current accepted consumer buffer
 in sequence.
+
+The view overload requires a valid view. A zero-length invalid view fails
+rather than being treated as a pointer-count zero operation.
 
 When a read exhausts the current consumer buffer:
 

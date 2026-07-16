@@ -5,11 +5,12 @@ File:   TUnorderedSlots.md
 Author: Ritchie Brannan  
 Date:   1 Apr 26  
 
-# TUnorderedSlots<TIndex>
+# TUnorderedSlots<TSlotBacking, TIndex>
 
 ## Overview
 
-TUnorderedSlots<TIndex> maintains an unordered index over slot indices.
+TUnorderedSlots<TSlotBacking, TIndex> maintains an unordered index over slot
+indices for a lower slot-backing layer.
 
 The template stores metadata only and does not store or access payload.
 
@@ -52,25 +53,24 @@ Sentinel:
 
 - -1 is not a valid slot index
 
-Visit identifiers:
-
-- -1 for loose
-- -2 for empty
-
 ## Ownership boundary
 
-Base owns:
+The slot-backing layer owns:
+
+- payload or side storage
+- payload movement
+- payload reserve coordination
+
+TUnorderedSlots owns:
 
 - metadata
-- structure
-- lifecycle
+- loose and empty structures
+- metadata lifecycle
 
-Derived owns:
+The public facade owns:
 
-- payload
-- movement
-- capacity policy
 - public API
+- coordinated container lifecycle
 
 ## Observation model
 
@@ -99,11 +99,10 @@ Non-goals:
 - no empty-slot preservation
 - no full-domain remapping
 
-## Virtual callbacks
+## Slot-backing responsibilities
 
-Derived provides:
+TSlotBacking provides:
 
-- on_visit(slot_index, identifier)
 - on_move_payload(source_index, target_index)
 - on_reserve_empty(minimum_capacity, recommended_capacity)
 
@@ -122,27 +121,17 @@ Capacity negotiation.
 
 Must satisfy minimum_capacity.
 
-### on_visit
+## Re-entry contract
 
-Called with identifier:
-
-- -1 loose
-- -2 empty
-
-## Re-entry guard
-
-No structural re-entry during callbacks.
-
-- Debug: hard fail
-- Release: soft fail
+The slot-backing responsibility functions must not re-enter the slot manager.
+This is a usage contract rather than a runtime locking mechanism.
 
 No thread safety.
 
 ## Internal layering
 
-- protected interface
-- safe_* wrappers
-- private_* helpers
+- direct compile-time calls to the protected lower slot-backing layer
+- private structural helpers
 
 ## Mutation model
 
@@ -178,11 +167,11 @@ Non-destructive:
 - acquire
 - erase
 
-## Visit operations
+## Traversal operations
 
-Each visit calls:
-
-    on_visit(slot_index, identifier)
+Loose and empty slots expose direct first, last, previous, and next traversal
+functions. Traversal follows the corresponding circular list without invoking
+slot-backing code.
 
 ## Invariants
 

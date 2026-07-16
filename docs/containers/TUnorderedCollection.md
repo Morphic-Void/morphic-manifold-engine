@@ -10,14 +10,14 @@ Date:   1 Apr 2026
 ## Overview
 
 TUnorderedCollection<T> is a move-only unordered collection wrapper
-over TUnorderedSlots and TStableStorage.
+over TUnorderedSlots and stable CMemoryToken storage.
 
 Slot metadata is managed by TUnorderedSlots. Object storage is provided
-by TStableStorage.
+by CMemoryToken in stable mode.
 
 Public identity during the mutable phase is slot_index.
 
-Constructed objects have stable addresses in TStableStorage.
+Constructed objects have stable addresses in the stable token.
 
 pack() remaps slot metadata and slot-side payload but does not relocate
 live T objects. Pointers and references to constructed objects remain
@@ -71,7 +71,7 @@ storage_index:
 
 ## Storage and stability
 
-Objects are placement-constructed in TStableStorage.
+Objects are placement-constructed in stable token storage.
 
 - addresses are stable once constructed
 - slot remapping does not relocate objects

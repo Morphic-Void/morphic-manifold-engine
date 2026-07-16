@@ -170,34 +170,21 @@ Accounting transfer must not infer deep ownership. If a container owns nested co
 
 ## Threading and observation model
 
-The installed current allocation context is thread-local.
+The ambient memory context is resolved from thread-local context first and then
+module-local context. Context installation is provisioning state and must not
+race live use.
 
-A context is expected to be provisioned before the owning thread installs it. While installed, it is expected to be mutated by the owning thread. External inspection is expected after the owning thread has stopped using it, unless a future context type explicitly defines a synchronized observation model.
-
-Allocation-context counters are local accounting fields, not atomic telemetry.
-
-The allocation substrate may be thread-safe as a routing layer, but that does not make a particular CAllocationContext instance suitable for unsynchronized concurrent mutation and observation.
+`CMemoryContext` allocation count and allocated-byte counters are relaxed
+atomics. They provide audit telemetry and accounting integrity checks, not a
+general synchronization mechanism for the objects stored through a context.
 
 ## Byte ownership
 
-Byte ownership is represented by CMemoryToken.
-
-A byte token owns raw byte storage and tracks pointer, normalized alignment intent, and byte extent.
-
-The canonical byte-token states are:
-
-    empty:
-        data == nullptr
-        align == 0
-        bytes == 0
-
-    ready:
-        data != nullptr
-        align != 0
-        bytes != 0
-
-    broken:
-        any other combination
+Raw storage ownership is represented by `memory::CMemoryToken`.
+A configured token records its memory context, element stride, storage-alignment
+intent, requested count, and relocatable or stable mode. Relocatable storage is
+contiguous; stable storage may be segmented. An empty token may retain its
+configuration and context so it can be reused after a move or deallocation.
 
 Byte-token observers are fail-safe. Pointer, alignment, and byte-count observers report canonical empty values when required metadata is not trusted. Allocation-count diagnostics use the allocation identity model described above.
 
@@ -431,7 +418,7 @@ Type identity is payload-family identity. Empty ownership reports type identity 
 
 Typed recovery is explicit and checked through typeless_cast<T, type_id>(). A failed recovery returns null.
 
-Typeless teardown destroys the typed node and deallocates the node allocation through the memory subsystem.
+Typeless teardown destroys the typed node and then deallocates the externally owned token storage through the memory subsystem.
 
 The subsystem-level accounting rule is that the carrier owns one direct allocation. Any ownership contained inside the recovered payload belongs to that payload's own accounting policy.
 
@@ -439,10 +426,14 @@ The subsystem-level accounting rule is that the carrier owns one direct allocati
 
 The headers provide the following local surfaces:
 
-- allocation_context.hpp: allocator interface, allocation context state, thread-local context routing, local allocation accounting.
-- memory_allocation.hpp: shared limits, growth helpers, alignment policy, allocation configuration, byte/typed allocation helpers.
-- memory_primitives.hpp: byte/typed owning tokens, byte/typed views, token/view state mechanics, allocation/reallocation/clone/deallocation, checked adoption and stealing.
-- memory_typeless.hpp: move-only erased typed-node ownership, checked recovery by type identity, typed node destruction and deallocation.
+- `memory_policies.hpp`: shared limits, growth helpers, and alignment policy.
+- `memory_context.hpp`: callback allocator, ambient context routing, attribution,
+  and allocation accounting.
+- `memory_token.hpp`: relocatable and stable raw-storage ownership.
+- `memory_view.hpp`: bounded mutable and const non-owning views.
+- `memory_typeless.hpp`: move-only token-backed erased typed-node ownership,
+  checked recovery by type identity, ordered typed-node destruction, and storage
+  deallocation.
 
 ## Summary rules
 

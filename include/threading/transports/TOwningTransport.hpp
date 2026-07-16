@@ -37,10 +37,11 @@
 #include <atomic>       //  std::atomic
 #include <cstddef>      //  std::size_t
 #include <cstdint>      //  std::uint32_t
-#include <cstring>      //  std::memcpy
+#include <new>          //  placement new
 #include <type_traits>  //  std::is_const_v, std::is_trivially_copyable_v
 
-#include "memory/memory_primitives.hpp"
+#include "memory/memory_policies.hpp"
+#include "memory/memory_token.hpp"
 #include "bit_utils/bit_ops.hpp"
 
 namespace threading::transports
@@ -66,6 +67,14 @@ private:
 public:
     static constexpr std::uint32_t k_max_capacity = 0x00100000u;    //  approximately 1 million elements
     static constexpr std::uint32_t k_min_capacity = 32u;
+    static constexpr std::size_t k_element_size = sizeof(T);
+    static constexpr std::size_t k_align = memory::t_default_align<T>();
+
+private:
+    static constexpr std::uint32_t k_token_max_capacity = static_cast<std::uint32_t>(memory::t_max_elements<T>());
+
+    [[nodiscard]] T* raw_data() noexcept { return static_cast<T*>(m_ring.data()); }
+    [[nodiscard]] const T* raw_data() const noexcept { return static_cast<const T*>(m_ring.data()); }
 
 public:
     TOwning() noexcept = default;
@@ -98,7 +107,10 @@ public:
     void deallocate() noexcept;
 
 private:
-    memory::TMemoryToken<T> m_ring;
+    static_assert(k_element_size <= 0xffffu, "TOwning<T> element size exceeds the memory token stride field.");
+    static_assert(k_element_size <= memory::k_byte_size_ceiling, "TOwning<T> element size exceeds the shared byte ceiling.");
+
+    memory::CMemoryToken m_ring{ k_element_size, k_align };
     std::uint32_t m_capacity = 0u;
     std::uint32_t m_read_index = 0u;
     std::uint32_t m_write_index = 0u;
@@ -112,24 +124,30 @@ private:
 template<typename T>
 inline bool TOwning<T>::is_valid() const noexcept
 {
-    if (m_capacity == 0u)
-    {   //  uninitialised, safe to check both the read and the write indices
-        if ((m_ring.data() != nullptr) || ((m_read_index | m_write_index) != 0u))
-        {
-            return false;
-        }
-    }
-    else if (m_ring.data() == nullptr)
+    if (!m_ring.is_relocatable() ||
+        (m_ring.stride() != k_element_size) || (m_ring.storage_alignment() != k_align) ||
+        (m_ring.count() != m_capacity))
     {
         return false;
     }
-    return m_occupied_count.load(std::memory_order_acquire) <= m_capacity;
+
+    const T* const ring = raw_data();
+    if (m_capacity == 0u)
+    {
+        return (ring == nullptr) && ((m_read_index | m_write_index) == 0u);
+    }
+    if (ring == nullptr)
+    {
+        return false;
+    }
+    return (m_occupied_count.load(std::memory_order_acquire) <= m_capacity) &&
+        (m_capacity <= k_max_capacity) && (m_capacity <= k_token_max_capacity);
 }
 
 template<typename T>
 inline bool TOwning<T>::is_ready() const noexcept
 {
-    return (m_capacity != 0u) && (m_ring.data() != nullptr);
+    return (m_capacity != 0u) && (raw_data() != nullptr);
 }
 
 template<typename T>
@@ -145,7 +163,7 @@ inline bool TOwning<T>::post(T&& src) noexcept
     {
         return false;
     }
-    m_ring.data()[m_write_index] = std::move(src);
+    raw_data()[m_write_index] = std::move(src);
     m_write_index = (m_write_index + 1u) & (m_capacity - 1u);
     m_occupied_count.fetch_add(1u, std::memory_order_release);
     return true;
@@ -171,7 +189,7 @@ inline bool TOwning<T>::read(T& dst) noexcept
     {
         return false;
     }
-    dst = std::move(m_ring.data()[m_read_index]);
+    dst = std::move(raw_data()[m_read_index]);
     m_read_index = (m_read_index + 1u) & (m_capacity - 1u);
     m_occupied_count.fetch_sub(1u, std::memory_order_release);
     return true;
@@ -187,7 +205,7 @@ inline std::uint32_t TOwning<T>::readable_count() const noexcept
 template<typename T>
 inline bool TOwning<T>::initialise(const std::uint32_t capacity) noexcept
 {
-    if (capacity > k_max_capacity)
+    if ((capacity > k_max_capacity) || (capacity > k_token_max_capacity))
     {   //  requested capacity not supported
         return false;
     }
@@ -195,7 +213,9 @@ inline bool TOwning<T>::initialise(const std::uint32_t capacity) noexcept
     {   //  re-initialisation is not allowed without deallocation
         return false;
     }
-    const std::uint32_t conditioned_capacity = std::max(std::min(bit_ops::round_up_to_pow2(capacity), k_max_capacity), k_min_capacity);
+    const std::uint32_t conditioned_capacity = std::max(
+        std::min(bit_ops::round_up_to_pow2(capacity), std::min(k_max_capacity, k_token_max_capacity)),
+        k_min_capacity);
     if (!m_ring.allocate(conditioned_capacity))
     {   //  allocation failed
         return false;
@@ -206,7 +226,7 @@ inline bool TOwning<T>::initialise(const std::uint32_t capacity) noexcept
     m_occupied_count.store(0u, std::memory_order_release);
     for (std::uint32_t index = 0u; index < m_capacity; ++index)
     {
-        ::new (static_cast<void*>(&m_ring.data()[index])) T();
+        ::new (static_cast<void*>(&raw_data()[index])) T();
     }
     return true;
 }
@@ -214,11 +234,11 @@ inline bool TOwning<T>::initialise(const std::uint32_t capacity) noexcept
 template<typename T>
 inline void TOwning<T>::deallocate() noexcept
 {
-    if (m_ring.data() != nullptr)
+    if (raw_data() != nullptr)
     {
         for (std::uint32_t index = 0u; index < m_capacity; ++index)
         {
-            m_ring.data()[index].~T();
+            raw_data()[index].~T();
         }
     }
     m_ring.deallocate();
@@ -231,4 +251,3 @@ inline void TOwning<T>::deallocate() noexcept
 }   //  namespace threading::transports
 
 #endif  //  #ifndef TOWNING_TRANSPORT_HPP_INCLUDED
-

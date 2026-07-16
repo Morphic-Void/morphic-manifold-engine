@@ -26,15 +26,13 @@
 #include "containers/TPodOrderedSlots.hpp"
 #include "containers/TPodUnorderedSlots.hpp"
 #include "containers/TPodVector.hpp"
-#include "containers/TStableStorage.hpp"
 #include "containers/TOrderedCollection.hpp"
 #include "containers/TUnorderedCollection.hpp"
 #include "debug/debug.hpp"
 #include "host/host.hpp"
-#include "host/host_allocator.hpp"
+#include "host/host_context.hpp"
 #include "image/codec/tga.hpp"
-#include "memory/memory_allocation.hpp"
-#include "memory/memory_primitives.hpp"
+#include "memory/memory_token.hpp"
 #include "memory/memory_typeless.hpp"
 #include "platform/filesystem/file.hpp"
 #include "platform/filesystem/log.hpp"
@@ -77,19 +75,10 @@ bool test_tga()
 
 int main()
 {
-    int ret = 0;
-    memory::IAllocator* host_allocator = host::get_the_host_allocator(system_ids::host);
-    if (MV_FAIL_SAFE_ASSERT(host_allocator != nullptr))
-    {
-        if (MV_FAIL_SAFE_ASSERT(memory::set_allocator(host_allocator)))
-        {
-            host::host();
-            platform::system::set_current_process_priority(platform::system::EProcessPriority::AboveNormal);
-            const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();
-            ret = run_tests();
-            memory::set_allocator(nullptr);
-        }
-    }
-    return ret;
+    host::host_context_install();
+    host::host();
+    platform::system::set_current_process_priority(platform::system::EProcessPriority::AboveNormal);
+    const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();
+    return run_tests();
 }
 

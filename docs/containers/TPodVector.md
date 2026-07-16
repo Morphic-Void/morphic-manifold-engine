@@ -37,7 +37,8 @@ Scope:
 
 ## Memory model
 
-Ownership is provided by memory::TMemoryToken<T>.
+Ownership is provided by a relocatable memory::CMemoryToken configured with
+stride sizeof(T).
 
 - storage is interpreted as tightly packed T[]
 - size() is the logical element count
@@ -46,13 +47,18 @@ Ownership is provided by memory::TMemoryToken<T>.
 
 ## Growth model
 
-Automatic growth uses memory::vector_growth_policy().
+Automatic growth uses memory::vector_growth_policy() with the vector's derived
+element-count ceiling supplied explicitly.
 
 Operations:
 
 - reserve(minimum_capacity) ensures capacity >= minimum_capacity
 - ensure_free(extra) ensures at least extra spare elements
 - shrink_to_fit() reduces capacity to match size
+
+reserve() and ensure_free() succeed without allocating or otherwise mutating
+the vector when the requested capacity is already satisfied. This includes a
+zero request on a canonical empty vector.
 
 ## Reallocation model
 
@@ -101,6 +107,29 @@ Valid:
 - reserve / ensure_free may grow capacity without changing size
 
 Zeroed growth is byte-zeroing only.
+
+## Removal model
+
+- pop_back() copies removed elements to a destination
+- pop_back_preserve_order() preserves their logical order in the destination
+- discard_back() removes elements without copying them to a destination
+- try_discard_back() removes up to the requested count and reports the count
+  removed
+- discard_back(0) succeeds without changing the vector
+
+## Range operation model
+
+For boolean pointer-count operations:
+
+- a zero count succeeds without requiring allocated storage and does not
+  inspect the pointer
+- a non-zero count requires a non-null pointer
+- a non-zero source or destination within the vector's own backing allocation
+  is rejected
+
+View overloads additionally require a valid view. Because zero-length views are
+invalid by contract, passing one fails rather than acting as a raw zero-count
+operation.
 
 ## Copy and representation model
 

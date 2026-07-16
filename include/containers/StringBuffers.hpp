@@ -20,6 +20,16 @@
 //  Strings are treated as byte sequences with explicit length or
 //  zero-terminated packed storage.
 //
+//  Parser workflows intentionally distinguish:
+//      - no string present       : null storage
+//      - empty string is present : non-null storage, zero logical length
+//
+//  The migrated bounded memory views cannot represent a non-null zero-count
+//  range, so CStringView and CSimpleString retain that distinction by keeping
+//  a one-byte backing view/token for zero-length present strings. That byte is
+//  expected to be the terminator when the caller is using the parser-oriented
+//  empty-string state.
+//
 //  CStringBuffer stores strings as:
 //      0 + payload bytes + 0
 //
@@ -43,8 +53,9 @@
 #include <utility>      //  std::move
 
 #include "algo/validate_permutations.hpp"
-#include "memory/memory_allocation.hpp"
-#include "memory/memory_primitives.hpp"
+#include "memory/memory_policies.hpp"
+#include "memory/memory_token.hpp"
+#include "memory/memory_view.hpp"
 #include "ByteBuffers.hpp"
 #include "TPodVector.hpp"
 
@@ -82,6 +93,7 @@ static inline std::size_t strz_length(const std::uint8_t* const string) noexcept
 //  - Canonical empty is { m_string == nullptr, m_length == 0 }.
 //  - Non-empty state stores a pointer to string bytes plus explicit length.
 //  - Zero-termination is not required when length is provided explicitly.
+//  - See the top-of-file parser-state note for the non-null zero-length case.
 //==============================================================================
 
 class CStringView : private CStringBase
@@ -102,16 +114,16 @@ public:
 
     //  View state
     bool set(const char* const cstring) noexcept { return set(cast_to_string(cstring)); }
-    bool set(const std::uint8_t* const string) noexcept { reset(); if (string != nullptr) { m_string.set(string); m_length = strz_length(m_string.data()); } return m_string.data() != nullptr; }
+    bool set(const std::uint8_t* const string) noexcept;
     bool set(const char* const cstring, const std::size_t length) noexcept { return set(cast_to_string(cstring), length); }
-    bool set(const std::uint8_t* const string, const std::size_t length) noexcept { reset(); if (string != nullptr) { m_string.set(string); m_length = length; } return m_string.data() != nullptr; }
-    void reset() noexcept { m_string.set(nullptr); m_length = 0u; }
+    bool set(const std::uint8_t* const string, const std::size_t length) noexcept;
+    void reset() noexcept { m_string.reset(); m_length = 0u; }
 
     //  Accessors
-    const char* cstring() const noexcept { return cast_to_cstring(m_string.data()); }
-    const std::uint8_t* string() const noexcept { return m_string.data(); }
+    const char* cstring() const noexcept { return cast_to_cstring(static_cast<const std::uint8_t*>(m_string.data())); }
+    const std::uint8_t* string() const noexcept { return static_cast<const std::uint8_t*>(m_string.data()); }
     std::size_t length() const noexcept { return (m_string.data() != nullptr) ? m_length : 0u; }
-    bool empty() const noexcept { return (m_string.data() == nullptr); }
+    bool empty() const noexcept { return (m_string.data() == nullptr); } //  null only; see parser-state note above
 
     //  Relationship identity
     [[nodiscard]] std::int32_t relationship(const CStringView& other) const noexcept;
@@ -132,7 +144,7 @@ public:
 private:
     std::int32_t private_compare(const CStringView& other) const noexcept;
 
-    memory::TMemoryConstView<std::uint8_t> m_string;
+    memory::CMemoryConstView m_string;
     std::size_t m_length = 0u;
 };
 
@@ -145,6 +157,7 @@ private:
 //  - Non-empty state owns a zero-terminated byte string together with its
 //    explicit payload length.
 //  - Logical size and capacity are fixed by each successful set().
+//  - See the top-of-file parser-state note for the non-null zero-length case.
 //==============================================================================
 
 class CSimpleString : private CStringBase
@@ -174,11 +187,11 @@ public:
     bool set(const std::uint8_t* const string, const std::size_t length) noexcept;
 
     //  Accessors
-    [[nodiscard]] CStringView view() const noexcept { return CStringView{ m_string.data(), m_length }; }
+    [[nodiscard]] CStringView view() const noexcept { return CStringView{ string(), m_length }; }
     [[nodiscard]] const char* cstring() const noexcept { return cast_to_cstring(string()); }
-    [[nodiscard]] const std::uint8_t* string() const noexcept { return m_string.data(); }
+    [[nodiscard]] const std::uint8_t* string() const noexcept { return static_cast<const std::uint8_t*>(m_string.data()); }
     [[nodiscard]] std::size_t length() const noexcept { return (m_string.data() != nullptr) ? m_length : 0u; }
-    [[nodiscard]] bool is_empty() const noexcept { return (m_string.data() == nullptr); }
+    [[nodiscard]] bool is_empty() const noexcept { return (m_string.data() == nullptr); } //  null only; see parser-state note above
 
     //  Relationship identity
     [[nodiscard]] std::int32_t relationship(const CStringView& other) const noexcept { return view().relationship(other); }
@@ -202,7 +215,7 @@ public:
 private:
     bool private_allocate(const std::uint8_t* const string, const std::size_t length) noexcept;
 
-    memory::TMemoryToken<std::uint8_t> m_string;
+    memory::CMemoryToken m_string{ 1u, 1u };
     std::size_t m_length = 0u;
 };
 
@@ -393,6 +406,37 @@ private:
 //  CStringView out of class function bodies
 //==============================================================================
 
+inline bool CStringView::set(const std::uint8_t* const string) noexcept
+{
+    reset();
+    if (string != nullptr)
+    {
+        m_length = strz_length(string);
+        const std::size_t storage_count = m_length + 1u;
+        if (!m_string.set(string, storage_count, 1u, 1u))
+        {
+            reset();
+        }
+    }
+    return m_string.data() != nullptr;
+}
+
+inline bool CStringView::set(const std::uint8_t* const string, const std::size_t length) noexcept
+{
+    reset();
+    if (string != nullptr)
+    {
+        m_length = length;
+        //  Preserve a non-null zero-length string as a distinct parser state.
+        const std::size_t storage_count = (length != 0u) ? length : 1u;
+        if (!m_string.set(string, storage_count, 1u, 1u))
+        {
+            reset();
+        }
+    }
+    return m_string.data() != nullptr;
+}
+
 [[nodiscard]] inline std::int32_t CStringView::relationship(const CStringView& other) const noexcept
 {
     return private_compare(other);
@@ -405,8 +449,8 @@ private:
 
 [[nodiscard]] inline std::int32_t CStringView::private_compare(const CStringView& other) const noexcept
 {
-    const std::uint8_t* const a = m_string.data();
-    const std::uint8_t* const b = other.m_string.data();
+    const std::uint8_t* const a = string();
+    const std::uint8_t* const b = other.string();
     if ((a != nullptr) && (b != nullptr))
     {
         std::size_t count = (m_length <= other.m_length) ? m_length : other.m_length;
@@ -463,12 +507,13 @@ inline void CSimpleString::deallocate() noexcept
 
 inline bool CSimpleString::private_allocate(const std::uint8_t* const string, const std::size_t length) noexcept
 {
-    if ((string != nullptr) && (length < memory::k_max_elements))
+    if ((string != nullptr) && (length < memory::k_byte_size_ceiling))
     {
-        if (m_string.allocate(length + 1u))
+        if (m_string.allocate(length + 1u, false))
         {
-            std::memcpy(m_string.data(), string, length);
-            m_string.data()[length] = 0u;
+            std::uint8_t* const dst = static_cast<std::uint8_t*>(m_string.data());
+            std::memcpy(dst, string, length);
+            dst[length] = 0u;
             m_length = length;
             return true;
         }
@@ -518,7 +563,7 @@ inline bool CStringBuffer::reserve_exact(const std::size_t exact_capacity) noexc
 
 inline bool CStringBuffer::ensure_free(const std::size_t length) noexcept
 {
-    return (length <= (memory::k_max_elements - 2u)) ? m_buffer.ensure_free(length + 2u) : false;
+    return (length <= (memory::k_byte_size_ceiling - 2u)) ? m_buffer.ensure_free(length + 2u) : false;
 }
 
 [[nodiscard]] inline bool CStringBuffer::check_invariants() const noexcept
@@ -764,7 +809,8 @@ inline bool CStableStrings::sort() noexcept
 inline bool CStableStrings::initialise(const std::size_t string_count, const std::size_t string_storage_size) noexcept
 {
     bool success = false;
-    if ((string_count != 0) && (string_count < k_max_elements) && memory::in_non_empty_range(string_storage_size, memory::k_max_elements))
+    if ((string_count != 0) && (string_count < k_max_elements) &&
+        memory::in_non_empty_range(string_storage_size, memory::k_byte_size_ceiling))
     {
         const std::size_t string_count_with_sentinel = string_count + 1u;
         success = true;
@@ -1041,7 +1087,9 @@ inline std::size_t CStableStrings::private_append(const std::uint8_t* const stri
             MV_HARD_ASSERT(check_integrity());
         }
     }
-    else if (initialise(memory::vector_growth_policy(1u), memory::buffer_growth_policy(length + 2u)))
+    else if (initialise(
+        memory::vector_growth_policy(1u, k_max_elements),
+        memory::buffer_growth_policy(length + 2u, memory::k_byte_size_ceiling)))
     {
         id = 1u;
 

@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
+#include <malloc.h>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -16,7 +18,7 @@
 
 #include "threading/transports/TRingTransport.hpp"
 #include "tests/TRingTransport_test_suite.hpp"
-#include "memory/memory_allocation.hpp"
+#include "memory/memory_context.hpp"
 #include "debug/debug.hpp"
 
 using threading::transports::TRing;
@@ -97,6 +99,22 @@ struct TTestContext
 inline std::string make_repeated_string(const char c, const std::uint32_t count)
 {
     return std::string(static_cast<std::size_t>(count), c);
+}
+
+static void* MV_STD_ABI_CALL allocate_test_memory(void*, const std::size_t alignment, const std::size_t bytes) noexcept
+{
+    return _aligned_malloc(bytes, (alignment < alignof(void*)) ? alignof(void*) : alignment);
+}
+
+static bool MV_STD_ABI_CALL deallocate_test_memory(void*, std::size_t, void* const ptr) noexcept
+{
+    _aligned_free(ptr);
+    return true;
+}
+
+static void* MV_STD_ABI_CALL reject_allocation(void*, const std::size_t, const std::size_t) noexcept
+{
+    return nullptr;
 }
 
 template<typename TTransport>
@@ -203,18 +221,47 @@ void test_ring_initialise_and_conditioning(TTestContext& ctx)
         TEST_EXPECT_FALSE(ctx, ring.is_ready());
         TEST_EXPECT_TRUE(ctx, ring.is_valid());
     }
+
+    {
+        struct alignas(256) TLargePod
+        {
+            std::uint8_t bytes[4096];
+        };
+
+        TRing<TLargePod> ring;
+        constexpr std::uint32_t max_elements =
+            static_cast<std::uint32_t>(std::min<std::size_t>(
+                TRing<TLargePod>::k_max_capacity,
+                memory::t_max_elements<TLargePod>()));
+
+        TEST_EXPECT_TRUE(ctx, ring.initialise(TRing<TLargePod>::k_min_capacity));
+        TEST_EXPECT_TRUE(ctx, ring.is_ready());
+        TEST_EXPECT_EQ(ctx, ring.writable_count(), TRing<TLargePod>::k_min_capacity);
+
+        ring.deallocate();
+
+        if (max_elements < std::numeric_limits<std::uint32_t>::max())
+        {
+            TEST_EXPECT_FALSE(ctx, ring.initialise(max_elements + 1u));
+            TEST_EXPECT_FALSE(ctx, ring.is_ready());
+            TEST_EXPECT_TRUE(ctx, ring.is_valid());
+        }
+    }
 }
 
 void test_ring_initial_allocation_failure(TTestContext& ctx)
 {
+    memory::CMemoryAllocator allocator(nullptr, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryAllocator rejecting_allocator(nullptr, reject_allocation, deallocate_test_memory, 1u);
+    memory::CMemoryContext usable_context(allocator, 1u);
+    memory::CMemoryContext rejecting_context(rejecting_allocator, 1u);
+    memory::CMemoryContext* const previous_thread_context = memory::set_thread_memory_context(&usable_context);
+
+    (void)memory::set_thread_memory_context(&rejecting_context);
     TRing<char> ring;
 
-    const bool previous = memory::enable_allocation(false);
-    (void)previous;
-
     TEST_EXPECT_FALSE(ctx, ring.initialise(TRing<char>::k_min_capacity));
-
-    (void)memory::enable_allocation(true);
+    (void)memory::set_thread_memory_context(previous_thread_context);
 
     TEST_EXPECT_FALSE(ctx, ring.is_ready());
     TEST_EXPECT_TRUE(ctx, ring.is_valid());
@@ -223,6 +270,11 @@ void test_ring_initial_allocation_failure(TTestContext& ctx)
 void test_ring_zero_and_null_behaviour(TTestContext& ctx)
 {
     TRing<char> ring;
+    TPodConstView<char> invalid_src;
+    TPodView<char> invalid_dst;
+
+    TEST_EXPECT_FALSE(ctx, ring.post(invalid_src));
+    TEST_EXPECT_FALSE(ctx, ring.read(invalid_dst));
     TEST_EXPECT_TRUE(ctx, ring.initialise(32u));
 
     TEST_EXPECT_TRUE(ctx, ring.post(nullptr, 0u));
@@ -230,6 +282,14 @@ void test_ring_zero_and_null_behaviour(TTestContext& ctx)
 
     TEST_EXPECT_FALSE(ctx, ring.post(nullptr, 1u));
     TEST_EXPECT_FALSE(ctx, ring.read(nullptr, 1u));
+    TEST_EXPECT_FALSE(ctx, ring.post(invalid_src));
+    TEST_EXPECT_FALSE(ctx, ring.read(invalid_dst));
+
+    char src = 'V';
+    char dst = '\0';
+    TEST_EXPECT_TRUE(ctx, ring.post(TPodConstView<char>{ &src, 1u }));
+    TEST_EXPECT_TRUE(ctx, ring.read(TPodView<char>{ &dst, 1u }));
+    TEST_EXPECT_EQ(ctx, dst, src);
 }
 
 void test_ring_basic_single_and_bulk_transfer(TTestContext& ctx)

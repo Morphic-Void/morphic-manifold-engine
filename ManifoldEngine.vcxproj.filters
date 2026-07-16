@@ -157,6 +157,9 @@
     <Filter Include="include\threading\messages">
       <UniqueIdentifier>{39411ac7-e9db-440a-8bd4-1b6de24569b7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\system">
+      <UniqueIdentifier>{6102aed3-de07-4c7c-9e61-231654f0d2fb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\containers\ByteBuffers.hpp">
@@ -180,10 +183,16 @@
     <ClInclude Include="include\algo\validate_permutations.hpp">
       <Filter>include\algo</Filter>
     </ClInclude>
-    <ClInclude Include="include\memory\memory_allocation.hpp">
+    <ClInclude Include="include\memory\memory_context.hpp">
       <Filter>include\memory</Filter>
     </ClInclude>
-    <ClInclude Include="include\memory\memory_primitives.hpp">
+    <ClInclude Include="include\memory\memory_policies.hpp">
+      <Filter>include\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\memory\memory_token.hpp">
+      <Filter>include\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\memory\memory_view.hpp">
       <Filter>include\memory</Filter>
     </ClInclude>
     <ClInclude Include="include\containers\TPodVector.hpp">
@@ -194,9 +203,6 @@
     </ClInclude>
     <ClInclude Include="include\tests\TUnorderedSlots_test_harness.hpp">
       <Filter>include\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="include\containers\TStableStorage.hpp">
-      <Filter>include\containers</Filter>
     </ClInclude>
     <ClInclude Include="include\containers\slots\SlotsRankMap.hpp">
       <Filter>include\containers\slots</Filter>
@@ -241,6 +247,36 @@
       <Filter>include\system</Filter>
     </ClInclude>
     <ClInclude Include="include\tests\run_tests.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\CMemoryView_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\ByteBuffers_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\CMemoryToken_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\MemoryTypeless_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\TPodVector_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\StringBuffers_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\TInstance_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\TPodFifo_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\TOrderedCollection_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\TUnorderedCollection_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
     <ClInclude Include="include\image\codec\tga.hpp">
@@ -399,9 +435,6 @@
     <ClInclude Include="include\threading\transports\transports.hpp">
       <Filter>include\threading\transports</Filter>
     </ClInclude>
-    <ClInclude Include="include\memory\allocation_context.hpp">
-      <Filter>include\memory</Filter>
-    </ClInclude>
     <ClInclude Include="include\threading\messages\CPodThreadMsg.hpp">
       <Filter>include\threading\messages</Filter>
     </ClInclude>
@@ -411,7 +444,13 @@
     <ClInclude Include="include\threading\messages\messages.hpp">
       <Filter>include\threading\messages</Filter>
     </ClInclude>
-    <ClInclude Include="include\host\host_allocator.hpp">
+    <ClInclude Include="include\system\system_context.hpp">
+      <Filter>include\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bit_utils\TBitField.hpp">
+      <Filter>include\bit_utils</Filter>
+    </ClInclude>
+    <ClInclude Include="include\host\host_context.hpp">
       <Filter>include\host</Filter>
     </ClInclude>
   </ItemGroup>
@@ -428,7 +467,7 @@
     <ClCompile Include="src\types\fp16data_t.cpp">
       <Filter>src\types</Filter>
     </ClCompile>
-    <ClCompile Include="src\memory\memory_allocation.cpp">
+    <ClCompile Include="src\memory\memory_context.cpp">
       <Filter>src\memory</Filter>
     </ClCompile>
     <ClCompile Include="src\debug\debug.cpp">
@@ -444,6 +483,36 @@
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\run_tests.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\CMemoryView_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\ByteBuffers_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\CMemoryToken_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\MemoryTypeless_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\TPodVector_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\StringBuffers_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\TInstance_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\TPodFifo_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\TOrderedCollection_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\TUnorderedCollection_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\image\codec\tga.cpp">
@@ -509,10 +578,10 @@
     <ClCompile Include="src\host\host.cpp">
       <Filter>src\host</Filter>
     </ClCompile>
-    <ClCompile Include="src\memory\allocation_context.cpp">
-      <Filter>src\memory</Filter>
+    <ClCompile Include="src\system\system_context.cpp">
+      <Filter>src\system</Filter>
     </ClCompile>
-    <ClCompile Include="src\host\host_allocator.cpp">
+    <ClCompile Include="src\host\host_context.cpp">
       <Filter>src\host</Filter>
     </ClCompile>
   </ItemGroup>
@@ -529,9 +598,6 @@
       <Filter>docs\containers\slots</Filter>
     </None>
     <None Include="docs\containers\TOrderedCollection.md">
-      <Filter>docs\containers</Filter>
-    </None>
-    <None Include="docs\containers\TStableStorage.md">
       <Filter>docs\containers</Filter>
     </None>
     <None Include="docs\containers\TUnorderedCollection.md">

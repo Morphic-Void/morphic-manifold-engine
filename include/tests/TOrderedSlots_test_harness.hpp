@@ -9,7 +9,9 @@
 
 #include <cstdint>
 
+#ifndef TORDERED_TESTHARNESS_WITH_MAIN
 #define TORDERED_TESTHARNESS_WITH_MAIN  0
+#endif
 
 // -----------------------------
 // Config
@@ -23,7 +25,7 @@ struct TOrderedConfig
     bool run_duplicates_and_stability = true;
     bool run_find_and_bounds = true;
     bool run_rank_index_mapping = true;
-    bool run_visit_semantics = true;
+    bool run_traversal_semantics = true;
     bool run_sort_and_compact = true;
     bool run_fuzz_lightweight = false;
 

@@ -33,13 +33,14 @@
 
 #include <algorithm>    //  std::min, std::max
 #include <cstddef>      //  std::size_t
-#include <cstring>      //  std::memcpy
+#include <cstring>      //  std::memcpy, std::memmove
 #include <type_traits>  //  std::is_const_v, std::is_trivially_copyable_v
 #include <utility>      //  std::move
 
+#include "bit_utils/bit_ops.hpp"
 #include "containers/TPodVector.hpp"
-#include "memory/memory_allocation.hpp"
-#include "memory/memory_primitives.hpp"
+#include "memory/memory_policies.hpp"
+#include "memory/memory_token.hpp"
 
 //==============================================================================
 //  TPodFifo<T>
@@ -71,7 +72,8 @@ public:
     [[nodiscard]] bool is_ready() const noexcept;
 
     //  Accessors
-    [[nodiscard]] T* data() const noexcept { return is_ready() ? m_token.data() : nullptr; }
+    [[nodiscard]] T* data() noexcept { return is_ready() ? raw_data() : nullptr; }
+    [[nodiscard]] const T* data() const noexcept { return is_ready() ? raw_data() : nullptr; }
     [[nodiscard]] std::size_t size() const noexcept { return is_ready() ? m_size : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t capacity() const noexcept { return is_ready() ? m_capacity : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t available() const noexcept { return is_ready() ? (m_capacity - m_size) : std::size_t{ 0 }; }
@@ -79,11 +81,11 @@ public:
     //  Operations
     [[nodiscard]] bool push_back(const T& src) noexcept { return push_back(&src, 1u); }
     [[nodiscard]] bool push_back(const T* const src, const std::size_t count = 1u) noexcept;
-    [[nodiscard]] bool push_back(const TPodConstView<T>& src) noexcept { return push_back(src.data(), src.size()); }
+    [[nodiscard]] bool push_back(const TPodConstView<T>& src) noexcept { return src.is_valid() && push_back(src.data(), src.size()); }
     [[nodiscard]] bool pop_front(T& dst) noexcept { return pop_front(&dst, 1u); }
     [[nodiscard]] bool pop_front(T* const dst, const std::size_t count = 1u) noexcept;
-    [[nodiscard]] bool pop_front(const TPodView<T>& dst) noexcept { return pop_front(dst.data(), dst.size()); }
-    [[nodiscard]] bool pop_front(const std::size_t count = 1u) noexcept;
+    [[nodiscard]] bool pop_front(const TPodView<T>& dst) noexcept { return dst.is_valid() && pop_front(dst.data(), dst.size()); }
+    [[nodiscard]] bool discard_front(const std::size_t count = 1u) noexcept;
 
     //  Allocation and capacity management
     [[nodiscard]] bool allocate(const std::size_t capacity) noexcept;
@@ -102,9 +104,15 @@ public:
     static constexpr std::size_t k_align = memory::t_default_align<T>();
 
 private:
+    [[nodiscard]] T* raw_data() noexcept { return static_cast<T*>(m_token.data()); }
+    [[nodiscard]] const T* raw_data() const noexcept { return static_cast<const T*>(m_token.data()); }
+    [[nodiscard]] bool is_internal_ptr(const T* const ptr) const noexcept;
     void pack(T* const dst, const T* const src) noexcept;
-    void move_from(TPodFifo&& src) noexcept;
-    memory::TMemoryToken<T> m_token;
+    void move_from(TPodFifo& src) noexcept;
+
+    static_assert(k_element_size <= 0xffffu, "TPodFifo<T> element size exceeds the memory token stride field.");
+
+    memory::CMemoryToken m_token{ k_element_size, k_align };
     std::size_t m_size = 0u;
     std::size_t m_capacity = 0u;
     std::size_t m_read_index = 0u;
@@ -133,90 +141,109 @@ inline TPodFifo<T>& TPodFifo<T>::operator=(TPodFifo&& src) noexcept
 template<typename T>
 inline bool TPodFifo<T>::is_valid() const noexcept
 {
-    return (m_token.data() != nullptr) ?
-        ((m_size <= m_capacity) && memory::in_non_empty_range(m_capacity, k_max_elements) && (m_read_index < m_capacity)) :
+    if (!m_token.is_relocatable() ||
+        (m_token.stride() != k_element_size) || (m_token.storage_alignment() != k_align) ||
+        (m_token.count() != m_capacity))
+    {
+        return false;
+    }
+
+    return (raw_data() != nullptr) ?
+        ((m_size <= m_capacity) && memory::in_non_empty_range(m_capacity, k_max_elements) &&
+            (m_read_index < m_capacity) && ((m_size != 0u) || (m_read_index == 0u))) :
         ((m_size | m_capacity | m_read_index) == 0u);
 }
 
 template<typename T>
 inline bool TPodFifo<T>::is_empty() const noexcept
 {
-    return (m_token.data() == nullptr) || (m_size == 0u) || (m_capacity == 0u) || (m_read_index >= m_capacity);
+    return (raw_data() == nullptr) || (m_size == 0u) || (m_capacity == 0u) || (m_read_index >= m_capacity);
 }
 
 template<typename T>
 inline bool TPodFifo<T>::is_ready() const noexcept
 {
-    return (m_token.data() != nullptr) && (m_size <= m_capacity) && memory::in_non_empty_range(m_capacity, k_max_elements) && (m_read_index < m_capacity);
+    return is_valid() && (raw_data() != nullptr);
 }
 
 template<typename T>
 inline bool TPodFifo<T>::push_back(const T* const src, const std::size_t count) noexcept
 {
-    if (!is_ready() || (count > available()) || ((src == nullptr) && (count != 0u)))
+    if (count == 0u)
+    {
+        return true;
+    }
+    if (!is_ready() || (src == nullptr) || is_internal_ptr(src) || (count > available()))
     {
         return false;
     }
-    if (count != 0u)
+    const std::size_t index_check = m_read_index + m_size;
+    const std::size_t write_index = (index_check >= m_capacity) ? (index_check - m_capacity) : index_check;
+    const std::size_t tail_size = m_capacity - write_index;
+    if (count <= tail_size)
     {
-        const std::size_t index_check = m_read_index + m_size;
-        const std::size_t write_index = (index_check >= m_capacity) ? (index_check - m_capacity) : index_check;
-        const std::size_t tail_size = m_capacity - write_index;
-        if (count <= tail_size)
-        {
-            std::memcpy((m_token.data() + write_index), src, (count * sizeof(T)));
-        }
-        else
-        {
-            std::memcpy((m_token.data() + write_index), src, (tail_size * sizeof(T)));
-            std::memcpy(m_token.data(), (src + tail_size), ((count - tail_size) * sizeof(T)));
-        }
-        m_size += count;
+        std::memcpy((data() + write_index), src, (count * sizeof(T)));
     }
+    else
+    {
+        std::memcpy((data() + write_index), src, (tail_size * sizeof(T)));
+        std::memcpy(data(), (src + tail_size), ((count - tail_size) * sizeof(T)));
+    }
+    m_size += count;
     return true;
 }
 
 template<typename T>
 inline bool TPodFifo<T>::pop_front(T* const dst, const std::size_t count) noexcept
 {
-    if (!is_ready() || (count > size()) || ((dst == nullptr) && (count != 0u)))
+    if (count == 0u)
+    {
+        return true;
+    }
+    if (!is_ready() || (dst == nullptr) || is_internal_ptr(dst) || (count > size()))
     {
         return false;
     }
-    if (count != 0u)
+    const std::size_t tail_size = m_capacity - m_read_index;
+    if (count <= tail_size)
     {
-        const std::size_t tail_size = m_capacity - m_read_index;
-        if (count <= tail_size)
-        {
-            std::memcpy(dst, (m_token.data() + m_read_index), (count * sizeof(T)));
-            m_read_index = (count != tail_size) ? (m_read_index + count) : 0u;
-        }
-        else
-        {
-            std::memcpy(dst, (m_token.data() + m_read_index), (tail_size * sizeof(T)));
-            m_read_index = count - tail_size;
-            std::memcpy((dst + tail_size), m_token.data(), (m_read_index * sizeof(T)));
-        }
-        m_size -= count;
+        std::memcpy(dst, (data() + m_read_index), (count * sizeof(T)));
+        m_read_index = (count != tail_size) ? (m_read_index + count) : 0u;
+    }
+    else
+    {
+        std::memcpy(dst, (data() + m_read_index), (tail_size * sizeof(T)));
+        m_read_index = count - tail_size;
+        std::memcpy((dst + tail_size), data(), (m_read_index * sizeof(T)));
+    }
+    m_size -= count;
+    if (m_size == 0u)
+    {
+        m_read_index = 0u;
     }
     return true;
 }
 
 template<typename T>
-inline bool TPodFifo<T>::pop_front(const std::size_t count) noexcept
+inline bool TPodFifo<T>::discard_front(const std::size_t count) noexcept
 {
+    if (count == 0u)
+    {
+        return true;
+    }
     if (!is_ready() || (count > size()))
     {
         return false;
     }
-    if (count != 0u)
+    m_read_index += count;
+    if (m_read_index >= m_capacity)
     {
-        m_read_index += count;
-        if (m_read_index >= m_capacity)
-        {
-            m_read_index -= capacity;
-        }
-        m_size -= count;
+        m_read_index -= m_capacity;
+    }
+    m_size -= count;
+    if (m_size == 0u)
+    {
+        m_read_index = 0u;
     }
     return true;
 }
@@ -241,14 +268,15 @@ inline bool TPodFifo<T>::reallocate(const std::size_t capacity) noexcept
     {
         if (capacity == m_capacity)
         {
-            T* const data = m_token.data();
-            pack(data, data);
+            T* const packed = data();
+            pack(packed, packed);
             return true;
         }
-        memory::TMemoryToken<T> token;
-        if (token.allocate(capacity))
+
+        memory::CMemoryToken token{ k_element_size, k_align };
+        if (token.allocate(capacity, false))
         {
-            pack(token.data(), m_token.data());
+            pack(static_cast<T*>(token.data()), data());
             m_token = std::move(token);
             m_capacity = capacity;
             return true;
@@ -260,7 +288,11 @@ inline bool TPodFifo<T>::reallocate(const std::size_t capacity) noexcept
 template<typename T>
 inline bool TPodFifo<T>::reserve(const std::size_t minimum_capacity) noexcept
 {
-    return (minimum_capacity <= k_max_elements) ? ((minimum_capacity > m_capacity) ? reallocate(std::max(memory::vector_growth_policy(minimum_capacity), m_capacity)) : true) : false;
+    return (minimum_capacity <= k_max_elements) ?
+        ((minimum_capacity > m_capacity) ?
+            reallocate(std::max(memory::vector_growth_policy(minimum_capacity, k_max_elements), m_capacity)) :
+            true) :
+        false;
 }
 
 template<typename T>
@@ -290,12 +322,18 @@ inline void TPodFifo<T>::deallocate() noexcept
 }
 
 template<typename T>
+inline bool TPodFifo<T>::is_internal_ptr(const T* const ptr) const noexcept
+{
+    return pod_storage_contains_ptr(raw_data(), m_capacity, ptr);
+}
+
+template<typename T>
 inline void TPodFifo<T>::pack() noexcept
 {
     if (is_ready())
     {
-        T* const data = m_token.data();
-        pack(data, data);
+        T* const packed = data();
+        pack(packed, packed);
     }
 }
 
@@ -321,15 +359,45 @@ inline void TPodFifo<T>::pack(T* const dst, const T* const src) noexcept
         {
             const std::size_t head_bytes = (m_read_index + m_size - m_capacity) * sizeof(T);
             const std::size_t tail_bytes = tail_size * sizeof(T);
-            if (((m_size + tail_size) <= m_capacity) || (src != dst))
+            if (src != dst)
             {
                 std::memcpy((dst + tail_size), src, head_bytes);
                 std::memcpy(dst, (src + m_read_index), tail_bytes);
             }
-            else
+            else if (m_size <= m_read_index)
             {
+                // Save the wrapped head in its final range before moving the
+                // unread tail; this condition keeps those ranges disjoint.
                 std::memmove((dst + tail_size), src, head_bytes);
                 std::memmove(dst, (src + m_read_index), tail_bytes);
+            }
+            else
+            {
+                // Rotate the complete backing range so wrapped logical elements
+                // become the packed prefix without requiring T assignment.
+                const std::size_t cycle_count = bit_ops::highest_common_factor(m_capacity, m_read_index);
+                for (std::size_t cycle = 0u; cycle < cycle_count; ++cycle)
+                {
+                    std::byte temporary[sizeof(T)];
+                    std::memcpy(temporary, (dst + cycle), sizeof(T));
+
+                    std::size_t current = cycle;
+                    while (true)
+                    {
+                        std::size_t next = current + m_read_index;
+                        if (next >= m_capacity)
+                        {
+                            next -= m_capacity;
+                        }
+                        if (next == cycle)
+                        {
+                            break;
+                        }
+                        std::memcpy((dst + current), (dst + next), sizeof(T));
+                        current = next;
+                    }
+                    std::memcpy((dst + current), temporary, sizeof(T));
+                }
             }
         }
     }
@@ -338,7 +406,7 @@ inline void TPodFifo<T>::pack(T* const dst, const T* const src) noexcept
 
 
 template<typename T>
-inline void TPodFifo<T>::move_from(TPodFifo&& src) noexcept
+inline void TPodFifo<T>::move_from(TPodFifo& src) noexcept
 {
     m_token = std::move(src.m_token);
     m_size = src.m_size;
@@ -350,4 +418,3 @@ inline void TPodFifo<T>::move_from(TPodFifo&& src) noexcept
 }
 
 #endif  //  #ifndef TPOD_FIFO_HPP_INCLUDED
-

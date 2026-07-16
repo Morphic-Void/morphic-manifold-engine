@@ -13,6 +13,7 @@
 #ifndef BIT_UTILS_HPP_INCLUDED
 #define BIT_UTILS_HPP_INCLUDED
 
+#include "TBitField.hpp"
 #include "bit_ops.hpp"
 #include "spatial_codes.hpp"
 

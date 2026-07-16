@@ -110,7 +110,7 @@ Fields:
 State rules:
 
 - size == 0 is the canonical empty state
-- valid requires size <= memory::k_max_elements
+- valid requires size <= memory::k_byte_size_ceiling
 - ready requires size != 0 and size within bounds
 
 ### MetaByteBuffer
@@ -145,7 +145,7 @@ State rules:
 - non-empty states require all fields to be non-zero
 - valid requires:
   - row_width <= row_pitch
-  - row_pitch * row_count <= memory::k_max_elements
+  - row_pitch * row_count <= memory::k_byte_size_ceiling
 - ready requires valid and non-empty
 
 Derived:

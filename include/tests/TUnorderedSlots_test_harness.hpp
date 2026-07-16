@@ -18,7 +18,7 @@ struct TUnorderedConfig
 {
     // Selection
     bool run_smoke = true;
-    bool run_visit_semantics = true;
+    bool run_traversal_semantics = true;
     bool run_compact_postconditions = true;
     bool run_resize_reserve = true;
     bool run_fuzz = false;
