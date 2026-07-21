@@ -184,6 +184,7 @@
     <ClCompile Include="src\tests\MemoryTypeless_test_suite.cpp" />
     <ClCompile Include="src\tests\StringBuffers_test_suite.cpp" />
     <ClCompile Include="src\tests\TInstance_test_suite.cpp" />
+    <ClCompile Include="src\tests\TMpmcTransport_test_suite.cpp" />
     <ClCompile Include="src\tests\TOrderedCollection_test_suite.cpp" />
     <ClCompile Include="src\tests\TPodFifo_test_suite.cpp" />
     <ClCompile Include="src\tests\TPodVector_test_suite.cpp" />
@@ -256,6 +257,7 @@
     <ClInclude Include="include\tests\MemoryTypeless_test_suite.hpp" />
     <ClInclude Include="include\tests\StringBuffers_test_suite.hpp" />
     <ClInclude Include="include\tests\TInstance_test_suite.hpp" />
+    <ClInclude Include="include\tests\TMpmcTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TOrderedCollection_test_suite.hpp" />
     <ClInclude Include="include\tests\TPodFifo_test_suite.hpp" />
     <ClInclude Include="include\tests\TPodVector_test_suite.hpp" />
@@ -289,6 +291,7 @@
     <ClInclude Include="include\threading\transports\interfaces\transport_interfaces.hpp" />
     <ClInclude Include="include\threading\transports\interfaces\TRingInterfaces.hpp" />
     <ClInclude Include="include\threading\transports\TBulkTransport.hpp" />
+    <ClInclude Include="include\threading\transports\TMpmcTransport.hpp" />
     <ClInclude Include="include\threading\transports\TOwningTransport.hpp" />
     <ClInclude Include="include\threading\transports\TQueueTransport.hpp" />
     <ClInclude Include="include\threading\transports\transports.hpp" />
@@ -316,6 +319,7 @@
     <None Include="docs\engineering-aphorisms.md" />
     <None Include="docs\engineering-principles.md" />
     <None Include="docs\memory\memory_subsystem.md" />
+    <None Include="docs\threading\mpmc_transport_handoff.md" />
     <None Include="docs\memory\memory_typeless.md" />
     <None Include="docs\origins.md" />
     <None Include="docs\threading\transports\TOwningTransport.md" />

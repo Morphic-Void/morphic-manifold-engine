@@ -192,6 +192,11 @@ void test_stable_pointer_preservation_across_growth(TTestContext& ctx)
     TEST_EXPECT(ctx, TTrackedValue::live_count == 70);
     TEST_EXPECT(ctx, TTrackedValue::construction_count == 70);
     TEST_EXPECT(ctx, TTrackedValue::destruction_count == 0);
+    TEST_EXPECT(ctx, collection.memory_token_count() == 4u);
+    TEST_EXPECT(ctx, collection.memory_allocation_count() != 0u);
+    TEST_EXPECT(ctx, collection.memory_allocation_size() != 0u);
+    TEST_EXPECT(ctx, collection.can_reattribute_to());
+    TEST_EXPECT(ctx, collection.reattribute());
 }
 
 void test_erase_sort_pack_and_stable_addresses(TTestContext& ctx)

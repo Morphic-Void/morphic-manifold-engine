@@ -51,6 +51,11 @@
 template<typename T> class TPodVector;
 template<typename T> class TPodView;
 template<typename T> class TPodConstView;
+template<typename T> class TPodUnorderedSlotsStorage;
+template<typename T, typename TKey> class TPodOrderedSlotsStorage;
+template<typename T> class TUnorderedCollectionStorage;
+template<typename T, typename TKey> class TOrderedCollectionStorage;
+class CStableStrings;
 
 //==============================================================================
 //  Shared POD storage helpers
@@ -149,6 +154,13 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
 
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+
     //  Views
     [[nodiscard]] TPodView<T> view() noexcept;
     [[nodiscard]] TPodConstView<T> view() const noexcept;
@@ -215,7 +227,23 @@ public:
     static constexpr std::size_t k_max_elements = memory::t_max_elements<T>();
 
 private:
+    template<typename> friend class TPodUnorderedSlotsStorage;
+    template<typename, typename> friend class TPodOrderedSlotsStorage;
+    template<typename> friend class TUnorderedCollectionStorage;
+    template<typename, typename> friend class TOrderedCollectionStorage;
+    friend class CStableStrings;
+
     static constexpr std::size_t k_max_bytes = k_max_elements * k_element_size;
+
+    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept
+    {
+        return m_token.owns_storage() ? m_token.context() : nullptr;
+    }
+    void unsafe_replace_memory_context_without_accounting(
+        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept
+    {
+        m_token.unsafe_replace_context_without_accounting(expected_source, target);
+    }
 
     [[nodiscard]] T* raw_data() noexcept { return static_cast<T*>(m_token.data()); }
     [[nodiscard]] const T* raw_data() const noexcept { return static_cast<const T*>(m_token.data()); }
@@ -360,6 +388,36 @@ private:
 //==============================================================================
 //  TPodVector<T> out of class function bodies
 //==============================================================================
+
+template<typename T>
+inline std::uint32_t TPodVector<T>::memory_token_count() const noexcept
+{
+    return m_token.memory_token_count();
+}
+
+template<typename T>
+inline std::uint32_t TPodVector<T>::memory_allocation_count() const noexcept
+{
+    return m_token.memory_allocation_count();
+}
+
+template<typename T>
+inline std::uint64_t TPodVector<T>::memory_allocation_size() const noexcept
+{
+    return m_token.memory_allocation_size();
+}
+
+template<typename T>
+inline bool TPodVector<T>::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_token.can_reattribute_to(context);
+}
+
+template<typename T>
+inline bool TPodVector<T>::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_token.reattribute(context);
+}
 
 template<typename T>
 inline TPodVector<T>::TPodVector(TPodVector&& src) noexcept

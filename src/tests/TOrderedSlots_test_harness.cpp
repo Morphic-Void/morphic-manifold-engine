@@ -1387,6 +1387,14 @@ static bool test_pod_ordered_slots_wrapper(TestLogger& log)
         log.fail("TPodOrderedSlots failed initial integrity");
         return false;
     }
+    if ((slots.memory_token_count() != 3u) ||
+        (slots.memory_allocation_count() == 0u) ||
+        (slots.memory_allocation_size() == 0u) ||
+        !slots.can_reattribute_to() || !slots.reattribute())
+    {
+        log.fail("TPodOrderedSlots memory attribution audit failed");
+        return false;
+    }
 
     const std::int32_t slot_a = slots.insert(OrderedSlotsTestKey{ 3 }, 30);
     const std::int32_t slot_b = slots.insert(OrderedSlotsTestKey{ 1 }, 10);

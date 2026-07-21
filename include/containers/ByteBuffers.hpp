@@ -119,6 +119,13 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
 
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+
     //  Views
     [[nodiscard]] CByteView view() const noexcept;
     [[nodiscard]] CByteConstView const_view() const noexcept;
@@ -163,6 +170,18 @@ public:
     }
 
 private:
+    friend class CStringBuffer;
+
+    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept
+    {
+        return m_token.owns_storage() ? m_token.context() : nullptr;
+    }
+    void unsafe_replace_memory_context_without_accounting(
+        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept
+    {
+        m_token.unsafe_replace_context_without_accounting(expected_source, target);
+    }
+
     memory::CMemoryToken m_token{ 1u, 1u };
     MetaByteBuffer m_meta;
 };
@@ -338,6 +357,13 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
     [[nodiscard]] bool is_contiguous() const noexcept { return is_ready() && m_meta.is_contiguous(); }
+
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
 
     //  Views
     [[nodiscard]] CByteRectView view() const noexcept;
@@ -560,6 +586,31 @@ private:
 //==============================================================================
 //  CByteBuffer out of class function bodies
 //==============================================================================
+
+inline std::uint32_t CByteBuffer::memory_token_count() const noexcept
+{
+    return m_token.memory_token_count();
+}
+
+inline std::uint32_t CByteBuffer::memory_allocation_count() const noexcept
+{
+    return m_token.memory_allocation_count();
+}
+
+inline std::uint64_t CByteBuffer::memory_allocation_size() const noexcept
+{
+    return m_token.memory_allocation_size();
+}
+
+inline bool CByteBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_token.can_reattribute_to(context);
+}
+
+inline bool CByteBuffer::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_token.reattribute(context);
+}
 
 inline CByteBuffer::CByteBuffer(CByteBuffer&& other) noexcept
 {
@@ -891,6 +942,31 @@ inline CByteConstView& CByteConstView::set(const memory::CMemoryConstView& view,
 //==============================================================================
 //  CByteRectBuffer out of class function bodies
 //==============================================================================
+
+inline std::uint32_t CByteRectBuffer::memory_token_count() const noexcept
+{
+    return m_token.memory_token_count();
+}
+
+inline std::uint32_t CByteRectBuffer::memory_allocation_count() const noexcept
+{
+    return m_token.memory_allocation_count();
+}
+
+inline std::uint64_t CByteRectBuffer::memory_allocation_size() const noexcept
+{
+    return m_token.memory_allocation_size();
+}
+
+inline bool CByteRectBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_token.can_reattribute_to(context);
+}
+
+inline bool CByteRectBuffer::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_token.reattribute(context);
+}
 
 inline CByteRectBuffer::CByteRectBuffer(CByteRectBuffer&& other) noexcept
 {

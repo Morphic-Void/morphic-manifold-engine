@@ -196,6 +196,11 @@ void test_stable_addresses_across_growth(TTestContext& ctx)
     TEST_EXPECT(ctx, count_live_slots(collection) == k_total);
     TEST_EXPECT(ctx, collection.check_integrity());
     TEST_EXPECT(ctx, TTracked::live_count == static_cast<int>(k_total));
+    TEST_EXPECT(ctx, collection.memory_token_count() == 3u);
+    TEST_EXPECT(ctx, collection.memory_allocation_count() != 0u);
+    TEST_EXPECT(ctx, collection.memory_allocation_size() != 0u);
+    TEST_EXPECT(ctx, collection.can_reattribute_to());
+    TEST_EXPECT(ctx, collection.reattribute());
 
     for (std::size_t i = 0u; i < k_total; ++i)
     {

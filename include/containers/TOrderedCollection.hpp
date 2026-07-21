@@ -75,6 +75,13 @@ public:
     [[nodiscard]] std::int32_t on_compare_keys(const std::int32_t source_index, const std::int32_t target_index) const noexcept;
 
 protected:
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
+    void unsafe_replace_memory_context_without_accounting(
+        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+
     memory::CMemoryToken m_storage;
     TPodVector<SlotData> m_slots;
     TPodVector<TKey> m_keys;
@@ -113,6 +120,13 @@ public:
     [[nodiscard]] bool is_valid() const noexcept;
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
+
+    //  Direct storage attribution. Allocations owned by contained T objects are excluded.
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
 
     //  Accessors
     T* get_object(const TKey& key) noexcept;
@@ -166,6 +180,128 @@ private:
 //==============================================================================
 //  TOrderedCollection<T> out of class function bodies
 //==============================================================================
+
+template<typename T, typename TKey>
+inline std::uint32_t TOrderedCollectionStorage<T, TKey>::memory_token_count() const noexcept
+{
+    return m_storage.memory_token_count() +
+        m_slots.memory_token_count() +
+        m_keys.memory_token_count();
+}
+
+template<typename T, typename TKey>
+inline std::uint32_t TOrderedCollectionStorage<T, TKey>::memory_allocation_count() const noexcept
+{
+    return m_storage.memory_allocation_count() +
+        m_slots.memory_allocation_count() +
+        m_keys.memory_allocation_count();
+}
+
+template<typename T, typename TKey>
+inline std::uint64_t TOrderedCollectionStorage<T, TKey>::memory_allocation_size() const noexcept
+{
+    return m_storage.memory_allocation_size() +
+        m_slots.memory_allocation_size() +
+        m_keys.memory_allocation_size();
+}
+
+template<typename T, typename TKey>
+inline bool TOrderedCollectionStorage<T, TKey>::memory_source_context(
+    memory::CMemoryContext*& source) const noexcept
+{
+    if (m_storage.owns_storage())
+    {
+        if ((source != nullptr) && (source != m_storage.context()))
+        {
+            return false;
+        }
+        source = m_storage.context();
+    }
+
+    memory::CMemoryContext* context = m_slots.memory_source_context();
+    if ((source != nullptr) && (context != nullptr) && (context != source))
+    {
+        return false;
+    }
+    if (source == nullptr)
+    {
+        source = context;
+    }
+
+    context = m_keys.memory_source_context();
+    if ((source != nullptr) && (context != nullptr) && (context != source))
+    {
+        return false;
+    }
+    if (source == nullptr)
+    {
+        source = context;
+    }
+    return true;
+}
+
+template<typename T, typename TKey>
+inline void TOrderedCollectionStorage<T, TKey>::unsafe_replace_memory_context_without_accounting(
+    memory::CMemoryContext* const expected_source,
+    memory::CMemoryContext* const target) noexcept
+{
+    m_storage.unsafe_replace_context_without_accounting(expected_source, target);
+    m_slots.unsafe_replace_memory_context_without_accounting(expected_source, target);
+    m_keys.unsafe_replace_memory_context_without_accounting(expected_source, target);
+}
+
+template<typename T, typename TKey>
+inline std::uint32_t TOrderedCollection<T, TKey>::memory_token_count() const noexcept
+{
+    return slot_data_class::memory_token_count() + slot_meta_class::memory_token_count();
+}
+
+template<typename T, typename TKey>
+inline std::uint32_t TOrderedCollection<T, TKey>::memory_allocation_count() const noexcept
+{
+    return slot_data_class::memory_allocation_count() + slot_meta_class::memory_allocation_count();
+}
+
+template<typename T, typename TKey>
+inline std::uint64_t TOrderedCollection<T, TKey>::memory_allocation_size() const noexcept
+{
+    return slot_data_class::memory_allocation_size() + slot_meta_class::memory_allocation_size();
+}
+
+template<typename T, typename TKey>
+inline bool TOrderedCollection<T, TKey>::can_reattribute_to(memory::CMemoryContext* target) const noexcept
+{
+    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
+    memory::CMemoryContext* source = nullptr;
+    return (target != nullptr) &&
+        slot_data_class::memory_source_context(source) &&
+        slot_meta_class::memory_source_context(source) &&
+        ((source == nullptr) || (source == target) || source->is_compatible_with(*target));
+}
+
+template<typename T, typename TKey>
+inline bool TOrderedCollection<T, TKey>::reattribute(memory::CMemoryContext* target) noexcept
+{
+    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
+    memory::CMemoryContext* source = nullptr;
+    if ((target == nullptr) ||
+        !slot_data_class::memory_source_context(source) ||
+        !slot_meta_class::memory_source_context(source) ||
+        ((source != nullptr) && (source != target) && !source->is_compatible_with(*target)))
+    {
+        return false;
+    }
+
+    if ((source != nullptr) && (source != target) &&
+        !memory::reattribute(*source, *target, memory_allocation_count(), memory_allocation_size()))
+    {
+        return false;
+    }
+
+    slot_data_class::unsafe_replace_memory_context_without_accounting(source, target);
+    slot_meta_class::unsafe_replace_memory_context_without_accounting(source, target);
+    return true;
+}
 
 template<typename T, typename TKey>
 inline bool TOrderedCollection<T, TKey>::is_valid() const noexcept

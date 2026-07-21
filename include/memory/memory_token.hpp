@@ -17,6 +17,7 @@
 #include <cstddef>      //  std::size_t
 #include <cstdint>      //  std::uint8_t, std::uint16_t, std::uint32_t
 #include <cstring>      //  std::memcpy, std::memset
+#include <limits>       //  std::numeric_limits
 
 #include "memory_context.hpp"
 #include "memory_policies.hpp"
@@ -65,6 +66,7 @@ public:
 
     [[nodiscard]] bool can_reattribute_to(CMemoryContext* context = nullptr) const noexcept;
     [[nodiscard]] bool reattribute(CMemoryContext* context = nullptr) noexcept;
+    void unsafe_replace_context_without_accounting(CMemoryContext* expected_source, CMemoryContext* target) noexcept;
 
     [[nodiscard]] bool is_configured() const noexcept;
     [[nodiscard]] bool is_empty() const noexcept { return m_count == 0u; }
@@ -74,6 +76,10 @@ public:
     [[nodiscard]] explicit operator bool() const noexcept { return is_configured(); }
 
     [[nodiscard]] CMemoryContext* context() const noexcept { return m_context; }
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept { return 1u; }
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+
     [[nodiscard]] std::size_t count() const noexcept { return m_count; }
     [[nodiscard]] std::size_t stride() const noexcept { return m_stride; }
     [[nodiscard]] std::size_t storage_alignment() const noexcept;
@@ -132,8 +138,6 @@ private:
     [[nodiscard]] static std::size_t directory_capacity(std::size_t buffer_count) noexcept;
     [[nodiscard]] std::size_t buffer_count_for(std::size_t count) const noexcept;
     [[nodiscard]] std::size_t directory_bytes_for(std::size_t buffer_count) const noexcept;
-    [[nodiscard]] std::size_t allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t allocated_bytes() const noexcept;
     [[nodiscard]] bool allocate_stable_buffers(void** buffers, std::size_t first_buffer, std::size_t buffer_count, bool zero) noexcept;
     [[nodiscard]] bool create_stable_storage(std::size_t count, bool zero, void*& new_memory) noexcept;
     [[nodiscard]] bool clone_to(const CMemoryToken& source, CMemoryContext* context) noexcept;
@@ -404,7 +408,7 @@ inline std::size_t CMemoryToken::directory_bytes_for(const std::size_t buffer_co
     return directory_capacity(buffer_count) * sizeof(void*);
 }
 
-inline std::size_t CMemoryToken::allocation_count() const noexcept
+inline std::uint32_t CMemoryToken::memory_allocation_count() const noexcept
 {
     if (!owns_storage())
     {
@@ -415,10 +419,12 @@ inline std::size_t CMemoryToken::allocation_count() const noexcept
         return 1u;
     }
     const std::size_t buffer_count = buffer_count_for(m_count);
-    return buffer_count + ((buffer_count > 1u) ? 1u : 0u);
+    const std::size_t allocation_count = buffer_count + ((buffer_count > 1u) ? 1u : 0u);
+    MV_HARD_ASSERT(allocation_count <= std::numeric_limits<std::uint32_t>::max());
+    return static_cast<std::uint32_t>(allocation_count);
 }
 
-inline std::uint64_t CMemoryToken::allocated_bytes() const noexcept
+inline std::uint64_t CMemoryToken::memory_allocation_size() const noexcept
 {
     if (!owns_storage())
     {
@@ -847,12 +853,26 @@ inline bool CMemoryToken::reattribute(CMemoryContext* target) noexcept
         return true;
     }
 
-    if (!memory::reattribute(*m_context, *target, allocation_count(), allocated_bytes()))
+    if (!memory::reattribute(*m_context, *target, memory_allocation_count(), memory_allocation_size()))
     {
         return false;
     }
     m_context = target;
     return true;
+}
+
+inline void CMemoryToken::unsafe_replace_context_without_accounting(
+    CMemoryContext* const expected_source,
+    CMemoryContext* const target) noexcept
+{
+    const bool valid = (target != nullptr) && (!owns_storage() ||
+        ((expected_source != nullptr) && (m_context == expected_source) &&
+            expected_source->is_compatible_with(*target)));
+    MV_HARD_ASSERT(valid);
+    if (valid)
+    {
+        m_context = target;
+    }
 }
 
 }   //  namespace memory

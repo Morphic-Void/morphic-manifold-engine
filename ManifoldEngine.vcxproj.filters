@@ -270,6 +270,9 @@
     <ClInclude Include="include\tests\TInstance_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
+    <ClInclude Include="include\tests\TMpmcTransport_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
     <ClInclude Include="include\tests\TPodFifo_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
@@ -376,6 +379,9 @@
       <Filter>include\host</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\transports\TBulkTransport.hpp">
+      <Filter>include\threading\transports</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\transports\TMpmcTransport.hpp">
       <Filter>include\threading\transports</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\transports\TOwningTransport.hpp">
@@ -504,6 +510,9 @@
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\TInstance_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\TMpmcTransport_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\TPodFifo_test_suite.cpp">
@@ -650,6 +659,9 @@
     </None>
     <None Include="docs\memory\memory_subsystem.md">
       <Filter>docs\memory</Filter>
+    </None>
+    <None Include="docs\threading\mpmc_transport_handoff.md">
+      <Filter>docs\threading</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

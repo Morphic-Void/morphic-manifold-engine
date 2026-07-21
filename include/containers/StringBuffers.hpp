@@ -193,6 +193,13 @@ public:
     [[nodiscard]] std::size_t length() const noexcept { return (m_string.data() != nullptr) ? m_length : 0u; }
     [[nodiscard]] bool is_empty() const noexcept { return (m_string.data() == nullptr); } //  null only; see parser-state note above
 
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+
     //  Relationship identity
     [[nodiscard]] std::int32_t relationship(const CStringView& other) const noexcept { return view().relationship(other); }
     [[nodiscard]] std::int32_t relationship(const CSimpleString& other) const noexcept { return view().relationship(other); }
@@ -259,6 +266,13 @@ public:
     [[nodiscard]] std::size_t available() const noexcept { return m_buffer.available(); }
     [[nodiscard]] bool empty() const noexcept { return m_buffer.size() == 0u; }
 
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+
     //  String accessors
     [[nodiscard]] CStringView view(const std::size_t offset) const noexcept { return CStringView(string(offset)); }
     [[nodiscard]] const char* cstring(const std::size_t offset) const noexcept { return cast_to_cstring(string(offset)); }
@@ -288,8 +302,13 @@ public:
 
     //  Invalid offset return value
     static constexpr std::size_t k_invalid_offset = 0u;
-
 private:
+    friend class CStableStrings;
+
+    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept;
+    void unsafe_replace_memory_context_without_accounting(
+        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+
     [[nodiscard]] std::size_t private_append(const std::uint8_t* const string, const std::size_t length) noexcept;
 
     CByteBuffer m_buffer;
@@ -330,6 +349,13 @@ public:
     //  Accessors
     [[nodiscard]] CStringView view(const std::size_t id) const noexcept;
     [[nodiscard]] bool is_valid_id(const std::size_t id) const noexcept;
+
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
 
     //  Index conversions
     //
@@ -379,8 +405,11 @@ public:
     static constexpr std::size_t k_invalid_ref_index = 0u;
     static constexpr std::size_t k_invalid_offset = 0u;
     static constexpr std::size_t k_invalid_rank = 0u;
-
 private:
+    [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
+    void unsafe_replace_memory_context_without_accounting(
+        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+
     std::size_t private_find_ref_index(const std::uint8_t* const string, const std::size_t length, std::size_t& insert_at) noexcept;
     std::size_t private_find_id(const std::uint8_t* const string, const std::size_t length) noexcept;
     std::size_t private_append(const std::uint8_t* const string, const std::size_t length) noexcept;
@@ -469,6 +498,31 @@ inline bool CStringView::set(const std::uint8_t* const string, const std::size_t
 //  CSimpleString out of class function bodies
 //==============================================================================
 
+inline std::uint32_t CSimpleString::memory_token_count() const noexcept
+{
+    return m_string.memory_token_count();
+}
+
+inline std::uint32_t CSimpleString::memory_allocation_count() const noexcept
+{
+    return m_string.memory_allocation_count();
+}
+
+inline std::uint64_t CSimpleString::memory_allocation_size() const noexcept
+{
+    return m_string.memory_allocation_size();
+}
+
+inline bool CSimpleString::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_string.can_reattribute_to(context);
+}
+
+inline bool CSimpleString::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_string.reattribute(context);
+}
+
 inline CSimpleString::CSimpleString(CSimpleString&& src) noexcept
 {
     m_string = std::move(src.m_string);
@@ -524,6 +578,43 @@ inline bool CSimpleString::private_allocate(const std::uint8_t* const string, co
 //==============================================================================
 //  CStringBuffer out of class function bodies
 //==============================================================================
+
+inline std::uint32_t CStringBuffer::memory_token_count() const noexcept
+{
+    return m_buffer.memory_token_count();
+}
+
+inline std::uint32_t CStringBuffer::memory_allocation_count() const noexcept
+{
+    return m_buffer.memory_allocation_count();
+}
+
+inline std::uint64_t CStringBuffer::memory_allocation_size() const noexcept
+{
+    return m_buffer.memory_allocation_size();
+}
+
+inline bool CStringBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_buffer.can_reattribute_to(context);
+}
+
+inline bool CStringBuffer::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_buffer.reattribute(context);
+}
+
+inline memory::CMemoryContext* CStringBuffer::memory_source_context() const noexcept
+{
+    return m_buffer.memory_source_context();
+}
+
+inline void CStringBuffer::unsafe_replace_memory_context_without_accounting(
+    memory::CMemoryContext* const expected_source,
+    memory::CMemoryContext* const target) noexcept
+{
+    m_buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
+}
 
 [[nodiscard]] inline const std::uint8_t* CStringBuffer::string(const std::size_t offset) const noexcept
 {
@@ -646,6 +737,128 @@ inline bool CStringBuffer::ensure_free(const std::size_t length) noexcept
 //==============================================================================
 //  CStableStrings out of class function bodies
 //==============================================================================
+
+inline std::uint32_t CStableStrings::memory_token_count() const noexcept
+{
+    return m_string_buffer.memory_token_count() +
+        m_string_refs.memory_token_count() +
+        m_ref_index_to_id.memory_token_count() +
+        m_id_to_ref_index.memory_token_count() +
+        m_sorted_ref_indices.memory_token_count();
+}
+
+inline std::uint32_t CStableStrings::memory_allocation_count() const noexcept
+{
+    return m_string_buffer.memory_allocation_count() +
+        m_string_refs.memory_allocation_count() +
+        m_ref_index_to_id.memory_allocation_count() +
+        m_id_to_ref_index.memory_allocation_count() +
+        m_sorted_ref_indices.memory_allocation_count();
+}
+
+inline std::uint64_t CStableStrings::memory_allocation_size() const noexcept
+{
+    return m_string_buffer.memory_allocation_size() +
+        m_string_refs.memory_allocation_size() +
+        m_ref_index_to_id.memory_allocation_size() +
+        m_id_to_ref_index.memory_allocation_size() +
+        m_sorted_ref_indices.memory_allocation_size();
+}
+
+inline bool CStableStrings::memory_source_context(memory::CMemoryContext*& source) const noexcept
+{
+    source = m_string_buffer.memory_source_context();
+
+    memory::CMemoryContext* context = m_string_refs.memory_source_context();
+    if ((source != nullptr) && (context != nullptr) && (context != source))
+    {
+        return false;
+    }
+    if (source == nullptr)
+    {
+        source = context;
+    }
+
+    context = m_ref_index_to_id.memory_source_context();
+    if ((source != nullptr) && (context != nullptr) && (context != source))
+    {
+        return false;
+    }
+    if (source == nullptr)
+    {
+        source = context;
+    }
+
+    context = m_id_to_ref_index.memory_source_context();
+    if ((source != nullptr) && (context != nullptr) && (context != source))
+    {
+        return false;
+    }
+    if (source == nullptr)
+    {
+        source = context;
+    }
+
+    context = m_sorted_ref_indices.memory_source_context();
+    if ((source != nullptr) && (context != nullptr) && (context != source))
+    {
+        return false;
+    }
+    if (source == nullptr)
+    {
+        source = context;
+    }
+    return true;
+}
+
+inline bool CStableStrings::can_reattribute_to(memory::CMemoryContext* target) const noexcept
+{
+    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
+    memory::CMemoryContext* source = nullptr;
+    return (target != nullptr) && memory_source_context(source) &&
+        m_string_buffer.can_reattribute_to(target) &&
+        m_string_refs.can_reattribute_to(target) &&
+        m_ref_index_to_id.can_reattribute_to(target) &&
+        m_id_to_ref_index.can_reattribute_to(target) &&
+        m_sorted_ref_indices.can_reattribute_to(target);
+}
+
+inline bool CStableStrings::reattribute(memory::CMemoryContext* target) noexcept
+{
+    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
+    memory::CMemoryContext* source = nullptr;
+    if ((target == nullptr) || !memory_source_context(source) ||
+        !m_string_buffer.can_reattribute_to(target) ||
+        !m_string_refs.can_reattribute_to(target) ||
+        !m_ref_index_to_id.can_reattribute_to(target) ||
+        !m_id_to_ref_index.can_reattribute_to(target) ||
+        !m_sorted_ref_indices.can_reattribute_to(target))
+    {
+        return false;
+    }
+
+    const std::uint32_t allocation_count = memory_allocation_count();
+    const std::uint64_t allocation_size = memory_allocation_size();
+    if ((source != nullptr) && (source != target) &&
+        !memory::reattribute(*source, *target, allocation_count, allocation_size))
+    {
+        return false;
+    }
+
+    unsafe_replace_memory_context_without_accounting(source, target);
+    return true;
+}
+
+inline void CStableStrings::unsafe_replace_memory_context_without_accounting(
+    memory::CMemoryContext* const expected_source,
+    memory::CMemoryContext* const target) noexcept
+{
+    m_string_buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
+    m_string_refs.unsafe_replace_memory_context_without_accounting(expected_source, target);
+    m_ref_index_to_id.unsafe_replace_memory_context_without_accounting(expected_source, target);
+    m_id_to_ref_index.unsafe_replace_memory_context_without_accounting(expected_source, target);
+    m_sorted_ref_indices.unsafe_replace_memory_context_without_accounting(expected_source, target);
+}
 
 inline CStringView CStableStrings::view(const std::size_t id) const noexcept
 {

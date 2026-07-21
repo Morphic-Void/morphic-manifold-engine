@@ -339,6 +339,60 @@ void test_stable_reattribute_between_compatible_contexts(
     TEST_EXPECT(ctx, target_context.get_live_allocated_bytes() == 0u);
 }
 
+void test_aggregate_accounting_and_context_replacement(
+    TTestContext& ctx,
+    memory::CMemoryContext& source_context,
+    memory::CMemoryContext& target_context,
+    memory::CMemoryContext& incompatible_context)
+{
+    CMemoryToken relocatable{ sizeof(std::uint64_t), alignof(std::uint64_t), &source_context };
+    CMemoryToken stable{ k_stable_stride, k_stable_alignment, k_buffer_capacity_hint, &source_context };
+    CMemoryToken empty{ 1u, 1u, &source_context };
+    TEST_EXPECT(ctx, relocatable.allocate(7u, true));
+    TEST_EXPECT(ctx, stable.allocate(9u, true));
+
+    void* const relocatable_address = relocatable.data();
+    void* const stable_address = stable.index_ptr(4u);
+    const std::uint32_t expected_allocations = source_context.get_live_allocation_count();
+    const std::uint64_t expected_bytes = source_context.get_live_allocated_bytes();
+
+    TEST_EXPECT(ctx, relocatable.memory_token_count() == 1u);
+    TEST_EXPECT(ctx, stable.memory_token_count() == 1u);
+    TEST_EXPECT(ctx, empty.memory_token_count() == 1u);
+    TEST_EXPECT(ctx, (relocatable.memory_allocation_count() + stable.memory_allocation_count()) == expected_allocations);
+    TEST_EXPECT(ctx, (relocatable.memory_allocation_size() + stable.memory_allocation_size()) == expected_bytes);
+    TEST_EXPECT(ctx, relocatable.can_reattribute_to(&target_context));
+    TEST_EXPECT(ctx, stable.can_reattribute_to(&target_context));
+    TEST_EXPECT(ctx, !relocatable.can_reattribute_to(&incompatible_context));
+    TEST_EXPECT(ctx, !stable.can_reattribute_to(&incompatible_context));
+    TEST_EXPECT(ctx, relocatable.context() == &source_context);
+    TEST_EXPECT(ctx, stable.context() == &source_context);
+    TEST_EXPECT(ctx, empty.context() == &source_context);
+    TEST_EXPECT(ctx, source_context.get_live_allocation_count() == expected_allocations);
+    TEST_EXPECT(ctx, source_context.get_live_allocated_bytes() == expected_bytes);
+    TEST_EXPECT(ctx, incompatible_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, incompatible_context.get_live_allocated_bytes() == 0u);
+
+    TEST_EXPECT(ctx, memory::reattribute(source_context, target_context, expected_allocations, expected_bytes));
+    relocatable.unsafe_replace_context_without_accounting(&source_context, &target_context);
+    stable.unsafe_replace_context_without_accounting(&source_context, &target_context);
+    empty.unsafe_replace_context_without_accounting(&source_context, &target_context);
+    TEST_EXPECT(ctx, relocatable.context() == &target_context);
+    TEST_EXPECT(ctx, stable.context() == &target_context);
+    TEST_EXPECT(ctx, empty.context() == &target_context);
+    TEST_EXPECT(ctx, relocatable.data() == relocatable_address);
+    TEST_EXPECT(ctx, stable.index_ptr(4u) == stable_address);
+    TEST_EXPECT(ctx, source_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, source_context.get_live_allocated_bytes() == 0u);
+    TEST_EXPECT(ctx, target_context.get_live_allocation_count() == expected_allocations);
+    TEST_EXPECT(ctx, target_context.get_live_allocated_bytes() == expected_bytes);
+
+    relocatable.deallocate();
+    stable.deallocate();
+    TEST_EXPECT(ctx, target_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, target_context.get_live_allocated_bytes() == 0u);
+}
+
 void test_stable_deallocate_preserves_configuration_and_reuse(TTestContext& ctx, memory::CMemoryContext& context)
 {
     CMemoryToken token{ k_stable_stride, k_stable_alignment, k_buffer_capacity_hint, &context };
@@ -375,8 +429,10 @@ int run_memory_token_tests()
 {
     TTestContext ctx;
     memory::CMemoryAllocator allocator{ nullptr, &test_allocate, &test_deallocate };
+    memory::CMemoryAllocator incompatible_allocator{ nullptr, &test_allocate, &test_deallocate };
     memory::CMemoryContext context{ allocator };
     memory::CMemoryContext alternate_context{ allocator };
+    memory::CMemoryContext incompatible_context{ incompatible_allocator };
 
     test_stable_map_index_growth_and_slack(ctx, context);
     test_stable_requested_count_and_internal_slack(ctx, context);
@@ -385,12 +441,15 @@ int run_memory_token_tests()
     test_stable_clone_preserves_content_and_configuration(ctx, context);
     test_stable_clone_to_compatible_alternate_context(ctx, context, alternate_context);
     test_stable_reattribute_between_compatible_contexts(ctx, context, alternate_context);
+    test_aggregate_accounting_and_context_replacement(ctx, context, alternate_context, incompatible_context);
     test_stable_deallocate_preserves_configuration_and_reuse(ctx, context);
 
     TEST_EXPECT(ctx, context.get_live_allocation_count() == 0u);
     TEST_EXPECT(ctx, context.get_live_allocated_bytes() == 0u);
     TEST_EXPECT(ctx, alternate_context.get_live_allocation_count() == 0u);
     TEST_EXPECT(ctx, alternate_context.get_live_allocated_bytes() == 0u);
+    TEST_EXPECT(ctx, incompatible_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, incompatible_context.get_live_allocated_bytes() == 0u);
     std::cout << "CMemoryToken: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return (ctx.failed == 0) ? 0 : 1;
 }

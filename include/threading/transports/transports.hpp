@@ -20,6 +20,7 @@
 #define TRANSPORTS_HPP_INCLUDED
 
 #include "TBulkTransport.hpp"
+#include "TMpmcTransport.hpp"
 #include "TOwningTransport.hpp"
 #include "TQueueTransport.hpp"
 #include "TRingTransport.hpp"

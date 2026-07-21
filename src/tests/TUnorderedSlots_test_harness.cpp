@@ -812,6 +812,14 @@ static bool test_pod_unordered_slots_smoke(TestLogger& log)
         log.fail("TPodUnorderedSlots initialise failed");
         return false;
     }
+    if ((slots.memory_token_count() != 2u) ||
+        (slots.memory_allocation_count() == 0u) ||
+        (slots.memory_allocation_size() == 0u) ||
+        !slots.can_reattribute_to() || !slots.reattribute())
+    {
+        log.fail("TPodUnorderedSlots memory attribution audit failed");
+        return false;
+    }
 
     const int32_t a = slots.insert(11);
     const int32_t b = slots.insert(22);

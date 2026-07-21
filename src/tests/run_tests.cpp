@@ -20,6 +20,7 @@
 #include "tests/TOrderedSlots_test_harness.hpp"
 #include "tests/TUnorderedSlots_test_harness.hpp"
 #include "tests/TQueueTransport_test_suite.hpp"
+#include "tests/TMpmcTransport_test_suite.hpp"
 #include "tests/TRingTransport_test_suite.hpp"
 #include "tests/TOwningTransport_test_suite.hpp"
 
@@ -65,6 +66,9 @@ int run_tests()
 
     int tring_test_result = run_ring_transport_tests();
     cumulative_result += tring_test_result;
+
+    int mpmc_transport_test_result = run_mpmc_transport_tests();
+    cumulative_result += mpmc_transport_test_result;
 
     TOrderedConfig tlex_cfg;
     tlex_cfg.run_fuzz_lightweight = true;

@@ -326,13 +326,13 @@ inline bool reattribute(
     {
         return false;
     }
-    if (!MV_FAIL_SAFE_ASSERT(from.sub(allocation_count, bytes)))
+    if (!to.add(allocation_count, bytes))
     {
         return false;
     }
-    if (!MV_FAIL_SAFE_ASSERT(to.add(allocation_count, bytes)))
+    if (!MV_FAIL_SAFE_ASSERT(from.sub(allocation_count, bytes)))
     {
-        MV_HARD_ASSERT(from.add(allocation_count, bytes));
+        MV_HARD_ASSERT(to.sub(allocation_count, bytes));
         return false;
     }
     return true;
