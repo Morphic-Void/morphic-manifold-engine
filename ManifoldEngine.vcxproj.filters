@@ -145,15 +145,6 @@
     <Filter Include="include\modules">
       <UniqueIdentifier>{210de3cd-e8f2-4189-8c29-651432a71849}</UniqueIdentifier>
     </Filter>
-    <Filter Include="include\threading\transports\bundles">
-      <UniqueIdentifier>{0785ccbd-0312-4059-af80-7db3b7d29342}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="include\threading\transports\endpoints">
-      <UniqueIdentifier>{bd1054e2-dee3-4c82-acd1-a8ca5e7d7722}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="include\threading\transports\interfaces">
-      <UniqueIdentifier>{ab93cf3c-e250-41f3-bfcf-2831f264b58a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="include\threading\messages">
       <UniqueIdentifier>{39411ac7-e9db-440a-8bd4-1b6de24569b7}</UniqueIdentifier>
     </Filter>
@@ -392,51 +383,6 @@
     </ClInclude>
     <ClInclude Include="include\threading\transports\TRingTransport.hpp">
       <Filter>include\threading\transports</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\bundles\TBulkBundle.hpp">
-      <Filter>include\threading\transports\bundles</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\bundles\TOwningBundle.hpp">
-      <Filter>include\threading\transports\bundles</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\bundles\TQueueBundle.hpp">
-      <Filter>include\threading\transports\bundles</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\bundles\TRingBundle.hpp">
-      <Filter>include\threading\transports\bundles</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\endpoints\TBulkEndpoints.hpp">
-      <Filter>include\threading\transports\endpoints</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\endpoints\TOwningEndpoints.hpp">
-      <Filter>include\threading\transports\endpoints</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\endpoints\TQueueEndpoints.hpp">
-      <Filter>include\threading\transports\endpoints</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\endpoints\TRingEndpoints.hpp">
-      <Filter>include\threading\transports\endpoints</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\interfaces\TBulkInterfaces.hpp">
-      <Filter>include\threading\transports\interfaces</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\interfaces\TOwningInterfaces.hpp">
-      <Filter>include\threading\transports\interfaces</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\interfaces\TQueueInterfaces.hpp">
-      <Filter>include\threading\transports\interfaces</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\interfaces\TRingInterfaces.hpp">
-      <Filter>include\threading\transports\interfaces</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\bundles\transport_bundles.hpp">
-      <Filter>include\threading\transports\bundles</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\endpoints\transport_endpoints.hpp">
-      <Filter>include\threading\transports\endpoints</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\transports\interfaces\transport_interfaces.hpp">
-      <Filter>include\threading\transports\interfaces</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\transports\transports.hpp">
       <Filter>include\threading\transports</Filter>

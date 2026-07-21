@@ -13,6 +13,8 @@
 //  Triple-buffered SPSC sequential transport for trivially copyable T.
 //
 //  Defines threading::transports::TQueue<T>.
+//  Also defines the concrete producer/consumer endpoint wrappers and the
+//  simple one-transport bundle composition for TQueue.
 // 
 //  Does not provide MPMC-style queue semantics, blocking semantics,
 //  or shared random access.
@@ -176,6 +178,69 @@ private:
 
     //  Publication state
     std::atomic<std::uint32_t> m_staged_word{ k_default_staged_word };
+};
+
+//==============================================================================
+//  TQueueProducerEndpoint<T>
+//  Single Producer, Single Consumer (SPSC) producer endpoint
+//==============================================================================
+
+template<typename T>
+class TQueueProducerEndpoint
+{
+public:
+    explicit TQueueProducerEndpoint(TQueue<T>& queue) noexcept : m_queue{ queue } {}
+    ~TQueueProducerEndpoint() noexcept = default;
+
+    [[nodiscard]] bool is_valid() const noexcept { return m_queue.posting_is_valid(); }
+    [[nodiscard]] bool is_ready() const noexcept { return m_queue.posting_is_ready(); }
+    [[nodiscard]] bool is_poisoned() const noexcept { return m_queue.posting_poisoned(); }
+    [[nodiscard]] bool post(const T& src) noexcept { return m_queue.post(src); }
+    [[nodiscard]] bool post(const T* const src, const std::uint32_t count = 1u) noexcept { return m_queue.post(src, count); }
+    [[nodiscard]] bool post(const TPodConstView<T>& src) noexcept { return m_queue.post(src); }
+    [[nodiscard]] bool post_would_reallocate(const std::uint32_t count) const noexcept { return m_queue.post_would_reallocate(count); }
+
+private:
+    TQueue<T>& m_queue;
+};
+
+//==============================================================================
+//  TQueueConsumerEndpoint<T>
+//  Single Producer, Single Consumer (SPSC) consumer endpoint
+//==============================================================================
+
+template<typename T>
+class TQueueConsumerEndpoint
+{
+public:
+    explicit TQueueConsumerEndpoint(TQueue<T>& queue) noexcept : m_queue{ queue } {}
+    ~TQueueConsumerEndpoint() noexcept = default;
+
+    [[nodiscard]] bool is_valid() const noexcept { return m_queue.reading_is_valid(); }
+    [[nodiscard]] bool is_ready() const noexcept { return m_queue.reading_is_ready(); }
+    [[nodiscard]] bool read(T& dst) noexcept { return m_queue.read(dst); }
+    [[nodiscard]] bool read(T* const dst, const std::uint32_t count = 1u) noexcept { return m_queue.read(dst, count); }
+    [[nodiscard]] bool read(const TPodView<T>& dst) noexcept { return m_queue.read(dst); }
+    [[nodiscard]] std::uint32_t current_readable_count() const noexcept { return m_queue.current_readable_count(); }
+    [[nodiscard]] std::uint32_t refresh_readable_count() noexcept { return m_queue.refresh_readable_count(); }
+
+private:
+    TQueue<T>& m_queue;
+};
+
+//==============================================================================
+//  TQueueBundle<T>
+//  Single Producer, Single Consumer (SPSC) transport bundle
+//==============================================================================
+
+template<typename T>
+struct TQueueBundle
+{
+    TQueue<T> transport;
+    TQueueProducerEndpoint<T> producer;
+    TQueueConsumerEndpoint<T> consumer;
+
+    TQueueBundle() noexcept : transport(), producer(transport), consumer(transport) {}
 };
 
 //==============================================================================

@@ -25,8 +25,5 @@
 #include "CCountingSemaphore.hpp"
 #include "messages/messages.hpp"
 #include "transports/transports.hpp"
-#include "transports/bundles/transport_bundles.hpp"
-#include "transports/endpoints/transport_endpoints.hpp"
-#include "transports/interfaces/transport_interfaces.hpp"
 
 #endif  //  #ifndef THREADING_HPP_INCLUDED

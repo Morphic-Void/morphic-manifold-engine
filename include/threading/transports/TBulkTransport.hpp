@@ -11,6 +11,8 @@
 //  - No exceptions.
 //
 //  Defines threading::transports::TBulk<T>.
+//  Also defines the concrete producer/consumer endpoint wrappers and the
+//  simple one-transport bundle composition for TBulk.
 //
 //  Triple-buffered SPSC latest-state transport for bulk payloads.
 //
@@ -114,6 +116,59 @@ private:
 
     //  Publication state
     std::atomic<std::uint32_t> m_staged_word{ k_null_staged_word };
+};
+
+//==============================================================================
+//  TBulkProducerEndpoint<T>
+//  Single Producer, Single Consumer (SPSC) producer endpoint
+//==============================================================================
+
+template<typename T>
+class TBulkProducerEndpoint
+{
+public:
+    explicit TBulkProducerEndpoint(TBulk<T>& bulk) noexcept : m_bulk{ bulk } {}
+    ~TBulkProducerEndpoint() noexcept = default;
+
+    [[nodiscard]] T* producer_data() noexcept { return m_bulk.producer_data(); }
+    bool publish() noexcept { return m_bulk.publish(); }
+
+private:
+    TBulk<T>& m_bulk;
+};
+
+//==============================================================================
+//  TBulkConsumerEndpoint<T>
+//  Single Producer, Single Consumer (SPSC) consumer endpoint
+//==============================================================================
+
+template<typename T>
+class TBulkConsumerEndpoint
+{
+public:
+    explicit TBulkConsumerEndpoint(TBulk<T>& bulk) noexcept : m_bulk{ bulk } {}
+    ~TBulkConsumerEndpoint() noexcept = default;
+
+    [[nodiscard]] T* consumer_data() noexcept { return m_bulk.consumer_data(); }
+    bool discard_and_acquire() noexcept { return m_bulk.discard_and_acquire(); }
+
+private:
+    TBulk<T>& m_bulk;
+};
+
+//==============================================================================
+//  TBulkBundle<T>
+//  Single Producer, Single Consumer (SPSC) transport bundle
+//==============================================================================
+
+template<typename T>
+struct TBulkBundle
+{
+    TBulk<T> transport;
+    TBulkProducerEndpoint<T> producer;
+    TBulkConsumerEndpoint<T> consumer;
+
+    TBulkBundle() noexcept : transport(), producer(transport), consumer(transport) {}
 };
 
 //==============================================================================

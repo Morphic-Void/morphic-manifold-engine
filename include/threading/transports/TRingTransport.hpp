@@ -13,6 +13,8 @@
 //  Fixed-capacity SPSC ring transport for trivially copyable T.
 //
 //  Defines threading::transports::TRing<T>.
+//  Also defines the concrete producer/consumer endpoint wrappers and the
+//  simple one-transport bundle composition for TRing.
 // 
 //  Does not grow, discard, overwrite unread data, or provide
 //  blocking semantics.
@@ -112,6 +114,67 @@ private:
     std::uint32_t m_read_index = 0u;
     std::uint32_t m_write_index = 0u;
     std::atomic<std::uint32_t> m_occupied_count{ 0u };
+};
+
+//==============================================================================
+//  TRingProducerEndpoint<T>
+//  Single Producer, Single Consumer (SPSC) producer endpoint
+//==============================================================================
+
+template<typename T>
+class TRingProducerEndpoint
+{
+public:
+    explicit TRingProducerEndpoint(TRing<T>& ring) noexcept : m_ring{ ring } {}
+    ~TRingProducerEndpoint() noexcept = default;
+
+    [[nodiscard]] bool is_valid() const noexcept { return m_ring.posting_is_valid(); }
+    [[nodiscard]] bool is_ready() const noexcept { return m_ring.is_ready(); }
+    [[nodiscard]] bool post(const T& src) noexcept { return m_ring.post(src); }
+    [[nodiscard]] bool post(const T* const src, const std::uint32_t count = 1u) noexcept { return m_ring.post(src, count); }
+    [[nodiscard]] bool post(const TPodConstView<T>& src) noexcept { return m_ring.post(src); }
+    [[nodiscard]] std::uint32_t writable_count() const noexcept { return m_ring.writable_count(); }
+
+private:
+    TRing<T>& m_ring;
+};
+
+//==============================================================================
+//  TRingConsumerEndpoint<T>
+//  Single Producer, Single Consumer (SPSC) consumer endpoint
+//==============================================================================
+
+template<typename T>
+class TRingConsumerEndpoint
+{
+public:
+    explicit TRingConsumerEndpoint(TRing<T>& ring) noexcept : m_ring{ ring } {}
+    ~TRingConsumerEndpoint() noexcept = default;
+
+    [[nodiscard]] bool is_valid() const noexcept { return m_ring.reading_is_valid(); }
+    [[nodiscard]] bool is_ready() const noexcept { return m_ring.is_ready(); }
+    [[nodiscard]] bool read(T& dst) noexcept { return m_ring.read(dst); }
+    [[nodiscard]] bool read(T* const dst, const std::uint32_t count = 1u) noexcept { return m_ring.read(dst, count); }
+    [[nodiscard]] bool read(const TPodView<T>& dst) noexcept { return m_ring.read(dst); }
+    [[nodiscard]] std::uint32_t readable_count() const noexcept { return m_ring.readable_count(); }
+
+private:
+    TRing<T>& m_ring;
+};
+
+//==============================================================================
+//  TRingBundle<T>
+//  Single Producer, Single Consumer (SPSC) transport bundle
+//==============================================================================
+
+template<typename T>
+struct TRingBundle
+{
+    TRing<T> transport;
+    TRingProducerEndpoint<T> producer;
+    TRingConsumerEndpoint<T> consumer;
+
+    TRingBundle() noexcept : transport(), producer(transport), consumer(transport) {}
 };
 
 //==============================================================================
