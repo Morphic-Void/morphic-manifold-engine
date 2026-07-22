@@ -281,6 +281,7 @@
     <ClInclude Include="include\threading\transports\TQueueTransport.hpp" />
     <ClInclude Include="include\threading\transports\transports.hpp" />
     <ClInclude Include="include\threading\transports\TRingTransport.hpp" />
+    <ClInclude Include="include\types\atomic_types.hpp" />
     <ClInclude Include="include\types\fp16data_t.hpp" />
     <ClInclude Include="include\types\typeless.hpp" />
     <ClInclude Include="include\types\typeless_pod.hpp" />

@@ -405,6 +405,9 @@
     <ClInclude Include="include\host\host_context.hpp">
       <Filter>include\host</Filter>
     </ClInclude>
+    <ClInclude Include="include\types\atomic_types.hpp">
+      <Filter>include\types</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main\ManifoldEngine.cpp">

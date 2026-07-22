@@ -1,3 +1,4 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
@@ -45,15 +46,7 @@
 #include <utility>
 
 #include "bit_utils/bit_ops.hpp"
-
-template<typename T>
-struct alignas(128) TCacheLineAtomic
-{
-    static_assert(sizeof(std::atomic<T>) <= 128u, "Atomic object is larger than 128 bytes.");
-
-    std::atomic<T> value;
-    std::uint8_t padding[128u - sizeof(std::atomic<T>)];
-};
+#include "types/atomic_types.hpp"
 
 namespace threading::transports
 {
