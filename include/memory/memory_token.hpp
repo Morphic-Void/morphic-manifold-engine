@@ -62,11 +62,9 @@ public:
     // Configuration preserves an existing context and otherwise selects the ambient context.
     [[nodiscard]] bool configure_relocatable(std::size_t stride, std::size_t storage_alignment = 0u) noexcept;
     [[nodiscard]] bool configure_stable(std::size_t stride, std::size_t storage_alignment = 0u, std::size_t buffer_capacity_hint = 0u) noexcept;
-    [[nodiscard]] bool set_context(CMemoryContext* context = nullptr) noexcept { return reattribute(context); }
 
-    [[nodiscard]] bool can_reattribute_to(CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(CMemoryContext* context = nullptr) noexcept;
-    void unsafe_replace_context_without_accounting(CMemoryContext* expected_source, CMemoryContext* target) noexcept;
+    [[nodiscard]] bool clone(const CMemoryToken& source) noexcept;
+    [[nodiscard]] bool clone(const CMemoryToken& source, CMemoryContext* context) noexcept;
 
     [[nodiscard]] bool is_configured() const noexcept;
     [[nodiscard]] bool is_empty() const noexcept { return m_count == 0u; }
@@ -76,9 +74,6 @@ public:
     [[nodiscard]] explicit operator bool() const noexcept { return is_configured(); }
 
     [[nodiscard]] CMemoryContext* context() const noexcept { return m_context; }
-    [[nodiscard]] std::uint32_t memory_token_count() const noexcept { return 1u; }
-    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
 
     [[nodiscard]] std::size_t count() const noexcept { return m_count; }
     [[nodiscard]] std::size_t stride() const noexcept { return m_stride; }
@@ -96,9 +91,9 @@ public:
     [[nodiscard]] CMemoryView view() noexcept;
     [[nodiscard]] CMemoryConstView view() const noexcept;
     [[nodiscard]] CMemoryConstView const_view() const noexcept { return view(); }
+    [[nodiscard]] void* map_index(std::size_t index, bool zero_new = true) noexcept;
     [[nodiscard]] void* index_ptr(std::size_t index) noexcept;
     [[nodiscard]] const void* index_ptr(std::size_t index) const noexcept;
-    [[nodiscard]] void* map_index(std::size_t index, bool zero_new = true) noexcept;
 
     // allocate() replaces all storage in either mode. reallocate() preserves a
     // relocatable prefix; grow_to() preserves all stable addresses and content.
@@ -106,8 +101,15 @@ public:
     [[nodiscard]] bool reallocate(std::size_t count, std::size_t copy_count, bool zero_new = true) noexcept;
     [[nodiscard]] bool grow_to(std::size_t count, bool zero_new = true) noexcept;
     void deallocate() noexcept;
-    [[nodiscard]] bool clone(const CMemoryToken& source) noexcept;
-    [[nodiscard]] bool clone(const CMemoryToken& source, CMemoryContext* context) noexcept;
+
+    // Direct storage attribution.
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept { return 1u; }
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool set_context(CMemoryContext* context = nullptr) noexcept { return reattribute(context); }
+    void unsafe_replace_context_without_accounting(CMemoryContext* expected_source, CMemoryContext* target) noexcept;
 
 private:
     using storage_alignment_field = TBitField16<0x001fu>;       // bits  0..4
@@ -206,6 +208,28 @@ inline CMemoryToken& CMemoryToken::operator=(CMemoryToken&& other) noexcept
     return *this;
 }
 
+inline void CMemoryToken::set_storage_alignment_log2(const std::size_t value) noexcept
+{
+    m_control = storage_alignment_field::replace(m_control, value);
+}
+
+inline void CMemoryToken::set_buffer_capacity_log2(const std::size_t value) noexcept
+{
+    m_control = buffer_capacity_field::replace(m_control, value);
+}
+
+inline void CMemoryToken::set_stable(const bool stable) noexcept
+{
+    if (stable)
+    {
+        m_control |= k_stable_mask;
+    }
+    else
+    {
+        m_control &= static_cast<std::uint16_t>(~k_stable_mask);
+    }
+}
+
 inline bool CMemoryToken::make_control(
     const EMode mode,
     const std::size_t stride,
@@ -295,32 +319,81 @@ inline bool CMemoryToken::configure_stable(
     return configure(EMode::stable, stride, storage_alignment, buffer_capacity_hint, m_context);
 }
 
+inline bool CMemoryToken::clone_to(const CMemoryToken& source, CMemoryContext* const context) noexcept
+{
+    CMemoryToken new_token;
+    if (source.is_configured())
+    {
+        if (context == nullptr)
+        {
+            return false;
+        }
+
+        new_token.m_context = context;
+        new_token.m_stride = source.m_stride;
+        new_token.m_control = source.m_control;
+        if (source.m_count != 0u)
+        {
+            if (!new_token.allocate(source.m_count, false))
+            {
+                return false;
+            }
+
+            if (source.is_relocatable())
+            {
+                std::memcpy(new_token.m_memory, source.m_memory, source.bytes());
+            }
+            else if (source.is_stable())
+            {
+                const std::size_t capacity = source.per_buffer_capacity();
+                std::size_t index = 0u;
+                while (index < source.m_count)
+                {
+                    const std::size_t copy_count = std::min((source.m_count - index), capacity);
+                    std::memcpy(new_token.index_ptr(index), source.index_ptr(index), (copy_count * source.stride()));
+                    index += copy_count;
+                }
+            }
+        }
+    }
+
+    deallocate();
+    m_memory = new_token.m_memory;
+    m_context = new_token.m_context;
+    m_count = new_token.m_count;
+    m_stride = new_token.m_stride;
+    m_control = new_token.m_control;
+    new_token.m_memory = nullptr;
+    new_token.m_context = nullptr;
+    new_token.m_count = 0u;
+    new_token.m_stride = 0u;
+    new_token.m_control = 0u;
+    return true;
+}
+
+inline bool CMemoryToken::clone(const CMemoryToken& source) noexcept
+{
+    if (this == &source)
+    {
+        return true;
+    }
+    return clone_to(source, source.m_context);
+}
+
+inline bool CMemoryToken::clone(const CMemoryToken& source, CMemoryContext* context) noexcept
+{
+    context = (context != nullptr) ? context : get_ambient_memory_context();
+    if ((this == &source) && (context == source.m_context))
+    {
+        return true;
+    }
+    return clone_to(source, context);
+}
+
 inline bool CMemoryToken::is_configured() const noexcept
 {
     return (m_context != nullptr) && (m_stride != 0u) &&
         ((m_control & static_cast<std::uint16_t>(~k_known_mask)) == 0u);
-}
-
-inline void CMemoryToken::set_storage_alignment_log2(const std::size_t value) noexcept
-{
-    m_control = storage_alignment_field::replace(m_control, value);
-}
-
-inline void CMemoryToken::set_buffer_capacity_log2(const std::size_t value) noexcept
-{
-    m_control = buffer_capacity_field::replace(m_control, value);
-}
-
-inline void CMemoryToken::set_stable(const bool stable) noexcept
-{
-    if (stable)
-    {
-        m_control |= k_stable_mask;
-    }
-    else
-    {
-        m_control &= static_cast<std::uint16_t>(~k_stable_mask);
-    }
 }
 
 inline bool CMemoryToken::is_relocatable() const noexcept
@@ -358,6 +431,25 @@ inline std::size_t CMemoryToken::per_buffer_capacity() const noexcept
     return is_stable() ? (std::size_t{ 1u } << get_buffer_capacity_log2()) : std::size_t{ 0u };
 }
 
+inline std::size_t CMemoryToken::buffer_count_for(const std::size_t element_count) const noexcept
+{
+    return (element_count == 0u) ? 0u : (1u + ((element_count - 1u) >> get_buffer_capacity_log2()));
+}
+
+inline std::size_t CMemoryToken::directory_capacity(const std::size_t buffer_count) noexcept
+{
+    if (buffer_count <= 1u)
+    {
+        return 0u;
+    }
+    return std::max(k_min_directory_capacity, bit_ops::round_up_to_pow2(buffer_count));
+}
+
+inline std::size_t CMemoryToken::directory_bytes_for(const std::size_t buffer_count) const noexcept
+{
+    return directory_capacity(buffer_count) * sizeof(void*);
+}
+
 inline bool CMemoryToken::can_grow_to(const std::size_t new_count) const noexcept
 {
     if (!is_stable() || (new_count > max_count()))
@@ -389,66 +481,6 @@ inline CMemoryConstView CMemoryToken::view() const noexcept
     return CMemoryConstView{ data(), count(), stride(), storage_alignment() };
 }
 
-inline std::size_t CMemoryToken::buffer_count_for(const std::size_t element_count) const noexcept
-{
-    return (element_count == 0u) ? 0u : (1u + ((element_count - 1u) >> get_buffer_capacity_log2()));
-}
-
-inline std::size_t CMemoryToken::directory_capacity(const std::size_t buffer_count) noexcept
-{
-    if (buffer_count <= 1u)
-    {
-        return 0u;
-    }
-    return std::max(k_min_directory_capacity, bit_ops::round_up_to_pow2(buffer_count));
-}
-
-inline std::size_t CMemoryToken::directory_bytes_for(const std::size_t buffer_count) const noexcept
-{
-    return directory_capacity(buffer_count) * sizeof(void*);
-}
-
-inline std::uint32_t CMemoryToken::memory_allocation_count() const noexcept
-{
-    if (!owns_storage())
-    {
-        return 0u;
-    }
-    if (is_relocatable())
-    {
-        return 1u;
-    }
-    const std::size_t buffer_count = buffer_count_for(m_count);
-    const std::size_t allocation_count = buffer_count + ((buffer_count > 1u) ? 1u : 0u);
-    MV_HARD_ASSERT(allocation_count <= std::numeric_limits<std::uint32_t>::max());
-    return static_cast<std::uint32_t>(allocation_count);
-}
-
-inline std::uint64_t CMemoryToken::memory_allocation_size() const noexcept
-{
-    if (!owns_storage())
-    {
-        return 0u;
-    }
-    if (is_relocatable())
-    {
-        const std::size_t conditioned_alignment = m_context->condition_alignment(storage_alignment());
-        return m_context->condition_bytes(conditioned_alignment, bytes());
-    }
-    const std::size_t buffer_count = buffer_count_for(m_count);
-    const std::size_t conditioned_buffer_alignment = m_context->condition_alignment(storage_alignment());
-    const std::size_t conditioned_buffer_bytes = m_context->condition_bytes(
-        conditioned_buffer_alignment, (per_buffer_capacity() * stride()));
-    std::uint64_t total_bytes = static_cast<std::uint64_t>(buffer_count) * conditioned_buffer_bytes;
-    if (buffer_count > 1u)
-    {
-        const std::size_t conditioned_directory_alignment = m_context->condition_alignment(alignof(void*));
-        total_bytes += m_context->condition_bytes(
-            conditioned_directory_alignment, directory_bytes_for(buffer_count));
-    }
-    return total_bytes;
-}
-
 inline const void* CMemoryToken::index_ptr(const std::size_t index) const noexcept
 {
     if ((m_memory == nullptr) || !contains_index(index))
@@ -472,6 +504,20 @@ inline const void* CMemoryToken::index_ptr(const std::size_t index) const noexce
 inline void* CMemoryToken::index_ptr(const std::size_t index) noexcept
 {
     return const_cast<void*>(static_cast<const CMemoryToken&>(*this).index_ptr(index));
+}
+
+inline void* CMemoryToken::map_index(const std::size_t index, const bool zero_new) noexcept
+{
+    if (!is_stable() || (index >= max_count()))
+    {
+        return nullptr;
+    }
+    const std::size_t new_count = index + 1u;
+    if (!can_grow_to(new_count) || !grow(new_count, zero_new))
+    {
+        return nullptr;
+    }
+    return index_ptr(index);
 }
 
 inline bool CMemoryToken::allocate_stable_buffers(
@@ -534,20 +580,6 @@ inline bool CMemoryToken::create_stable_storage(
     }
     new_memory = new_directory;
     return true;
-}
-
-inline void* CMemoryToken::map_index(const std::size_t index, const bool zero_new) noexcept
-{
-    if (!is_stable() || (index >= max_count()))
-    {
-        return nullptr;
-    }
-    const std::size_t new_count = index + 1u;
-    if (!can_grow_to(new_count) || !grow(new_count, zero_new))
-    {
-        return nullptr;
-    }
-    return index_ptr(index);
 }
 
 inline bool CMemoryToken::allocate(const std::size_t new_count, const bool zero) noexcept
@@ -629,11 +661,6 @@ inline bool CMemoryToken::reallocate(
     m_memory = new_memory;
     m_count = static_cast<std::uint32_t>(new_count);
     return true;
-}
-
-inline bool CMemoryToken::grow_to(const std::size_t new_count, const bool zero_new) noexcept
-{
-    return can_grow_to(new_count) && grow(new_count, zero_new);
 }
 
 inline bool CMemoryToken::grow(const std::size_t new_count, const bool zero_new) noexcept
@@ -718,6 +745,11 @@ inline bool CMemoryToken::grow(const std::size_t new_count, const bool zero_new)
     return true;
 }
 
+inline bool CMemoryToken::grow_to(const std::size_t new_count, const bool zero_new) noexcept
+{
+    return can_grow_to(new_count) && grow(new_count, zero_new);
+}
+
 inline void CMemoryToken::release_storage(void* const memory, const std::uint32_t element_count) noexcept
 {
     if (memory == nullptr)
@@ -755,75 +787,45 @@ inline void CMemoryToken::deallocate() noexcept
     m_count = 0u;
 }
 
-inline bool CMemoryToken::clone(const CMemoryToken& source) noexcept
+inline std::uint32_t CMemoryToken::memory_allocation_count() const noexcept
 {
-    if (this == &source)
+    if (!owns_storage())
     {
-        return true;
+        return 0u;
     }
-    return clone_to(source, source.m_context);
+    if (is_relocatable())
+    {
+        return 1u;
+    }
+    const std::size_t buffer_count = buffer_count_for(m_count);
+    const std::size_t allocation_count = buffer_count + ((buffer_count > 1u) ? 1u : 0u);
+    MV_HARD_ASSERT(allocation_count <= std::numeric_limits<std::uint32_t>::max());
+    return static_cast<std::uint32_t>(allocation_count);
 }
 
-inline bool CMemoryToken::clone(const CMemoryToken& source, CMemoryContext* context) noexcept
+inline std::uint64_t CMemoryToken::memory_allocation_size() const noexcept
 {
-    context = (context != nullptr) ? context : get_ambient_memory_context();
-    if ((this == &source) && (context == source.m_context))
+    if (!owns_storage())
     {
-        return true;
+        return 0u;
     }
-    return clone_to(source, context);
-}
-
-inline bool CMemoryToken::clone_to(const CMemoryToken& source, CMemoryContext* const context) noexcept
-{
-    CMemoryToken new_token;
-    if (source.is_configured())
+    if (is_relocatable())
     {
-        if (context == nullptr)
-        {
-            return false;
-        }
-
-        new_token.m_context = context;
-        new_token.m_stride = source.m_stride;
-        new_token.m_control = source.m_control;
-        if (source.m_count != 0u)
-        {
-            if (!new_token.allocate(source.m_count, false))
-            {
-                return false;
-            }
-
-            if (source.is_relocatable())
-            {
-                std::memcpy(new_token.m_memory, source.m_memory, source.bytes());
-            }
-            else if (source.is_stable())
-            {
-                const std::size_t capacity = source.per_buffer_capacity();
-                std::size_t index = 0u;
-                while (index < source.m_count)
-                {
-                    const std::size_t copy_count = std::min((source.m_count - index), capacity);
-                    std::memcpy(new_token.index_ptr(index), source.index_ptr(index), (copy_count * source.stride()));
-                    index += copy_count;
-                }
-            }
-        }
+        const std::size_t conditioned_alignment = m_context->condition_alignment(storage_alignment());
+        return m_context->condition_bytes(conditioned_alignment, bytes());
     }
-
-    deallocate();
-    m_memory = new_token.m_memory;
-    m_context = new_token.m_context;
-    m_count = new_token.m_count;
-    m_stride = new_token.m_stride;
-    m_control = new_token.m_control;
-    new_token.m_memory = nullptr;
-    new_token.m_context = nullptr;
-    new_token.m_count = 0u;
-    new_token.m_stride = 0u;
-    new_token.m_control = 0u;
-    return true;
+    const std::size_t buffer_count = buffer_count_for(m_count);
+    const std::size_t conditioned_buffer_alignment = m_context->condition_alignment(storage_alignment());
+    const std::size_t conditioned_buffer_bytes = m_context->condition_bytes(
+        conditioned_buffer_alignment, (per_buffer_capacity() * stride()));
+    std::uint64_t total_bytes = static_cast<std::uint64_t>(buffer_count) * conditioned_buffer_bytes;
+    if (buffer_count > 1u)
+    {
+        const std::size_t conditioned_directory_alignment = m_context->condition_alignment(alignof(void*));
+        total_bytes += m_context->condition_bytes(
+            conditioned_directory_alignment, directory_bytes_for(buffer_count));
+    }
+    return total_bytes;
 }
 
 inline bool CMemoryToken::can_reattribute_to(CMemoryContext* target) const noexcept

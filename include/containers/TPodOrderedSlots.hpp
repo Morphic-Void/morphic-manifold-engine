@@ -102,13 +102,6 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
 
-    //  Direct storage attribution
-    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
-    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
-
     //  Accessors
     T* get_slot(const TKey& key) noexcept;
     T* get_slot(const std::int32_t slot_index) noexcept;
@@ -142,6 +135,13 @@ public:
     //  Constants
     static constexpr std::size_t k_element_size = sizeof(T);
 
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+
 private:
     static [[nodiscard]] bool failed_integrity_check() noexcept;
 };
@@ -149,6 +149,44 @@ private:
 //==============================================================================
 //  TPodOrderedSlots<T, TKey> out of class function bodies
 //==============================================================================
+
+template<typename T, typename TKey>
+inline void TPodOrderedSlotsStorage<T, TKey>::on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
+{
+    T& source_slot = (source_index < 0) ? m_swap_slot : m_slots[static_cast<std::size_t>(source_index)];
+    T& target_slot = (target_index < 0) ? m_swap_slot : m_slots[static_cast<std::size_t>(target_index)];
+    target_slot = source_slot;
+
+    TKey& source_key = (source_index < 0) ? m_swap_key : m_keys[static_cast<std::size_t>(source_index)];
+    TKey& target_key = (target_index < 0) ? m_swap_key : m_keys[static_cast<std::size_t>(target_index)];
+    target_key = source_key;
+}
+
+template<typename T, typename TKey>
+inline std::uint32_t TPodOrderedSlotsStorage<T, TKey>::on_reserve_empty(
+    const std::uint32_t minimum_capacity,
+    const std::uint32_t recommended_capacity) noexcept
+{
+    (void)minimum_capacity;
+    const std::size_t new_capacity = static_cast<std::size_t>(recommended_capacity);
+    if (!m_slots.reallocate(new_capacity) || !m_keys.reallocate(new_capacity))
+    {
+        return 0u;
+    }
+    (void)m_slots.set_size(new_capacity);
+    (void)m_keys.set_size(new_capacity);
+    return recommended_capacity;
+}
+
+template<typename T, typename TKey>
+inline std::int32_t TPodOrderedSlotsStorage<T, TKey>::on_compare_keys(
+    const std::int32_t source_index,
+    const std::int32_t target_index) const noexcept
+{
+    const TKey& source_key = (source_index < 0) ? m_staged_key : m_keys[static_cast<std::size_t>(source_index)];
+    const TKey& target_key = (target_index < 0) ? m_staged_key : m_keys[static_cast<std::size_t>(target_index)];
+    return static_cast<std::int32_t>(source_key.relationship(target_key));
+}
 
 template<typename T, typename TKey>
 inline std::uint32_t TPodOrderedSlotsStorage<T, TKey>::memory_token_count() const noexcept
@@ -201,59 +239,6 @@ inline void TPodOrderedSlotsStorage<T, TKey>::unsafe_replace_memory_context_with
 {
     m_slots.unsafe_replace_memory_context_without_accounting(expected_source, target);
     m_keys.unsafe_replace_memory_context_without_accounting(expected_source, target);
-}
-
-template<typename T, typename TKey>
-inline std::uint32_t TPodOrderedSlots<T, TKey>::memory_token_count() const noexcept
-{
-    return slot_data_class::memory_token_count() + slot_meta_class::memory_token_count();
-}
-
-template<typename T, typename TKey>
-inline std::uint32_t TPodOrderedSlots<T, TKey>::memory_allocation_count() const noexcept
-{
-    return slot_data_class::memory_allocation_count() + slot_meta_class::memory_allocation_count();
-}
-
-template<typename T, typename TKey>
-inline std::uint64_t TPodOrderedSlots<T, TKey>::memory_allocation_size() const noexcept
-{
-    return slot_data_class::memory_allocation_size() + slot_meta_class::memory_allocation_size();
-}
-
-template<typename T, typename TKey>
-inline bool TPodOrderedSlots<T, TKey>::can_reattribute_to(memory::CMemoryContext* target) const noexcept
-{
-    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
-    memory::CMemoryContext* source = nullptr;
-    return (target != nullptr) &&
-        slot_data_class::memory_source_context(source) &&
-        slot_meta_class::memory_source_context(source) &&
-        ((source == nullptr) || (source == target) || source->is_compatible_with(*target));
-}
-
-template<typename T, typename TKey>
-inline bool TPodOrderedSlots<T, TKey>::reattribute(memory::CMemoryContext* target) noexcept
-{
-    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
-    memory::CMemoryContext* source = nullptr;
-    if ((target == nullptr) ||
-        !slot_data_class::memory_source_context(source) ||
-        !slot_meta_class::memory_source_context(source) ||
-        ((source != nullptr) && (source != target) && !source->is_compatible_with(*target)))
-    {
-        return false;
-    }
-
-    if ((source != nullptr) && (source != target) &&
-        !memory::reattribute(*source, *target, memory_allocation_count(), memory_allocation_size()))
-    {
-        return false;
-    }
-
-    slot_data_class::unsafe_replace_memory_context_without_accounting(source, target);
-    slot_meta_class::unsafe_replace_memory_context_without_accounting(source, target);
-    return true;
 }
 
 template<typename T, typename TKey>
@@ -454,41 +439,56 @@ inline bool TPodOrderedSlots<T, TKey>::check_integrity() const noexcept
 }
 
 template<typename T, typename TKey>
-inline void TPodOrderedSlotsStorage<T, TKey>::on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
+inline std::uint32_t TPodOrderedSlots<T, TKey>::memory_token_count() const noexcept
 {
-    T& source_slot = (source_index < 0) ? m_swap_slot : m_slots[static_cast<std::size_t>(source_index)];
-    T& target_slot = (target_index < 0) ? m_swap_slot : m_slots[static_cast<std::size_t>(target_index)];
-    target_slot = source_slot;
-
-    TKey& source_key = (source_index < 0) ? m_swap_key : m_keys[static_cast<std::size_t>(source_index)];
-    TKey& target_key = (target_index < 0) ? m_swap_key : m_keys[static_cast<std::size_t>(target_index)];
-    target_key = source_key;
+    return slot_data_class::memory_token_count() + slot_meta_class::memory_token_count();
 }
 
 template<typename T, typename TKey>
-inline std::uint32_t TPodOrderedSlotsStorage<T, TKey>::on_reserve_empty(
-    const std::uint32_t minimum_capacity,
-    const std::uint32_t recommended_capacity) noexcept
+inline std::uint32_t TPodOrderedSlots<T, TKey>::memory_allocation_count() const noexcept
 {
-    (void)minimum_capacity;
-    const std::size_t new_capacity = static_cast<std::size_t>(recommended_capacity);
-    if (!m_slots.reallocate(new_capacity) || !m_keys.reallocate(new_capacity))
+    return slot_data_class::memory_allocation_count() + slot_meta_class::memory_allocation_count();
+}
+
+template<typename T, typename TKey>
+inline std::uint64_t TPodOrderedSlots<T, TKey>::memory_allocation_size() const noexcept
+{
+    return slot_data_class::memory_allocation_size() + slot_meta_class::memory_allocation_size();
+}
+
+template<typename T, typename TKey>
+inline bool TPodOrderedSlots<T, TKey>::can_reattribute_to(memory::CMemoryContext* target) const noexcept
+{
+    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
+    memory::CMemoryContext* source = nullptr;
+    return (target != nullptr) &&
+        slot_data_class::memory_source_context(source) &&
+        slot_meta_class::memory_source_context(source) &&
+        ((source == nullptr) || (source == target) || source->is_compatible_with(*target));
+}
+
+template<typename T, typename TKey>
+inline bool TPodOrderedSlots<T, TKey>::reattribute(memory::CMemoryContext* target) noexcept
+{
+    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
+    memory::CMemoryContext* source = nullptr;
+    if ((target == nullptr) ||
+        !slot_data_class::memory_source_context(source) ||
+        !slot_meta_class::memory_source_context(source) ||
+        ((source != nullptr) && (source != target) && !source->is_compatible_with(*target)))
     {
-        return 0u;
+        return false;
     }
-    (void)m_slots.set_size(new_capacity);
-    (void)m_keys.set_size(new_capacity);
-    return recommended_capacity;
-}
 
-template<typename T, typename TKey>
-inline std::int32_t TPodOrderedSlotsStorage<T, TKey>::on_compare_keys(
-    const std::int32_t source_index,
-    const std::int32_t target_index) const noexcept
-{
-    const TKey& source_key = (source_index < 0) ? m_staged_key : m_keys[static_cast<std::size_t>(source_index)];
-    const TKey& target_key = (target_index < 0) ? m_staged_key : m_keys[static_cast<std::size_t>(target_index)];
-    return static_cast<std::int32_t>(source_key.relationship(target_key));
+    if ((source != nullptr) && (source != target) &&
+        !memory::reattribute(*source, *target, memory_allocation_count(), memory_allocation_size()))
+    {
+        return false;
+    }
+
+    slot_data_class::unsafe_replace_memory_context_without_accounting(source, target);
+    slot_meta_class::unsafe_replace_memory_context_without_accounting(source, target);
+    return true;
 }
 
 template<typename T, typename TKey>

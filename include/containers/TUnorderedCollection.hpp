@@ -111,13 +111,6 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
 
-    //  Direct storage attribution. Allocations owned by contained T objects are excluded.
-    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
-    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
-
     //  Accessors
     T* get_object(const std::int32_t slot_index) noexcept;
     const T* get_object(const std::int32_t slot_index) const noexcept;
@@ -149,12 +142,19 @@ public:
     static constexpr std::size_t k_element_size = sizeof(T);
     static constexpr std::size_t k_element_align = memory::t_default_align<T>();
 
+    //  Direct storage attribution. Allocations owned by contained T objects are excluded.
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+
 private:
     [[nodiscard]] bool storage_is_valid() const noexcept;
     [[nodiscard]] bool storage_is_ready() const noexcept;
+    [[nodiscard]] T* storage_map_index(std::size_t storage_index) noexcept;
     [[nodiscard]] T* storage_index_ptr(std::size_t storage_index) noexcept;
     [[nodiscard]] const T* storage_index_ptr(std::size_t storage_index) const noexcept;
-    [[nodiscard]] T* storage_map_index(std::size_t storage_index) noexcept;
 
     void deconstruct_payload() noexcept;
     static [[nodiscard]] bool failed_integrity_check() noexcept;
@@ -166,6 +166,30 @@ private:
 //==============================================================================
 //  TUnorderedCollection<T> out of class function bodies
 //==============================================================================
+
+template<typename T>
+inline void TUnorderedCollectionStorage<T>::on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
+{
+    SlotData swap = m_slots[target_index];
+    m_slots[target_index] = m_slots[source_index];
+    m_slots[source_index] = swap;
+}
+
+template<typename T>
+inline std::uint32_t TUnorderedCollectionStorage<T>::on_reserve_empty(const std::uint32_t minimum_capacity, const std::uint32_t recommended_capacity) noexcept
+{
+    (void)minimum_capacity;
+    const std::size_t new_capacity = static_cast<std::size_t>(recommended_capacity);
+    if (!m_slots.reallocate(new_capacity))
+    {   //  decline the reserve attempt and force the base class slot acquisition to fail
+        return 0u;
+    }
+    for (std::size_t i = m_slots.size(); i < new_capacity; ++i)
+    {
+        (void)m_slots.push_back({ SlotState::Unmapped, i });
+    }
+    return recommended_capacity;
+}
 
 template<typename T>
 inline std::uint32_t TUnorderedCollectionStorage<T>::memory_token_count() const noexcept
@@ -217,59 +241,6 @@ inline void TUnorderedCollectionStorage<T>::unsafe_replace_memory_context_withou
 {
     m_storage.unsafe_replace_context_without_accounting(expected_source, target);
     m_slots.unsafe_replace_memory_context_without_accounting(expected_source, target);
-}
-
-template<typename T>
-inline std::uint32_t TUnorderedCollection<T>::memory_token_count() const noexcept
-{
-    return slot_data_class::memory_token_count() + slot_meta_class::memory_token_count();
-}
-
-template<typename T>
-inline std::uint32_t TUnorderedCollection<T>::memory_allocation_count() const noexcept
-{
-    return slot_data_class::memory_allocation_count() + slot_meta_class::memory_allocation_count();
-}
-
-template<typename T>
-inline std::uint64_t TUnorderedCollection<T>::memory_allocation_size() const noexcept
-{
-    return slot_data_class::memory_allocation_size() + slot_meta_class::memory_allocation_size();
-}
-
-template<typename T>
-inline bool TUnorderedCollection<T>::can_reattribute_to(memory::CMemoryContext* target) const noexcept
-{
-    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
-    memory::CMemoryContext* source = nullptr;
-    return (target != nullptr) &&
-        slot_data_class::memory_source_context(source) &&
-        slot_meta_class::memory_source_context(source) &&
-        ((source == nullptr) || (source == target) || source->is_compatible_with(*target));
-}
-
-template<typename T>
-inline bool TUnorderedCollection<T>::reattribute(memory::CMemoryContext* target) noexcept
-{
-    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
-    memory::CMemoryContext* source = nullptr;
-    if ((target == nullptr) ||
-        !slot_data_class::memory_source_context(source) ||
-        !slot_meta_class::memory_source_context(source) ||
-        ((source != nullptr) && (source != target) && !source->is_compatible_with(*target)))
-    {
-        return false;
-    }
-
-    if ((source != nullptr) && (source != target) &&
-        !memory::reattribute(*source, *target, memory_allocation_count(), memory_allocation_size()))
-    {
-        return false;
-    }
-
-    slot_data_class::unsafe_replace_memory_context_without_accounting(source, target);
-    slot_meta_class::unsafe_replace_memory_context_without_accounting(source, target);
-    return true;
 }
 
 template<typename T>
@@ -554,27 +525,56 @@ inline bool TUnorderedCollection<T>::check_integrity() const noexcept
 }
 
 template<typename T>
-inline void TUnorderedCollectionStorage<T>::on_move_payload(const std::int32_t source_index, const std::int32_t target_index) noexcept
+inline std::uint32_t TUnorderedCollection<T>::memory_token_count() const noexcept
 {
-    SlotData swap = m_slots[target_index];
-    m_slots[target_index] = m_slots[source_index];
-    m_slots[source_index] = swap;
+    return slot_data_class::memory_token_count() + slot_meta_class::memory_token_count();
 }
 
 template<typename T>
-inline std::uint32_t TUnorderedCollectionStorage<T>::on_reserve_empty(const std::uint32_t minimum_capacity, const std::uint32_t recommended_capacity) noexcept
+inline std::uint32_t TUnorderedCollection<T>::memory_allocation_count() const noexcept
 {
-    (void)minimum_capacity;
-    const std::size_t new_capacity = static_cast<std::size_t>(recommended_capacity);
-    if (!m_slots.reallocate(new_capacity))
-    {   //  decline the reserve attempt and force the base class slot acquisition to fail
-        return 0u;
-    }
-    for (std::size_t i = m_slots.size(); i < new_capacity; ++i)
+    return slot_data_class::memory_allocation_count() + slot_meta_class::memory_allocation_count();
+}
+
+template<typename T>
+inline std::uint64_t TUnorderedCollection<T>::memory_allocation_size() const noexcept
+{
+    return slot_data_class::memory_allocation_size() + slot_meta_class::memory_allocation_size();
+}
+
+template<typename T>
+inline bool TUnorderedCollection<T>::can_reattribute_to(memory::CMemoryContext* target) const noexcept
+{
+    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
+    memory::CMemoryContext* source = nullptr;
+    return (target != nullptr) &&
+        slot_data_class::memory_source_context(source) &&
+        slot_meta_class::memory_source_context(source) &&
+        ((source == nullptr) || (source == target) || source->is_compatible_with(*target));
+}
+
+template<typename T>
+inline bool TUnorderedCollection<T>::reattribute(memory::CMemoryContext* target) noexcept
+{
+    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
+    memory::CMemoryContext* source = nullptr;
+    if ((target == nullptr) ||
+        !slot_data_class::memory_source_context(source) ||
+        !slot_meta_class::memory_source_context(source) ||
+        ((source != nullptr) && (source != target) && !source->is_compatible_with(*target)))
     {
-        (void)m_slots.push_back({ SlotState::Unmapped, i });
+        return false;
     }
-    return recommended_capacity;
+
+    if ((source != nullptr) && (source != target) &&
+        !memory::reattribute(*source, *target, memory_allocation_count(), memory_allocation_size()))
+    {
+        return false;
+    }
+
+    slot_data_class::unsafe_replace_memory_context_without_accounting(source, target);
+    slot_meta_class::unsafe_replace_memory_context_without_accounting(source, target);
+    return true;
 }
 
 template<typename T>

@@ -71,13 +71,6 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
 
-    //  Direct storage attribution
-    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
-    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
-
     //  Accessors
     [[nodiscard]] T* data() noexcept { return is_ready() ? raw_data() : nullptr; }
     [[nodiscard]] const T* data() const noexcept { return is_ready() ? raw_data() : nullptr; }
@@ -110,6 +103,13 @@ public:
     static constexpr std::size_t k_element_size = sizeof(T);
     static constexpr std::size_t k_align = memory::t_default_align<T>();
 
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+
 private:
     [[nodiscard]] T* raw_data() noexcept { return static_cast<T*>(m_token.data()); }
     [[nodiscard]] const T* raw_data() const noexcept { return static_cast<const T*>(m_token.data()); }
@@ -128,36 +128,6 @@ private:
 //==============================================================================
 //  TPodFifo<T> out of class function bodies
 //==============================================================================
-
-template<typename T>
-inline std::uint32_t TPodFifo<T>::memory_token_count() const noexcept
-{
-    return m_token.memory_token_count();
-}
-
-template<typename T>
-inline std::uint32_t TPodFifo<T>::memory_allocation_count() const noexcept
-{
-    return m_token.memory_allocation_count();
-}
-
-template<typename T>
-inline std::uint64_t TPodFifo<T>::memory_allocation_size() const noexcept
-{
-    return m_token.memory_allocation_size();
-}
-
-template<typename T>
-inline bool TPodFifo<T>::can_reattribute_to(memory::CMemoryContext* context) const noexcept
-{
-    return m_token.can_reattribute_to(context);
-}
-
-template<typename T>
-inline bool TPodFifo<T>::reattribute(memory::CMemoryContext* context) noexcept
-{
-    return m_token.reattribute(context);
-}
 
 template<typename T>
 inline TPodFifo<T>::TPodFifo(TPodFifo&& src) noexcept
@@ -372,6 +342,36 @@ inline void TPodFifo<T>::pack() noexcept
         T* const packed = data();
         pack(packed, packed);
     }
+}
+
+template<typename T>
+inline std::uint32_t TPodFifo<T>::memory_token_count() const noexcept
+{
+    return m_token.memory_token_count();
+}
+
+template<typename T>
+inline std::uint32_t TPodFifo<T>::memory_allocation_count() const noexcept
+{
+    return m_token.memory_allocation_count();
+}
+
+template<typename T>
+inline std::uint64_t TPodFifo<T>::memory_allocation_size() const noexcept
+{
+    return m_token.memory_allocation_size();
+}
+
+template<typename T>
+inline bool TPodFifo<T>::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_token.can_reattribute_to(context);
+}
+
+template<typename T>
+inline bool TPodFifo<T>::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_token.reattribute(context);
 }
 
 template<typename T>

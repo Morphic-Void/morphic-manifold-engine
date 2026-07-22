@@ -119,13 +119,6 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
 
-    //  Direct storage attribution
-    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
-    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
-
     //  Views
     [[nodiscard]] CByteView view() const noexcept;
     [[nodiscard]] CByteConstView const_view() const noexcept;
@@ -168,6 +161,13 @@ public:
         m_meta.reset();
         return std::move(m_token);
     }
+
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
 
 private:
     friend class CStringBuffer;
@@ -358,13 +358,6 @@ public:
     [[nodiscard]] bool is_ready() const noexcept;
     [[nodiscard]] bool is_contiguous() const noexcept { return is_ready() && m_meta.is_contiguous(); }
 
-    //  Direct storage attribution
-    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
-    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
-
     //  Views
     [[nodiscard]] CByteRectView view() const noexcept;
     [[nodiscard]] CByteRectConstView const_view() const noexcept;
@@ -412,6 +405,13 @@ public:
         m_meta.reset();
         return std::move(m_token);
     }
+
+    //  Direct storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
 
 private:
     memory::CMemoryToken m_token{ 1u, 1u };
@@ -587,31 +587,6 @@ private:
 //  CByteBuffer out of class function bodies
 //==============================================================================
 
-inline std::uint32_t CByteBuffer::memory_token_count() const noexcept
-{
-    return m_token.memory_token_count();
-}
-
-inline std::uint32_t CByteBuffer::memory_allocation_count() const noexcept
-{
-    return m_token.memory_allocation_count();
-}
-
-inline std::uint64_t CByteBuffer::memory_allocation_size() const noexcept
-{
-    return m_token.memory_allocation_size();
-}
-
-inline bool CByteBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
-{
-    return m_token.can_reattribute_to(context);
-}
-
-inline bool CByteBuffer::reattribute(memory::CMemoryContext* context) noexcept
-{
-    return m_token.reattribute(context);
-}
-
 inline CByteBuffer::CByteBuffer(CByteBuffer&& other) noexcept
 {
     m_token = other.disown(m_meta);
@@ -624,6 +599,22 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
         m_token = other.disown(m_meta);
     }
     return *this;
+}
+
+inline bool CByteBuffer::is_valid() const noexcept
+{
+    return m_meta.is_valid() && m_token.is_relocatable() &&
+        (m_token.stride() == 1u) && (m_token.count() == m_meta.capacity);
+}
+
+inline bool CByteBuffer::is_empty() const noexcept
+{
+    return (m_token.data() == nullptr) || m_meta.is_empty();
+}
+
+inline bool CByteBuffer::is_ready() const noexcept
+{
+    return is_valid() && (m_token.data() != nullptr);
 }
 
 [[nodiscard]] inline CByteView CByteBuffer::view() const noexcept
@@ -809,20 +800,29 @@ inline void CByteBuffer::zero_fill() const noexcept
     }
 }
 
-inline bool CByteBuffer::is_valid() const noexcept
+inline std::uint32_t CByteBuffer::memory_token_count() const noexcept
 {
-    return m_meta.is_valid() && m_token.is_relocatable() &&
-        (m_token.stride() == 1u) && (m_token.count() == m_meta.capacity);
+    return m_token.memory_token_count();
 }
 
-inline bool CByteBuffer::is_empty() const noexcept
+inline std::uint32_t CByteBuffer::memory_allocation_count() const noexcept
 {
-    return (m_token.data() == nullptr) || m_meta.is_empty();
+    return m_token.memory_allocation_count();
 }
 
-inline bool CByteBuffer::is_ready() const noexcept
+inline std::uint64_t CByteBuffer::memory_allocation_size() const noexcept
 {
-    return is_valid() && (m_token.data() != nullptr);
+    return m_token.memory_allocation_size();
+}
+
+inline bool CByteBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_token.can_reattribute_to(context);
+}
+
+inline bool CByteBuffer::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_token.reattribute(context);
 }
 
 //==============================================================================
@@ -943,31 +943,6 @@ inline CByteConstView& CByteConstView::set(const memory::CMemoryConstView& view,
 //  CByteRectBuffer out of class function bodies
 //==============================================================================
 
-inline std::uint32_t CByteRectBuffer::memory_token_count() const noexcept
-{
-    return m_token.memory_token_count();
-}
-
-inline std::uint32_t CByteRectBuffer::memory_allocation_count() const noexcept
-{
-    return m_token.memory_allocation_count();
-}
-
-inline std::uint64_t CByteRectBuffer::memory_allocation_size() const noexcept
-{
-    return m_token.memory_allocation_size();
-}
-
-inline bool CByteRectBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
-{
-    return m_token.can_reattribute_to(context);
-}
-
-inline bool CByteRectBuffer::reattribute(memory::CMemoryContext* context) noexcept
-{
-    return m_token.reattribute(context);
-}
-
 inline CByteRectBuffer::CByteRectBuffer(CByteRectBuffer&& other) noexcept
 {
     m_token = other.disown(m_meta);
@@ -980,6 +955,22 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
         m_token = other.disown(m_meta);
     }
     return *this;
+}
+
+inline bool CByteRectBuffer::is_valid() const noexcept
+{
+    return m_meta.is_valid() && m_token.is_relocatable() &&
+        (m_token.stride() == 1u) && (m_token.count() == (m_meta.row_pitch * m_meta.row_count));
+}
+
+inline bool CByteRectBuffer::is_empty() const noexcept
+{
+    return (m_token.data() == nullptr) || m_meta.is_empty();
+}
+
+inline bool CByteRectBuffer::is_ready() const noexcept
+{
+    return is_valid() && (m_token.data() != nullptr);
 }
 
 [[nodiscard]] inline CByteRectView CByteRectBuffer::view() const noexcept
@@ -1162,20 +1153,29 @@ inline void CByteRectBuffer::zero_fill() const noexcept
     }
 }
 
-inline bool CByteRectBuffer::is_valid() const noexcept
+inline std::uint32_t CByteRectBuffer::memory_token_count() const noexcept
 {
-    return m_meta.is_valid() && m_token.is_relocatable() &&
-        (m_token.stride() == 1u) && (m_token.count() == (m_meta.row_pitch * m_meta.row_count));
+    return m_token.memory_token_count();
 }
 
-inline bool CByteRectBuffer::is_empty() const noexcept
+inline std::uint32_t CByteRectBuffer::memory_allocation_count() const noexcept
 {
-    return (m_token.data() == nullptr) || m_meta.is_empty();
+    return m_token.memory_allocation_count();
 }
 
-inline bool CByteRectBuffer::is_ready() const noexcept
+inline std::uint64_t CByteRectBuffer::memory_allocation_size() const noexcept
 {
-    return is_valid() && (m_token.data() != nullptr);
+    return m_token.memory_allocation_size();
+}
+
+inline bool CByteRectBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_token.can_reattribute_to(context);
+}
+
+inline bool CByteRectBuffer::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_token.reattribute(context);
 }
 
 //==============================================================================

@@ -79,13 +79,6 @@ public:
     [[nodiscard]] bool is_ready() const noexcept { return is_valid() && (object_ptr() != nullptr); }
     [[nodiscard]] explicit operator bool() const noexcept { return is_ready(); }
 
-    //  Direct storage attribution. The contained object's own allocations are excluded.
-    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
-    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
-
     //  Accessors
     [[nodiscard]] T& operator*() noexcept;
     [[nodiscard]] const T& operator*() const noexcept;
@@ -97,6 +90,13 @@ public:
     template<typename... TArgs> bool emplace(TArgs&&... args) noexcept;
     void reset() noexcept;
     void swap(TInstance& other) noexcept;
+
+    //  Direct storage attribution. The contained object's own allocations are excluded.
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
 
 private:
     void destroy_and_deallocate() noexcept;
@@ -130,36 +130,6 @@ inline TInstance<T> make_object_owner(TArgs&&... args) noexcept
 //==============================================================================
 
 template<typename T>
-inline std::uint32_t TInstance<T>::memory_token_count() const noexcept
-{
-    return m_token.memory_token_count();
-}
-
-template<typename T>
-inline std::uint32_t TInstance<T>::memory_allocation_count() const noexcept
-{
-    return m_token.memory_allocation_count();
-}
-
-template<typename T>
-inline std::uint64_t TInstance<T>::memory_allocation_size() const noexcept
-{
-    return m_token.memory_allocation_size();
-}
-
-template<typename T>
-inline bool TInstance<T>::can_reattribute_to(memory::CMemoryContext* context) const noexcept
-{
-    return m_token.can_reattribute_to(context);
-}
-
-template<typename T>
-inline bool TInstance<T>::reattribute(memory::CMemoryContext* context) noexcept
-{
-    return m_token.reattribute(context);
-}
-
-template<typename T>
 inline TInstance<T>& TInstance<T>::operator=(TInstance<T>&& other) noexcept
 {
     if (this != &other)
@@ -168,6 +138,18 @@ inline TInstance<T>& TInstance<T>::operator=(TInstance<T>&& other) noexcept
         m_token = std::move(other.m_token);
     }
     return *this;
+}
+
+template<typename T>
+inline bool TInstance<T>::is_valid() const noexcept
+{
+    if (!m_token.is_relocatable() ||
+        (m_token.stride() != k_element_size) || (m_token.storage_alignment() != k_align) ||
+        (m_token.count() > 1u))
+    {
+        return false;
+    }
+    return (object_ptr() != nullptr) ? (m_token.count() == 1u) : (m_token.count() == 0u);
 }
 
 template<typename T>
@@ -196,18 +178,6 @@ inline const T* TInstance<T>::operator->() const noexcept
 {
     MV_HARD_ASSERT(object_ptr() != nullptr);
     return object_ptr();
-}
-
-template<typename T>
-inline bool TInstance<T>::is_valid() const noexcept
-{
-    if (!m_token.is_relocatable() ||
-        (m_token.stride() != k_element_size) || (m_token.storage_alignment() != k_align) ||
-        (m_token.count() > 1u))
-    {
-        return false;
-    }
-    return (object_ptr() != nullptr) ? (m_token.count() == 1u) : (m_token.count() == 0u);
 }
 
 template<typename T>
@@ -269,6 +239,36 @@ inline void TInstance<T>::swap(TInstance& other) noexcept
 {
     using std::swap;
     swap(m_token, other.m_token);
+}
+
+template<typename T>
+inline std::uint32_t TInstance<T>::memory_token_count() const noexcept
+{
+    return m_token.memory_token_count();
+}
+
+template<typename T>
+inline std::uint32_t TInstance<T>::memory_allocation_count() const noexcept
+{
+    return m_token.memory_allocation_count();
+}
+
+template<typename T>
+inline std::uint64_t TInstance<T>::memory_allocation_size() const noexcept
+{
+    return m_token.memory_allocation_size();
+}
+
+template<typename T>
+inline bool TInstance<T>::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+{
+    return m_token.can_reattribute_to(context);
+}
+
+template<typename T>
+inline bool TInstance<T>::reattribute(memory::CMemoryContext* context) noexcept
+{
+    return m_token.reattribute(context);
 }
 
 #endif  //  TINSTANCE_HPP_INCLUDED

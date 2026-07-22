@@ -108,14 +108,6 @@ protected:
     [[nodiscard]] bool is_initialised() const noexcept;
     [[nodiscard]] bool is_empty() const noexcept;
 
-    //  Direct metadata storage attribution
-    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
-    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
-    void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
-
     //  Simple accessors
     [[nodiscard]] std::uint32_t capacity() const noexcept;
     [[nodiscard]] std::uint32_t minimum_safe_capacity() const noexcept;
@@ -330,6 +322,14 @@ protected:
     //  Validates metadata invariants, counts, list structure, tree balance,
     //  and index ranges. Comparator-defined lex order is not checked here.
     [[nodiscard]] bool check_integrity() const noexcept;
+
+    //  Direct metadata storage attribution
+    [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
+    [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
+    [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
+    [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
+    void unsafe_replace_memory_context_without_accounting(
+        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
 
 private:
 
@@ -635,48 +635,6 @@ inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::clone(const TOrderedSlot
     }
     slot_backing() = src.slot_backing();
     return copy_from(src);
-}
-
-template<typename TSlotBacking, typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_token_count() const noexcept
-{
-    return m_meta_slot_array.memory_token_count();
-}
-
-template<typename TSlotBacking, typename TIndex, typename TMeta>
-inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_allocation_count() const noexcept
-{
-    return m_meta_slot_array.memory_allocation_count();
-}
-
-template<typename TSlotBacking, typename TIndex, typename TMeta>
-inline std::uint64_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_allocation_size() const noexcept
-{
-    return m_meta_slot_array.memory_allocation_size();
-}
-
-template<typename TSlotBacking, typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_source_context(
-    memory::CMemoryContext*& source) const noexcept
-{
-    if (!m_meta_slot_array.owns_storage())
-    {
-        return true;
-    }
-    if ((source != nullptr) && (source != m_meta_slot_array.context()))
-    {
-        return false;
-    }
-    source = m_meta_slot_array.context();
-    return true;
-}
-
-template<typename TSlotBacking, typename TIndex, typename TMeta>
-inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::unsafe_replace_memory_context_without_accounting(
-    memory::CMemoryContext* const expected_source,
-    memory::CMemoryContext* const target) noexcept
-{
-    m_meta_slot_array.unsafe_replace_context_without_accounting(expected_source, target);
 }
 
 template<typename TSlotBacking, typename TIndex, typename TMeta>
@@ -1789,6 +1747,48 @@ inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::private_validate
 
 //  This function only exists as a debug convenience to help capture integrity check failure causes.
 //  It may be expanded on in the future as a potential logging site.
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_token_count() const noexcept
+{
+    return m_meta_slot_array.memory_token_count();
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_allocation_count() const noexcept
+{
+    return m_meta_slot_array.memory_allocation_count();
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline std::uint64_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_allocation_size() const noexcept
+{
+    return m_meta_slot_array.memory_allocation_size();
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_source_context(
+    memory::CMemoryContext*& source) const noexcept
+{
+    if (!m_meta_slot_array.owns_storage())
+    {
+        return true;
+    }
+    if ((source != nullptr) && (source != m_meta_slot_array.context()))
+    {
+        return false;
+    }
+    source = m_meta_slot_array.context();
+    return true;
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::unsafe_replace_memory_context_without_accounting(
+    memory::CMemoryContext* const expected_source,
+    memory::CMemoryContext* const target) noexcept
+{
+    m_meta_slot_array.unsafe_replace_context_without_accounting(expected_source, target);
+}
+
 template<typename TSlotBacking, typename TIndex, typename TMeta>
 inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::failed_integrity_check() noexcept
 {
