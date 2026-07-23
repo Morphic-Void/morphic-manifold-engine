@@ -198,6 +198,40 @@ void test_ring_uninitialised_state(TTestContext& ctx)
     TEST_EXPECT_TRUE(ctx, ring.read(nullptr, 0u) == false); // not ready
 }
 
+void test_ring_memory_context_configuration(TTestContext& ctx)
+{
+    memory::CMemoryAllocator allocator_a(nullptr, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryAllocator allocator_b(nullptr, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryContext context_a(allocator_a, 1u);
+    memory::CMemoryContext context_b(allocator_b, 1u);
+    memory::CMemoryContext* const previous_thread_context = memory::set_thread_memory_context(&context_a);
+
+    {
+        TRing<char> ambient_ring;
+        TEST_EXPECT_EQ(ctx, ambient_ring.memory_context(), &context_a);
+        TEST_EXPECT_TRUE(ctx, ambient_ring.initialise(32u));
+        TEST_EXPECT_EQ(ctx, ambient_ring.memory_context(), &context_a);
+    }
+
+    {
+        TRing<char> explicit_ctor_ring(&context_b);
+        TEST_EXPECT_EQ(ctx, explicit_ctor_ring.memory_context(), &context_b);
+        TEST_EXPECT_TRUE(ctx, explicit_ctor_ring.initialise(32u));
+        TEST_EXPECT_EQ(ctx, explicit_ctor_ring.memory_context(), &context_b);
+    }
+
+    {
+        TRing<char> explicit_init_ring;
+        TEST_EXPECT_EQ(ctx, explicit_init_ring.memory_context(), &context_a);
+        TEST_EXPECT_TRUE(ctx, explicit_init_ring.initialise(32u, &context_b));
+        TEST_EXPECT_EQ(ctx, explicit_init_ring.memory_context(), &context_b);
+        explicit_init_ring.deallocate();
+        TEST_EXPECT_EQ(ctx, explicit_init_ring.memory_context(), &context_b);
+    }
+
+    (void)memory::set_thread_memory_context(previous_thread_context);
+}
+
 void test_ring_initialise_and_conditioning(TTestContext& ctx)
 {
     {
@@ -397,6 +431,7 @@ int test_ring_transport()
     TTestContext ctx;
 
     test_ring_uninitialised_state(ctx);
+    test_ring_memory_context_configuration(ctx);
     test_ring_initialise_and_conditioning(ctx);
     test_ring_initial_allocation_failure(ctx);
     test_ring_zero_and_null_behaviour(ctx);

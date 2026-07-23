@@ -27,6 +27,15 @@ primitive:
 - no overwrite-on-full behaviour
 - single-element move-based post and read operations
 
+`TOwning<T>` owns allocator-managed ring storage. Its memory attribution is a
+transport-level configuration choice rather than an endpoint concern:
+
+- `memory_context()` exposes the configured attribution as a read-only query
+- attribution may be selected explicitly by constructor or `initialise(...)`
+- `nullptr` context selection uses the ambient memory context
+- attribution is fixed for the configured lifetime and is not reattributable
+- endpoints do not expose or mutate attribution
+
 It is not `TRing<T>` with a different payload category. The slot model
 is materially different.
 
@@ -50,6 +59,7 @@ is materially different.
 - rejection when no writable slot exists
 - rejection when no readable element exists
 - role-specific and common status and validity checks
+- read-only transport memory-context observation
 
 `TOwning<T>` does not provide:
 
@@ -92,6 +102,7 @@ Backing storage is raw storage until `initialise()`.
 
 During `initialise()`:
 
+- the transport's configured memory context is fixed for that configured lifetime
 - storage is allocated
 - every slot is default-constructed
 

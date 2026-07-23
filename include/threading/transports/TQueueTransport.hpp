@@ -76,6 +76,10 @@ public:
 
 public:
     TQueue() noexcept = default;
+    explicit TQueue(memory::CMemoryContext* const context) noexcept
+    {
+        (void)set_memory_context(context);
+    }
     TQueue(const TQueue&) = delete;
     TQueue& operator=(const TQueue&) = delete;
     TQueue(TQueue&&) noexcept = delete;
@@ -107,8 +111,13 @@ public:
     //  initialise_*() requires a deallocated / not-ready instance.
     //  deallocate() releases owned storage and must not race active role use.
     [[nodiscard]] bool initialise_fixed(const std::uint32_t capacity, const bool allow_discard = false) noexcept;
+    [[nodiscard]] bool initialise_fixed(const std::uint32_t capacity, const bool allow_discard, memory::CMemoryContext* context) noexcept;
     [[nodiscard]] bool initialise_growable(const std::uint32_t capacity, const std::uint32_t max_capacity = 0u) noexcept;
+    [[nodiscard]] bool initialise_growable(const std::uint32_t capacity, const std::uint32_t max_capacity, memory::CMemoryContext* context) noexcept;
     void deallocate() noexcept;
+
+    //  Memory context accessor
+    [[nodiscard]] memory::CMemoryContext* memory_context() const noexcept;
 
     //  Validation
     //  - full structural validity check
@@ -120,6 +129,7 @@ private:
     static_assert(k_element_size <= 0xffffu, "TQueue<T> element size exceeds the memory token stride field.");
     static_assert(k_element_size <= memory::k_byte_size_ceiling, "TQueue<T> element size exceeds the shared byte ceiling.");
 
+    [[nodiscard]] bool set_memory_context(memory::CMemoryContext* context) noexcept;
     static std::uint32_t growth_policy(const std::uint32_t capacity) noexcept;
     bool growth_and_discard_policy(const std::uint32_t count, const std::uint32_t buffer_size, std::uint32_t& target_capacity, bool& discard) const noexcept;
     bool is_canonical_empty() const noexcept;
@@ -494,7 +504,10 @@ inline std::uint32_t TQueue<T>::refresh_readable_count() noexcept
 }
 
 template<typename T>
-inline bool TQueue<T>::initialise_fixed(const std::uint32_t capacity, const bool allow_discard) noexcept
+inline bool TQueue<T>::initialise_fixed(
+    const std::uint32_t capacity,
+    const bool allow_discard,
+    memory::CMemoryContext* context) noexcept
 {
     if ((capacity > k_max_capacity) || (capacity > k_token_max_capacity))
     {   //  requested capacity not supported
@@ -502,6 +515,10 @@ inline bool TQueue<T>::initialise_fixed(const std::uint32_t capacity, const bool
     }
     if (m_max_capacity != 0u)
     {   //  re-initialisation is not allowed without deallocation
+        return false;
+    }
+    if (!set_memory_context(context))
+    {
         return false;
     }
     const std::uint32_t conditioned_capacity = std::max(
@@ -531,7 +548,16 @@ inline bool TQueue<T>::initialise_fixed(const std::uint32_t capacity, const bool
 }
 
 template<typename T>
-inline bool TQueue<T>::initialise_growable(const std::uint32_t capacity, const std::uint32_t max_capacity) noexcept
+inline bool TQueue<T>::initialise_fixed(const std::uint32_t capacity, const bool allow_discard) noexcept
+{
+    return initialise_fixed(capacity, allow_discard, memory_context());
+}
+
+template<typename T>
+inline bool TQueue<T>::initialise_growable(
+    const std::uint32_t capacity,
+    const std::uint32_t max_capacity,
+    memory::CMemoryContext* context) noexcept
 {
     if ((capacity > k_token_max_capacity) ||
         (max_capacity > k_max_capacity) ||
@@ -540,7 +566,7 @@ inline bool TQueue<T>::initialise_growable(const std::uint32_t capacity, const s
     {   //  requested capacity not supported
         return false;
     }
-    if (!initialise_fixed(capacity, false))
+    if (!initialise_fixed(capacity, false, context))
     {
         return false;
     }
@@ -551,6 +577,12 @@ inline bool TQueue<T>::initialise_growable(const std::uint32_t capacity, const s
             : std::max(max_capacity, m_capacity);
     }
     return true;
+}
+
+template<typename T>
+inline bool TQueue<T>::initialise_growable(const std::uint32_t capacity, const std::uint32_t max_capacity) noexcept
+{
+    return initialise_growable(capacity, max_capacity, memory_context());
 }
 
 template<typename T>
@@ -572,6 +604,28 @@ inline void TQueue<T>::deallocate() noexcept
     m_reading_buffer_index = k_null_buffer_index;
     m_reading_read_index = 0u;
     m_staged_word.store(k_default_staged_word, std::memory_order_relaxed);
+}
+
+template<typename T>
+inline memory::CMemoryContext* TQueue<T>::memory_context() const noexcept
+{
+    memory::CMemoryContext* const context = m_buffers[0].storage.context();
+    if ((context == nullptr) ||
+        (m_buffers[1].storage.context() != context) ||
+        (m_buffers[2].storage.context() != context))
+    {
+        return nullptr;
+    }
+    return context;
+}
+
+template<typename T>
+inline bool TQueue<T>::set_memory_context(memory::CMemoryContext* context) noexcept
+{
+    return
+        m_buffers[0].storage.set_context(context) &&
+        m_buffers[1].storage.set_context(context) &&
+        m_buffers[2].storage.set_context(context);
 }
 
 template<typename T>

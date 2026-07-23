@@ -71,6 +71,7 @@ public:
 
 public:
     TRing() noexcept = default;
+    explicit TRing(memory::CMemoryContext* const context) noexcept : m_ring{ k_element_size, k_align, context } {}
     TRing(const TRing&) = delete;
     TRing& operator=(const TRing&) = delete;
     TRing(TRing&&) noexcept = delete;
@@ -101,7 +102,11 @@ public:
     //  initialise() requires a deallocated / not-ready instance.
     //  deallocate() releases owned storage and must not race active role use.
     [[nodiscard]] bool initialise(const std::uint32_t capacity) noexcept;
+    [[nodiscard]] bool initialise(const std::uint32_t capacity, memory::CMemoryContext* context) noexcept;
     void deallocate() noexcept;
+
+    //  Memory context accessor
+    [[nodiscard]] memory::CMemoryContext* memory_context() const noexcept { return m_ring.context(); }
 
 private:
     [[nodiscard]] T* raw_data() noexcept { return static_cast<T*>(m_ring.data()); }
@@ -289,7 +294,7 @@ inline std::uint32_t TRing<T>::readable_count() const noexcept
 }
 
 template<typename T>
-inline bool TRing<T>::initialise(const std::uint32_t capacity) noexcept
+inline bool TRing<T>::initialise(const std::uint32_t capacity, memory::CMemoryContext* context) noexcept
 {
     if (capacity > k_max_capacity)
     {   //  requested capacity not supported
@@ -297,6 +302,10 @@ inline bool TRing<T>::initialise(const std::uint32_t capacity) noexcept
     }
     if (m_capacity != 0u)
     {   //  re-initialisation is not allowed without deallocation
+        return false;
+    }
+    if (!m_ring.set_context(context))
+    {
         return false;
     }
     const std::uint32_t conditioned_capacity = std::max(std::min(bit_ops::round_up_to_pow2(capacity), k_max_capacity), k_min_capacity);
@@ -309,6 +318,12 @@ inline bool TRing<T>::initialise(const std::uint32_t capacity) noexcept
     m_write_index = 0u;
     m_occupied_count.store(0u, std::memory_order_release);
     return true;
+}
+
+template<typename T>
+inline bool TRing<T>::initialise(const std::uint32_t capacity) noexcept
+{
+    return initialise(capacity, m_ring.context());
 }
 
 template<typename T>

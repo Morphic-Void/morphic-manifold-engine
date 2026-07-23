@@ -80,6 +80,7 @@ private:
 
 public:
     TOwning() noexcept = default;
+    explicit TOwning(memory::CMemoryContext* const context) noexcept : m_ring{ k_element_size, k_align, context } {}
     TOwning(const TOwning&) = delete;
     TOwning& operator=(const TOwning&) = delete;
     TOwning(TOwning&&) noexcept = delete;
@@ -106,7 +107,11 @@ public:
     //  initialise() requires a deallocated / not-ready instance.
     //  deallocate() releases owned storage and must not race active role use.
     [[nodiscard]] bool initialise(const std::uint32_t capacity) noexcept;
+    [[nodiscard]] bool initialise(const std::uint32_t capacity, memory::CMemoryContext* context) noexcept;
     void deallocate() noexcept;
+
+    //  Memory context accessor
+    [[nodiscard]] memory::CMemoryContext* memory_context() const noexcept { return m_ring.context(); }
 
 private:
     static_assert(k_element_size <= 0xffffu, "TOwning<T> element size exceeds the memory token stride field.");
@@ -262,7 +267,7 @@ inline std::uint32_t TOwning<T>::readable_count() const noexcept
 }
 
 template<typename T>
-inline bool TOwning<T>::initialise(const std::uint32_t capacity) noexcept
+inline bool TOwning<T>::initialise(const std::uint32_t capacity, memory::CMemoryContext* context) noexcept
 {
     if ((capacity > k_max_capacity) || (capacity > k_token_max_capacity))
     {   //  requested capacity not supported
@@ -270,6 +275,10 @@ inline bool TOwning<T>::initialise(const std::uint32_t capacity) noexcept
     }
     if (m_capacity != 0u)
     {   //  re-initialisation is not allowed without deallocation
+        return false;
+    }
+    if (!m_ring.set_context(context))
+    {
         return false;
     }
     const std::uint32_t conditioned_capacity = std::max(
@@ -288,6 +297,12 @@ inline bool TOwning<T>::initialise(const std::uint32_t capacity) noexcept
         ::new (static_cast<void*>(&raw_data()[index])) T();
     }
     return true;
+}
+
+template<typename T>
+inline bool TOwning<T>::initialise(const std::uint32_t capacity) noexcept
+{
+    return initialise(capacity, m_ring.context());
 }
 
 template<typename T>

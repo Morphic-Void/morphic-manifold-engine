@@ -236,6 +236,45 @@ void test_queue_uninitialised_state(TTestContext& ctx)
     TEST_EXPECT_FALSE(ctx, queue.read(nullptr, 0u)); // not ready
 }
 
+void test_queue_memory_context_configuration(TTestContext& ctx)
+{
+    TAllocationGate gate;
+    memory::CMemoryAllocator allocator_a(&gate, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryAllocator allocator_b(&gate, allocate_test_memory, deallocate_test_memory, 1u);
+    memory::CMemoryContext context_a(allocator_a, 1u);
+    memory::CMemoryContext context_b(allocator_b, 1u);
+    const TThreadContextScope thread_context_scope(&context_a);
+
+    {
+        TQueue<char> ambient_queue;
+        TEST_EXPECT_EQ(ctx, ambient_queue.memory_context(), &context_a);
+        TEST_EXPECT_TRUE(ctx, ambient_queue.initialise_fixed(32u, false));
+        TEST_EXPECT_EQ(ctx, ambient_queue.memory_context(), &context_a);
+    }
+
+    {
+        TQueue<char> explicit_ctor_queue(&context_b);
+        TEST_EXPECT_EQ(ctx, explicit_ctor_queue.memory_context(), &context_b);
+        TEST_EXPECT_TRUE(ctx, explicit_ctor_queue.initialise_fixed(32u, false));
+        TEST_EXPECT_EQ(ctx, explicit_ctor_queue.memory_context(), &context_b);
+    }
+
+    {
+        TQueue<char> explicit_fixed_queue;
+        TEST_EXPECT_EQ(ctx, explicit_fixed_queue.memory_context(), &context_a);
+        TEST_EXPECT_TRUE(ctx, explicit_fixed_queue.initialise_fixed(32u, false, &context_b));
+        TEST_EXPECT_EQ(ctx, explicit_fixed_queue.memory_context(), &context_b);
+        explicit_fixed_queue.deallocate();
+        TEST_EXPECT_EQ(ctx, explicit_fixed_queue.memory_context(), &context_b);
+    }
+
+    {
+        TQueue<char> explicit_growable_queue;
+        TEST_EXPECT_TRUE(ctx, explicit_growable_queue.initialise_growable(8u, 64u, &context_b));
+        TEST_EXPECT_EQ(ctx, explicit_growable_queue.memory_context(), &context_b);
+    }
+}
+
 void test_queue_initialise_rejection_and_conditioning(TTestContext& ctx)
 {
     {
@@ -653,6 +692,7 @@ int test_queue_transport()
     const TThreadContextScope thread_context_scope(&context);
 
     test_queue_uninitialised_state(ctx);
+    test_queue_memory_context_configuration(ctx);
     test_queue_initialise_rejection_and_conditioning(ctx);
     test_queue_respects_byte_ceiling(ctx);
     test_queue_initial_allocation_failure(ctx);
