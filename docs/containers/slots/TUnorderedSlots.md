@@ -72,6 +72,10 @@ The public facade owns:
 - public API
 - coordinated container lifecycle
 
+The facade destroys payloads or objects before releasing slot metadata. The
+lower slot-backing object must remain alive whenever the middle slot manager
+calls movement or reserve responsibilities.
+
 ## Observation model
 
 Traversal:
@@ -121,6 +125,10 @@ Capacity negotiation.
 
 Must satisfy minimum_capacity.
 
+Metadata and payload-side reserve retain the established non-transactional
+cross-layer behavior. A coordinated rollback redesign is a separate
+architectural decision.
+
 ## Re-entry contract
 
 The slot-backing responsibility functions must not re-enter the slot manager.
@@ -138,6 +146,10 @@ No thread safety.
 Operation:
 
 - pack()
+
+Metadata copy/move/take/clone facilities and facade-facing empty, loose, and
+rank traversal helpers are retained capabilities even when a particular
+production caller is not currently visible.
 
 ## Capacity model
 

@@ -7,32 +7,14 @@ backlog:
 
 - `manifold_engine_interim_backlog.md` contains the broader engine backlog and
   subsystem dependencies.
-- `../memory/memory_refactor_handoff.md` contains the current memory/container
-  architecture and detailed follow-on constraints.
-- `../containers/slot_sandwich_refactor_handoff.md` records the completed slot
-  sandwich design, retained capabilities, and validation history.
-- `../system/erased_owner_handoff.md` defines the active `CErasedOwner`
-  replacement and its staged transport integration.
+- `../project/future_work_notes.md` retains useful cross-task context that is
+  not an active priority.
+- `../project/completed_milestones.md` records completed cross-cutting work.
+- Permanent architecture belongs to the subsystem documents under `docs/`.
 
 ## Current Priorities
 
-1. Complete the strong system-ID and module mounting-point prerequisite
-   described by `../system/erased_owner_handoff.md`. The erased-owner hazard,
-   attribution, and future provisioning surfaces must not encode the current
-   ambiguity between stable mounting points and module variants.
-2. Implement the first buildable `CErasedOwner` checkpoint described in
-   `../system/erased_owner_handoff.md`: system-owned transported types and
-   registration, direct token-backed erased ownership, explicit destruction
-   dispatch, hazards, and migration through the existing `TOwning` without
-   automatic reattribution.
-3. Continue the bounded Rigtorp-style MPMC transport work for the upcoming
-   debug infrastructure and later job system. The initial single-header
-   transport-family checkpoint is now landed and validated; remaining work is
-   naming, stronger contention coverage, wrapper review, and downstream
-   integration. The agreed lifecycle states are `open`, `closing`, `closed`,
-   and `shutdown`, with outstanding-reservation accounting for race-free
-   draining and closure.
-4. Continue the low-level text ingester and JSON infrastructure work described
+1. Continue the low-level text ingester and JSON infrastructure work described
    in the interim backlog, with debug-system slices added where they support
    diagnostics and controlled shutdown.
 

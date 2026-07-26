@@ -77,6 +77,12 @@ Objects are placement-constructed in stable token storage.
 - slot remapping does not relocate objects
 - storage_index determines object location
 
+The stable token uses `sizeof(T)` stride,
+`memory::t_default_align<T>()` storage alignment, and the established
+floor-32 per-buffer capacity hint. First storage mapping uses
+`map_index()`; subsequent access uses `index_ptr()`. The collection does
+not request a contiguous view of object storage.
+
 ## Traversal model
 
 Traversal follows TUnorderedSlots behaviour.
@@ -115,6 +121,10 @@ Pointers and references returned by the collection:
 - must not be destroyed with delete
 
 Object lifetime must be managed through the collection API.
+
+A const owning collection controls both collection and pointee constness
+at its public surface. Mutable non-owning access remains available only
+through an explicitly mutable view.
 
 ## Behavioural notes
 

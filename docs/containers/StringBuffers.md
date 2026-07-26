@@ -53,6 +53,10 @@ CStringBuffer:
 
 Strings with embedded terminators require external length metadata.
 
+Null storage means that no string is present. Non-null storage with zero
+logical length represents a present but empty string and remains visible to
+parser-facing code. Do not normalize these two states into one another.
+
 ## Stable string table model
 
 CStableStrings:
