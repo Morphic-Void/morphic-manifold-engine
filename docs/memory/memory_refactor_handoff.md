@@ -89,9 +89,26 @@ conditioning. `memory::k_byte_size_ceiling` is the shared byte ceiling;
 stride/type-specific count limits use the common derived-limit helpers rather
 than local division.
 
-Token reattribution transfers aggregate allocation count and bytes in one
-context operation. Containers with multiple tokens may still require
-coordinated higher-level attribution.
+Token and container reattribution reserve the complete allocation count and
+conditioned-byte total in the target context before releasing it from the
+source. Target reservation failure is recoverable and leaves the source
+unchanged. Source release failure after reservation is an accounting-corruption
+boundary: the target reservation is rolled back and the failure is reported as
+critical.
+
+Complete owning containers expose direct `memory_token_count()`,
+`memory_allocation_count()`, and `memory_allocation_size()` statistics. Compound
+owners gather a coherent source context from their storage-owning tokens,
+perform one aggregate context transaction, and only then replace each token's
+context through the explicitly unsafe non-accounting token operation. This is a
+lightweight accounting and context-coherence check; it does not perform full
+container semantic-integrity walks.
+
+The layered slot containers keep the statistics, source-context gathering, and
+post-accounting context replacement operations protected in their lower
+metadata and backing-storage layers. The public complete facade corrals those
+contributions and owns the aggregate transaction. Regular compound containers
+perform the same aggregation directly over their members.
 
 Ambient module and thread state is deliberately non-atomic. Provisioning must
 not race live use. Each DLL requiring module-local ambient state must compile or
@@ -121,23 +138,35 @@ and other module-local executable state must remain valid for the lifetime of
 the transferred object.
 
 Virtual dispatch has now been removed from the slot-container hierarchy. This
-eliminates the container layer's principal DLL-local vtable dependency before
-general container reattribution is exposed.
+eliminated the container layer's principal DLL-local vtable dependency before
+general container reattribution was exposed.
+
+This is not a general prohibition on virtual interfaces. Internal virtual
+mechanisms remain valid when their objects and vtables cannot escape or outlive
+the defining binary. The cross-module hazard is stored executable identity:
+vptrs, callbacks, deleters, function pointers, and operation descriptors
+carried by data that may survive replacement or unloading of their defining
+DLL. Performance and indirection remain ordinary local considerations.
+
+Container reattribution covers only storage owned directly by the container.
+It does not reattribute allocations owned by contained objects. Thread
+transports are deliberately not reattributable. The current allocation-owning
+transport families expose a read-only memory-context query and accept optional
+explicit attribution during construction or initialise/configuration, defaulting
+otherwise to the ambient memory context. That attribution remains fixed for the
+configured transport lifetime; endpoints may observe it only through the owning
+transport and must never alter it. Live endpoint and concurrency state makes
+post-configuration transfer both unsafe and unnecessary. Closed-world erased
+payload handling remains separate follow-on work.
 
 ## Open Work
 
-1. Redesign the type-erased container rather than retaining its virtual node
-   interface. Coordinate descriptor or callback decisions with the slot work
-   where the same cross-DLL constraints apply. The owning token must remain
-   external to storage it may release unless self-deallocation lifetime is
-   solved explicitly.
-2. Add container token-audit accessors and compatible-context reattribution once
-   transferable object shapes and remaining code-lifetime restrictions are
-   established.
-3. Introduce distinct types for system, module, thread, type, and related IDs.
-   Preserve binary encoding as a representation detail rather than using it as
-   the type distinction.
-4. Add instantiation coverage for supported latent templates as they are
+1. Complete the strong system-ID and module mounting-point prerequisite needed
+   by erased-owner hazards, attribution, and later provisioning.
+2. Replace `CTypeless` with the system-owned `CErasedOwner` through the staged
+   design in `../system/erased_owner_handoff.md`. The first checkpoint retains
+   plain `TOwning` movement and defers payload/transport reattribution.
+3. Add instantiation coverage for supported latent templates as they are
    touched. Do not classify an uninstantiated template as dead code by default.
 
 The non-virtual ordered and unordered slot-container sandwich is complete. See
@@ -145,6 +174,15 @@ The non-virtual ordered and unordered slot-container sandwich is complete. See
 functional fences, and validation record.
 
 ## Completed Follow-on Work
+
+Direct-storage statistics and compatible-context reattribution are complete for
+the owning vector, FIFO, instance, byte-buffer, string, POD slot, and stable
+collection families. Public `memory_token_count()`,
+`memory_allocation_count()`, `memory_allocation_size()`,
+`can_reattribute_to()`, and `reattribute()` operations preserve object and
+storage addresses and commit all direct tokens together. Empty tokens are
+rebound with their owner after a successful transaction. Transports and
+`CTypeless` remain intentionally excluded.
 
 The `bit_ops` cast audit is complete. Calls with `std::size_t` operands now use
 the overload set directly, selecting the platform-width implementation on x86

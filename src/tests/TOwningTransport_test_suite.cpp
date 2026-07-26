@@ -297,10 +297,10 @@ void test_owning_uninitialised_state(TTestContext& ctx)
 
 void test_owning_memory_context_configuration(TTestContext& ctx)
 {
-    memory::CMemoryAllocator allocator_a(nullptr, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryAllocator allocator_b(nullptr, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryContext context_a(allocator_a, 1u);
-    memory::CMemoryContext context_b(allocator_b, 1u);
+    memory::CMemoryAllocator allocator_a(nullptr, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryAllocator allocator_b(nullptr, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context_a(allocator_a, system_ids::host);
+    memory::CMemoryContext context_b(allocator_b, system_ids::host);
     memory::CMemoryContext* const previous_thread_context = memory::set_thread_memory_context(&context_a);
 
     {
@@ -376,10 +376,10 @@ void test_owning_initial_allocation_failure(TTestContext& ctx)
 {
     TTrackedValue::reset_counters();
 
-    memory::CMemoryAllocator allocator(nullptr, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryAllocator rejecting_allocator(nullptr, reject_allocation, deallocate_test_memory, 1u);
-    memory::CMemoryContext usable_context(allocator, 1u);
-    memory::CMemoryContext rejecting_context(rejecting_allocator, 1u);
+    memory::CMemoryAllocator allocator(nullptr, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryAllocator rejecting_allocator(nullptr, reject_allocation, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext usable_context(allocator, system_ids::host);
+    memory::CMemoryContext rejecting_context(rejecting_allocator, system_ids::host);
     memory::CMemoryContext* const previous_thread_context = memory::set_thread_memory_context(&usable_context);
 
     (void)memory::set_thread_memory_context(&rejecting_context);

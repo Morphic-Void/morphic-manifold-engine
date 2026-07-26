@@ -239,10 +239,10 @@ void test_queue_uninitialised_state(TTestContext& ctx)
 void test_queue_memory_context_configuration(TTestContext& ctx)
 {
     TAllocationGate gate;
-    memory::CMemoryAllocator allocator_a(&gate, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryAllocator allocator_b(&gate, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryContext context_a(allocator_a, 1u);
-    memory::CMemoryContext context_b(allocator_b, 1u);
+    memory::CMemoryAllocator allocator_a(&gate, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryAllocator allocator_b(&gate, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context_a(allocator_a, system_ids::host);
+    memory::CMemoryContext context_b(allocator_b, system_ids::host);
     const TThreadContextScope thread_context_scope(&context_a);
 
     {
@@ -335,8 +335,8 @@ void test_queue_initial_allocation_failure(TTestContext& ctx)
 {
     TAllocationGate gate;
     gate.allow_allocations = false;
-    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryContext context(allocator, 1u);
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context(allocator, system_ids::host);
     const TThreadContextScope thread_context_scope(&context);
 
     TQueue<char> queue;
@@ -488,8 +488,8 @@ void run_queue_resize_success_script(tests::TTestContext& ctx,
     constexpr std::uint32_t max_capacity = 128u;
 
     TAllocationGate gate;
-    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryContext context(allocator, 1u);
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context(allocator, system_ids::host);
     const TThreadContextScope thread_context_scope(&context);
 
     TQueue<char> queue;
@@ -538,8 +538,8 @@ void run_queue_resize_failure_script(tests::TTestContext& ctx,
     constexpr std::uint32_t max_capacity = 128u;
 
     TAllocationGate gate;
-    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryContext context(allocator, 1u);
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context(allocator, system_ids::host);
     const TThreadContextScope thread_context_scope(&context);
 
     TQueue<char> queue;
@@ -644,8 +644,8 @@ void test_queue_growable_resize_matrix(tests::TTestContext& ctx)
 void test_queue_reading_can_drain_after_poison(tests::TTestContext& ctx)
 {
     TAllocationGate gate;
-    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryContext context(allocator, 1u);
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context(allocator, system_ids::host);
     const TThreadContextScope thread_context_scope(&context);
 
     TQueue<char> queue;
@@ -687,8 +687,8 @@ int test_queue_transport()
 {
     TTestContext ctx;
     TAllocationGate gate;
-    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryContext context(allocator, 1u);
+    memory::CMemoryAllocator allocator(&gate, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context(allocator, system_ids::host);
     const TThreadContextScope thread_context_scope(&context);
 
     test_queue_uninitialised_state(ctx);

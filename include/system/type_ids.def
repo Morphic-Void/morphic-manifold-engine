@@ -1,0 +1,9 @@
+//  Built-in transported type identity declarations.
+//  Include this file with:
+//  - MV_SYSTEM_TYPE(name)
+
+MV_SYSTEM_TYPE(byte_buffer)
+MV_SYSTEM_TYPE(byte_rect_buffer)
+MV_SYSTEM_TYPE(simple_string)
+MV_SYSTEM_TYPE(string_buffer)
+MV_SYSTEM_TYPE(stable_strings)

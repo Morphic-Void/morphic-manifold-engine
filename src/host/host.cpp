@@ -101,7 +101,7 @@ MV_DECLARE_TYPELESS(OwningTgaDecodeResult, type_ids::msg_id_tga_decode_result_ow
 
 struct ThreadConfig
 {
-    std::size_t system_id{ 0u };
+    system_ids::id_type system_id{};
     const char* name{ nullptr };
     platform::threading::EThreadPriority priority{ platform::threading::EThreadPriority::Normal };
     platform::threading::FThreadEntry entry_point{ nullptr };
@@ -154,7 +154,7 @@ private:
 inline void CThreadContext::startup() noexcept
 {
     m_resources.control_state.mark_startup();
-    std::size_t system_id = m_resources.config.system_id;   //  This needs to be stored in TLS for the real implementation
+    const system_ids::id_type system_id = m_resources.config.system_id;   //  This needs to be stored in TLS for the real implementation
     (void)platform::threading::set_current_thread_name(m_resources.config.name);
     (void)platform::threading::set_current_thread_priority(m_resources.config.priority);
 }

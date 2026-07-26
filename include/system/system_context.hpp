@@ -13,7 +13,7 @@
 #ifndef SYSTEM_CONTEXT_HPP_INCLUDED
 #define SYSTEM_CONTEXT_HPP_INCLUDED
 
-#include <cstddef>      //  std::size_t
+#include "system/system_ids.hpp"
 
 namespace system_context
 {
@@ -22,12 +22,12 @@ namespace system_context
 //  Ambient system identity
 //==============================================================================
 
-[[nodiscard]] std::size_t get_ambient_module_id() noexcept;
-[[nodiscard]] std::size_t get_ambient_thread_id() noexcept;
-[[nodiscard]] std::size_t get_ambient_system_id() noexcept;
+[[nodiscard]] module_ids::id_type get_ambient_module_id() noexcept;
+[[nodiscard]] thread_ids::id_type get_ambient_thread_id() noexcept;
+[[nodiscard]] system_ids::id_type get_ambient_system_id() noexcept;
 
-std::size_t set_ambient_module_id(std::size_t module_id = 0u) noexcept;
-std::size_t set_ambient_thread_id(std::size_t thread_id = 0u) noexcept;
+module_ids::id_type set_ambient_module_id(module_ids::id_type module_id = {}) noexcept;
+thread_ids::id_type set_ambient_thread_id(thread_ids::id_type thread_id = {}) noexcept;
 
 }   //  namespace system_context
 

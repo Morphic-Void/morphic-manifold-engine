@@ -178,6 +178,7 @@
     <ClCompile Include="src\platform\threading\thread_priority.cpp" />
     <ClCompile Include="src\platform\threading\wait_word.cpp" />
     <ClCompile Include="src\system\system_context.cpp" />
+    <ClCompile Include="src\system\system_ids.cpp" />
     <ClCompile Include="src\tests\ByteBuffers_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryToken_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryView_test_suite.cpp" />
@@ -248,8 +249,11 @@
     <ClInclude Include="include\platform\threading\wait_word.hpp" />
     <ClInclude Include="include\platform\windows_include.hpp" />
     <ClInclude Include="include\system\system_context.hpp" />
+    <ClInclude Include="include\system\runtime_ids.def" />
     <ClInclude Include="include\system\system_ids.hpp" />
+    <ClInclude Include="include\system\thread_ids.def" />
     <ClInclude Include="include\system\TStaticLookup.hpp" />
+    <ClInclude Include="include\system\type_ids.def" />
     <ClInclude Include="include\tests\ByteBuffers_test_suite.hpp" />
     <ClInclude Include="include\tests\CMemoryToken_test_suite.hpp" />
     <ClInclude Include="include\tests\run_tests.hpp" />

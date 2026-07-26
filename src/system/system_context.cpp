@@ -8,10 +8,7 @@
 //
 //  Module-local and thread-local ambient system context state.
 
-#include <cstddef>      //  std::size_t
-
 #include "system/system_context.hpp"
-#include "system/system_ids.hpp"
 
 namespace system_context
 {
@@ -20,39 +17,39 @@ namespace system_context
 //  Ambient state
 //==============================================================================
 
-static std::size_t s_module_id{ 0u };
+static module_ids::id_type s_module_id{};
 
-thread_local std::size_t t_thread_id{ 0u };
+thread_local thread_ids::id_type t_thread_id{};
 
 //==============================================================================
 //  Ambient system identity
 //==============================================================================
 
-std::size_t get_ambient_module_id() noexcept
+module_ids::id_type get_ambient_module_id() noexcept
 {
     return s_module_id;
 }
 
-std::size_t get_ambient_thread_id() noexcept
+thread_ids::id_type get_ambient_thread_id() noexcept
 {
     return t_thread_id;
 }
 
-std::size_t get_ambient_system_id() noexcept
+system_ids::id_type get_ambient_system_id() noexcept
 {
     return system_ids::make_system_id(s_module_id, t_thread_id);
 }
 
-std::size_t set_ambient_module_id(const std::size_t module_id) noexcept
+module_ids::id_type set_ambient_module_id(const module_ids::id_type module_id) noexcept
 {
-    const std::size_t previous_module_id = s_module_id;
+    const module_ids::id_type previous_module_id = s_module_id;
     s_module_id = module_id;
     return previous_module_id;
 }
 
-std::size_t set_ambient_thread_id(const std::size_t thread_id) noexcept
+thread_ids::id_type set_ambient_thread_id(const thread_ids::id_type thread_id) noexcept
 {
-    const std::size_t previous_thread_id = t_thread_id;
+    const thread_ids::id_type previous_thread_id = t_thread_id;
     t_thread_id = thread_id;
     return previous_thread_id;
 }

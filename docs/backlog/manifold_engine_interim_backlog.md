@@ -37,7 +37,8 @@ The immediate focus is now platform-agnostic lower-layer buildout:
 
 1. Low-level text ingester.
 2. JSON infrastructure.
-3. Debug system buildout in smaller interleaved slices.
+3. Bounded MPMC transport foundation.
+4. Debug system buildout in smaller interleaved slices.
 
 The JSON work extends upward architecturally, but it is a single contained pillar and is therefore suitable as the main near-term focus.
 
@@ -220,7 +221,79 @@ JSON parse/schema diagnostics should retain:
 
 ---
 
-## 2.3 Debug system buildout
+## 2.3 Bounded MPMC transport foundation
+
+**Status:** Open / prerequisite for debug transport
+**Scale:** Medium to Large
+**Domain:** Threading / transports
+
+### Purpose
+
+Add a fixed-capacity Rigtorp-style MPMC ring transport for the upcoming debug
+infrastructure and, much later, the job system.
+
+The transport should use per-slot sequence counters with atomic producer and
+consumer positions. It must remain a bounded, allocation-at-initialisation
+structure rather than acquiring storage during live transport operations.
+
+### Lifecycle state
+
+At least one additional atomic must describe the transport lifecycle:
+
+- `open`
+- `closing`
+- `closed`
+- `shutdown`
+- `failed`
+
+The implementation must define valid transitions and the operation-admission
+rules for every state. In particular, `closing` must reject new packets while
+allowing already accepted work to become visible and drain before `closed` is
+reported.
+
+### In-flight accounting decision
+
+Determine whether separate producer and consumer in-flight counters, a combined
+counter, or state-packed accounting is required. Closure must not mistake a
+temporarily empty ring for a drained ring while a producer has reserved a slot
+but has not yet published its packet.
+
+Any accounting must also support deterministic shutdown and failure handling
+without introducing unbounded waits into the non-blocking operations.
+
+### Initial scope
+
+- Fixed power-of-two capacity and explicit initialisation.
+- Multiple concurrent producers and consumers.
+- Non-blocking post and take operations.
+- Explicit lifecycle queries and transitions.
+- Defined draining, forced shutdown, and failure semantics.
+- No allocation through the codebase allocator after initialisation.
+- POD-safe initial packet support; ownership-bearing packet policy remains a
+  separate transfer-safety decision.
+- Interface, endpoint, and bundle integration consistent with the existing
+  transport family where that shape remains appropriate for MPMC ownership.
+
+### Validation
+
+- Capacity boundaries and repeated index wrap.
+- Sustained multi-producer/multi-consumer contention.
+- Exact-once packet accounting under contention.
+- Producer reservation versus close races.
+- Consumer drain versus close races.
+- Shutdown and failed-state operation rejection.
+- Repeated initialise, close, shutdown, and teardown cycles.
+- Windows stress coverage initially, with sanitizer-backed Linux coverage once
+  that build path is available.
+
+### Consumers
+
+- Dedicated debug reporting path.
+- Later general job-system queues.
+
+---
+
+## 2.4 Debug system buildout
 
 **Status:** Active but secondary / interleaved  
 **Scale:** Medium to Large  
@@ -250,8 +323,9 @@ Debug system work will occur in smaller interleaved slices, both to provide vari
 ### Communication model
 
 - Does not use standard SPSC transports.
-- Uses a dedicated debug communication path.
-- Likely MPSC and atomic.
+- Uses the bounded MPMC transport as its dedicated debug communication path.
+- The transport must be initialised before application or worker threads can
+  submit reports.
 - Threads report using static thread/module IDs and TLS context once that layer exists.
 
 ### Initial buildout areas
@@ -270,7 +344,7 @@ Debug system work will occur in smaller interleaved slices, both to provide vari
 
 ---
 
-## 2.4 TGA manual testing / lightweight validation
+## 2.5 TGA manual testing / lightweight validation
 
 **Status:** Open  
 **Scale:** Small/Medium  

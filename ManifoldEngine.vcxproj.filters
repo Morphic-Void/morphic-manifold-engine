@@ -399,6 +399,15 @@
     <ClInclude Include="include\system\system_context.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
+    <ClInclude Include="include\system\runtime_ids.def">
+      <Filter>include\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\system\thread_ids.def">
+      <Filter>include\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\system\type_ids.def">
+      <Filter>include\system</Filter>
+    </ClInclude>
     <ClInclude Include="include\bit_utils\TBitField.hpp">
       <Filter>include\bit_utils</Filter>
     </ClInclude>
@@ -537,6 +546,9 @@
       <Filter>src\host</Filter>
     </ClCompile>
     <ClCompile Include="src\system\system_context.cpp">
+      <Filter>src\system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\system\system_ids.cpp">
       <Filter>src\system</Filter>
     </ClCompile>
     <ClCompile Include="src\host\host_context.cpp">

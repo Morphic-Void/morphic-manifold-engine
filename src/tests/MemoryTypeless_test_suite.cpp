@@ -213,8 +213,8 @@ void test_move_and_destruction(TTestContext& ctx)
 void test_context_accounting_and_failure(TTestContext& ctx)
 {
     TAllocatorState state;
-    memory::CMemoryAllocator allocator(&state, allocate_test_memory, deallocate_test_memory, 1u);
-    memory::CMemoryContext context(allocator, 1u);
+    memory::CMemoryAllocator allocator(&state, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context(allocator, system_ids::host);
     const TMemoryContextScope context_scope(&context);
 
     using node_type = memory::TTypeless<TTrackedPayload, k_payload_type_id>;
