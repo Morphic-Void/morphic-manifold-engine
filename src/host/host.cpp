@@ -31,73 +31,15 @@
 #include "platform/system/performance_counter.hpp"
 #include "platform/system/process_priority.hpp"
 #include "platform/threading/platform_threading.hpp"
+#include "system/erased_owner.hpp"
+#include "system/erased_pod.hpp"
+#include "system/erased_owner_transport.hpp"
 #include "system/system_ids.hpp"
 #include "system/TStaticLookup.hpp"
+#include "system/transported_types.hpp"
 #include "threading/threading.hpp"
-#include "types/typeless_traits.hpp"
-#include "types/typeless_pod.hpp"
-#include "types/typeless.hpp"
 
 #include "debug/debug.hpp"
-
-namespace type_ids
-{   //  will be moved into system/system_ids.hpp
-
-static constexpr std::size_t msg_id_unrecognised_msg = encode_id(100u);
-
-static constexpr std::size_t msg_id_file_load_request = encode_id(101u);
-static constexpr std::size_t msg_id_file_save_request = encode_id(102u);
-static constexpr std::size_t msg_id_tga_load_request = encode_id(103u);
-static constexpr std::size_t msg_id_tga_save_request = encode_id(104u);
-static constexpr std::size_t msg_id_tga_encode_request = encode_id(105u);
-static constexpr std::size_t msg_id_tga_decode_request = encode_id(106u);
-
-static constexpr std::size_t msg_id_file_load_result = encode_id(107u);
-static constexpr std::size_t msg_id_file_save_result = encode_id(108u);
-static constexpr std::size_t msg_id_tga_load_result = encode_id(109u);
-static constexpr std::size_t msg_id_tga_save_result = encode_id(110u);
-
-static constexpr std::size_t msg_id_file_load_result_owning = encode_id(111u);
-static constexpr std::size_t msg_id_tga_encode_result_owning = encode_id(112u);
-static constexpr std::size_t msg_id_tga_decode_result_owning = encode_id(113u);
-
-};
-
-struct UnrecognisedMsg { std::size_t msg_id; };
-
-struct FileLoadRequest { const char* file; };
-struct FileSaveRequest { const char* file; CByteConstView* view; };
-struct TgaLoadRequest { const char* file; bool vflip; };
-struct TgaSaveRequest { const char* file; CByteRectConstView* view; image::codec::tga::EncodeOptions* options; };
-struct TgaEncodeRequest { CByteRectConstView* view; image::codec::tga::EncodeOptions* options; };
-struct TgaDecodeRequest { CByteConstView* view; bool vflip; };
-
-struct FileLoadResult { CByteConstView* view; };
-struct FileSaveResult { bool success; };
-struct TgaLoadResult { CByteRectConstView* view; image::codec::tga::decoded_image_desc desc; };
-struct TgaSaveResult { bool success; };
-
-struct OwningFileLoadResult { std::size_t async_slot; CByteBuffer buffer; };
-struct OwningTgaEncodeResult { std::size_t async_slot; CByteBuffer buffer; };
-struct OwningTgaDecodeResult { std::size_t async_slot; CByteRectBuffer buffer; image::codec::tga::decoded_image_desc desc; };
-
-MV_DECLARE_TYPELESS(UnrecognisedMsg, type_ids::msg_id_unrecognised_msg);
-
-MV_DECLARE_TYPELESS(FileLoadRequest, type_ids::msg_id_file_load_request);
-MV_DECLARE_TYPELESS(FileSaveRequest, type_ids::msg_id_file_save_request);
-MV_DECLARE_TYPELESS(TgaSaveRequest, type_ids::msg_id_tga_save_request);
-MV_DECLARE_TYPELESS(TgaLoadRequest, type_ids::msg_id_tga_load_request);
-MV_DECLARE_TYPELESS(TgaEncodeRequest, type_ids::msg_id_tga_encode_request);
-MV_DECLARE_TYPELESS(TgaDecodeRequest, type_ids::msg_id_tga_decode_request);
-
-MV_DECLARE_TYPELESS(FileLoadResult, type_ids::msg_id_file_load_result);
-MV_DECLARE_TYPELESS(FileSaveResult, type_ids::msg_id_file_save_result);
-MV_DECLARE_TYPELESS(TgaLoadResult, type_ids::msg_id_tga_load_result);
-MV_DECLARE_TYPELESS(TgaSaveResult, type_ids::msg_id_tga_save_result);
-
-MV_DECLARE_TYPELESS(OwningFileLoadResult, type_ids::msg_id_file_load_result_owning);
-MV_DECLARE_TYPELESS(OwningTgaEncodeResult, type_ids::msg_id_tga_encode_result_owning);
-MV_DECLARE_TYPELESS(OwningTgaDecodeResult, type_ids::msg_id_tga_decode_result_owning);
 
 struct ThreadConfig
 {
@@ -121,7 +63,7 @@ public:
     threading::CCountingSemaphore counting_semaphore;   //  use counting_semaphore for multi-thread jobs
     threading::transports::TQueue<threading::CPodThreadMsg> host_to_worker_msgs;
     threading::transports::TQueue<threading::CPodThreadMsg> worker_to_host_msgs;
-    threading::transports::TOwning<memory::CTypeless> worker_owned_to_host_owned;
+    threading::transports::CErasedOwnerTransport worker_owned_to_host_owned;
     threading::CThreadControlState control_state;
     ThreadConfig config;
 };
@@ -144,7 +86,7 @@ public:
     std::uint32_t wait_for_new_epoch(const uint32_t epoch) noexcept;
     bool read(threading::CPodThreadMsg& msg) noexcept { return m_resources.host_to_worker_msgs.read(msg); }
     bool post(const threading::CPodThreadMsg& msg) noexcept { return m_resources.worker_to_host_msgs.post(msg); }
-    bool pass_ownership(memory::CTypeless& obj) noexcept { return m_resources.worker_owned_to_host_owned.post(std::move(obj)); }
+    bool pass_ownership(CErasedOwner& obj) noexcept { return m_resources.worker_owned_to_host_owned.post(std::move(obj)); }
     const char* get_name() const noexcept { return m_resources.config.name; }
 
 private:
@@ -183,7 +125,7 @@ public:
     bool shutdown() noexcept;
     bool read(threading::CPodThreadMsg& msg) noexcept;
     bool post(const threading::CPodThreadMsg& msg) noexcept;
-    bool take_ownership(memory::CTypeless& obj) noexcept;
+    bool take_ownership(CErasedOwner& obj) noexcept;
     threading::EThreadRunState query_state() const noexcept;
 
 private:
@@ -263,7 +205,7 @@ inline bool CThreadPackage::post(const threading::CPodThreadMsg& msg) noexcept
     return success;
 }
 
-inline bool CThreadPackage::take_ownership(memory::CTypeless& msg) noexcept
+inline bool CThreadPackage::take_ownership(CErasedOwner& msg) noexcept
 {
     return m_resources.worker_owned_to_host_owned.read(msg);
 }
@@ -340,11 +282,13 @@ std::uint32_t CHostWorkerThread::main() noexcept
 
                     FileLoadRequest request;
                     (void)inbound_msg.payload.copy_to(request);
-                    memory::CTypeless outbound_msg = create_typeless<OwningFileLoadResult>();
-                    OwningFileLoadResult& result = *typeless_cast<OwningFileLoadResult>(outbound_msg);
-                    result.async_slot = inbound_msg.async_slot;
-                    result.buffer = platform::filesystem::loadFile(request.file);
-                    (void)m_context.pass_ownership(outbound_msg);
+                    CErasedOwner outbound_msg = CErasedOwner::create<OwningFileLoadResult>();
+                    if (OwningFileLoadResult* const result = outbound_msg.payload<OwningFileLoadResult>())
+                    {
+                        result->async_slot = inbound_msg.async_slot;
+                        result->buffer = platform::filesystem::loadFile(request.file);
+                        (void)m_context.pass_ownership(outbound_msg);
+                    }
                     break;
                 }
                 case (k_type_id_v<FileSaveRequest>):
@@ -367,11 +311,13 @@ std::uint32_t CHostWorkerThread::main() noexcept
 
                     TgaEncodeRequest request;
                     (void)inbound_msg.payload.copy_to(request);
-                    memory::CTypeless outbound_msg = create_typeless<OwningTgaEncodeResult>();
-                    OwningTgaEncodeResult& result = *typeless_cast<OwningTgaEncodeResult>(outbound_msg);
-                    result.async_slot = inbound_msg.async_slot;
-                    result.buffer = image::codec::tga::encode(*request.view, *request.options);
-                    (void)m_context.pass_ownership(outbound_msg);
+                    CErasedOwner outbound_msg = CErasedOwner::create<OwningTgaEncodeResult>();
+                    if (OwningTgaEncodeResult* const result = outbound_msg.payload<OwningTgaEncodeResult>())
+                    {
+                        result->async_slot = inbound_msg.async_slot;
+                        result->buffer = image::codec::tga::encode(*request.view, *request.options);
+                        (void)m_context.pass_ownership(outbound_msg);
+                    }
                     break;
                 }
                 case (k_type_id_v<TgaDecodeRequest>):
@@ -380,11 +326,13 @@ std::uint32_t CHostWorkerThread::main() noexcept
 
                     TgaDecodeRequest request;
                     (void)inbound_msg.payload.copy_to(request);
-                    memory::CTypeless outbound_msg = create_typeless<OwningTgaDecodeResult>();
-                    OwningTgaDecodeResult& result = *typeless_cast<OwningTgaDecodeResult>(outbound_msg);
-                    result.async_slot = inbound_msg.async_slot;
-                    result.buffer = image::codec::tga::decode(*request.view, result.desc, request.vflip);
-                    (void)m_context.pass_ownership(outbound_msg);
+                    CErasedOwner outbound_msg = CErasedOwner::create<OwningTgaDecodeResult>();
+                    if (OwningTgaDecodeResult* const result = outbound_msg.payload<OwningTgaDecodeResult>())
+                    {
+                        result->async_slot = inbound_msg.async_slot;
+                        result->buffer = image::codec::tga::decode(*request.view, result->desc, request.vflip);
+                        (void)m_context.pass_ownership(outbound_msg);
+                    }
                     break;
                 }
                 default:
@@ -785,7 +733,7 @@ int host()
                         }
                     }
                 }
-                memory::CTypeless inbound_msg_owning;
+                CErasedOwner inbound_msg_owning;
                 while (inbound_package.take_ownership(inbound_msg_owning))
                 {
                     debug_utils::debug_output("Host: Recieved object ownership\n");
@@ -796,7 +744,7 @@ int host()
                         {   //  for this test we know that this is in response to our own attempt to load the tga file
                             debug_utils::debug_output("Host: Took ownership of a loaded file buffer\n");
 
-                            OwningFileLoadResult& result = *typeless_cast<OwningFileLoadResult>(inbound_msg_owning);
+                            OwningFileLoadResult& result = *inbound_msg_owning.payload<OwningFileLoadResult>();
                             async_tga_load.buffer = std::move(result.buffer);
                             async_tga_load.view = async_tga_load.buffer.const_view();
                             const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::bg_conditioning)];
@@ -814,7 +762,7 @@ int host()
                         {   //  for this test we know that this is in response to our own attempt to encode the tga file
                             debug_utils::debug_output("Host: Took ownership of an encoded TGA file buffer\n");
 
-                            OwningTgaEncodeResult& result = *typeless_cast<OwningTgaEncodeResult>(inbound_msg_owning);
+                            OwningTgaEncodeResult& result = *inbound_msg_owning.payload<OwningTgaEncodeResult>();
                             async_tga_save.buffer = std::move(result.buffer);
                             async_tga_save.view = async_tga_save.buffer.const_view();
                             const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::bg_file_io)];
@@ -832,7 +780,7 @@ int host()
                         {   //  for this test we know that this is in response to our own attempt to decode the tga file
                             debug_utils::debug_output("Host: Took ownership of a decoded TGA image buffer\n");
 
-                            OwningTgaDecodeResult& result = *typeless_cast<OwningTgaDecodeResult>(inbound_msg_owning);
+                            OwningTgaDecodeResult& result = *inbound_msg_owning.payload<OwningTgaDecodeResult>();
                             async_tga_load.rect_buffer = std::move(result.buffer);
                             async_tga_load.rect_view = async_tga_load.rect_buffer.const_view();
                             async_tga_load.desc = result.desc;
@@ -849,7 +797,8 @@ int host()
                         }
                         default:
                         {
-                            debug_utils::debug_output("Host: Took ownership of an unknown object (%d)\n", inbound_msg_owning.query_type_id());
+                            MV_CRITICAL_ASSERT(false);
+                            debug_utils::debug_output("Host: Took ownership of an unknown object (%u)\n", inbound_msg_owning.query_type_id());
                             break;
                         }
                     }

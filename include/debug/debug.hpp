@@ -45,6 +45,11 @@
 
 #endif
 
+// Marks a broken architectural or accounting contract. Development should
+// stop; a published build may later report the failure and continue in a
+// degraded state through the expanded debug infrastructure.
+#define MV_CRITICAL_ASSERT(x) MV_HARD_ASSERT(x)
+
 namespace debug_utils
 {
 

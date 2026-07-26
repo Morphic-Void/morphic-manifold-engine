@@ -10,7 +10,7 @@
 #include "tests/ByteBuffers_test_suite.hpp"
 #include "tests/CMemoryToken_test_suite.hpp"
 #include "tests/CMemoryView_test_suite.hpp"
-#include "tests/MemoryTypeless_test_suite.hpp"
+#include "tests/ErasedOwner_test_suite.hpp"
 #include "tests/StringBuffers_test_suite.hpp"
 #include "tests/TInstance_test_suite.hpp"
 #include "tests/TOrderedCollection_test_suite.hpp"
@@ -34,8 +34,8 @@ int run_tests()
     int memory_view_test_result = run_memory_view_tests();
     cumulative_result += memory_view_test_result;
 
-    int memory_typeless_test_result = run_memory_typeless_tests();
-    cumulative_result += memory_typeless_test_result;
+    int erased_owner_test_result = run_erased_owner_tests();
+    cumulative_result += erased_owner_test_result;
 
     int pod_vector_test_result = run_pod_vector_tests();
     cumulative_result += pod_vector_test_result;

@@ -70,11 +70,17 @@
     <Filter Include="docs\memory">
       <UniqueIdentifier>{7a8e6360-4b25-4640-9e3d-24a60c29d301}</UniqueIdentifier>
     </Filter>
+    <Filter Include="docs\system">
+      <UniqueIdentifier>{4b370337-67b3-4e7a-bc4c-ad4be1e38f94}</UniqueIdentifier>
+    </Filter>
     <Filter Include="include\system">
       <UniqueIdentifier>{1ef648dd-f950-48e9-8d06-f300e76e082f}</UniqueIdentifier>
     </Filter>
     <Filter Include="docs\backlog">
       <UniqueIdentifier>{b447aee3-3045-4d9c-972f-2c78246358dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\project">
+      <UniqueIdentifier>{acc6f994-d5f4-4d02-89b5-2a7df903587f}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\threading">
       <UniqueIdentifier>{7d987152-6b93-4b7f-a705-e5e93914b562}</UniqueIdentifier>
@@ -228,11 +234,14 @@
     <ClInclude Include="include\tests\TOwningTransport_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
-    <ClInclude Include="include\memory\memory_typeless.hpp">
-      <Filter>include\memory</Filter>
+    <ClInclude Include="include\system\erased_owner.hpp">
+      <Filter>include\system</Filter>
     </ClInclude>
-    <ClInclude Include="include\types\typeless.hpp">
-      <Filter>include\types</Filter>
+    <ClInclude Include="include\system\erased_owner_transport.hpp">
+      <Filter>include\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\system\erased_pod.hpp">
+      <Filter>include\system</Filter>
     </ClInclude>
     <ClInclude Include="include\system\system_ids.hpp">
       <Filter>include\system</Filter>
@@ -249,7 +258,7 @@
     <ClInclude Include="include\tests\CMemoryToken_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
-    <ClInclude Include="include\tests\MemoryTypeless_test_suite.hpp">
+    <ClInclude Include="include\tests\ErasedOwner_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
     <ClInclude Include="include\tests\TPodVector_test_suite.hpp">
@@ -354,11 +363,11 @@
     <ClInclude Include="include\containers\TPodUnorderedSlots.hpp">
       <Filter>include\containers</Filter>
     </ClInclude>
-    <ClInclude Include="include\types\typeless_pod.hpp">
-      <Filter>include\types</Filter>
+    <ClInclude Include="include\system\system_type_registration.hpp">
+      <Filter>include\system</Filter>
     </ClInclude>
-    <ClInclude Include="include\types\typeless_traits.hpp">
-      <Filter>include\types</Filter>
+    <ClInclude Include="include\system\transported_types.hpp">
+      <Filter>include\system</Filter>
     </ClInclude>
     <ClInclude Include="include\containers\containers.hpp">
       <Filter>include\containers</Filter>
@@ -458,7 +467,7 @@
     <ClCompile Include="src\tests\CMemoryToken_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
-    <ClCompile Include="src\tests\MemoryTypeless_test_suite.cpp">
+    <ClCompile Include="src\tests\ErasedOwner_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\TPodVector_test_suite.cpp">
@@ -545,6 +554,12 @@
     <ClCompile Include="src\host\host.cpp">
       <Filter>src\host</Filter>
     </ClCompile>
+    <ClCompile Include="src\system\erased_owner.cpp">
+      <Filter>src\system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\system\erased_owner_transport.cpp">
+      <Filter>src\system</Filter>
+    </ClCompile>
     <ClCompile Include="src\system\system_context.cpp">
       <Filter>src\system</Filter>
     </ClCompile>
@@ -606,8 +621,8 @@
     <None Include="docs\codebase-ethos-primer.md">
       <Filter>docs</Filter>
     </None>
-    <None Include="docs\memory\memory_typeless.md">
-      <Filter>docs\memory</Filter>
+    <None Include="docs\system\erased_owner.md">
+      <Filter>docs\system</Filter>
     </None>
     <None Include="docs\origins.md">
       <Filter>docs</Filter>
@@ -621,8 +636,14 @@
     <None Include="docs\memory\memory_subsystem.md">
       <Filter>docs\memory</Filter>
     </None>
-    <None Include="docs\threading\mpmc_transport_handoff.md">
-      <Filter>docs\threading</Filter>
+    <None Include="docs\project\completed_milestones.md">
+      <Filter>docs\project</Filter>
+    </None>
+    <None Include="docs\project\future_work_notes.md">
+      <Filter>docs\project</Filter>
+    </None>
+    <None Include="docs\threading\transports\TMpmcTransport.md">
+      <Filter>docs\threading\transports</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

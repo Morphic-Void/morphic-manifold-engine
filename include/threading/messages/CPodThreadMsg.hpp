@@ -15,7 +15,7 @@
 //  CPodThreadMsg is a non-owning, trivially-copyable message container
 //  intended for queue-based communication between engine threads.
 //
-//  The stored payload is type-erased using TTypelessPod and identified by
+//  The stored payload is type-erased using TErasedPod and identified by
 //  the project type-id registry. Concrete message payloads are copied into
 //  and out of the erased storage; no typed pointer into the erased payload is
 //  exposed.
@@ -41,7 +41,7 @@
 
 #include <cstdint>      //  std::uint64_t, std::uintptr_t
 
-#include "types/typeless_pod.hpp"
+#include "system/erased_pod.hpp"
 
 namespace threading
 {
@@ -65,7 +65,7 @@ struct CPodThreadMsg
 {
     std::int32_t async_slot{ 0 };
     std::uint32_t reserved{ 0u };
-    TTypelessPodFor<PodThreadMsgPayload> payload;
+    TErasedPodFor<PodThreadMsgPayload> payload;
 };
 
 static_assert((sizeof(std::uintptr_t) <= sizeof(std::uint64_t)), "CPodThreadMsg requires pointer-sized values to fit in std::uint64_t.");

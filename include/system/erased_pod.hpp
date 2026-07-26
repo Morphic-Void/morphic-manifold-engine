@@ -2,7 +2,7 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   typeless_pod.hpp
+//  File:   erased_pod.hpp
 //  Author: Ritchie Brannan
 //  Date:   14 May 2026
 //
@@ -10,7 +10,7 @@
 //  - Requires C++17 or later.
 //  - No exceptions.
 //
-//  Inline POD typeless storage.
+//  Inline POD erased storage.
 //
 //  Provides fixed-capacity erased storage for trivially copyable payloads
 //  identified by project type ids.
@@ -18,44 +18,44 @@
 //  This is a value mechanism only. It does not allocate, construct,
 //  destroy, or transfer ownership.
 //
-//  The shared type-to-id binding traits are provided by
-//  types/typeless_traits.hpp.
+//  The shared type-to-id binding is provided by
+//  system/system_type_registration.hpp.
 
 #pragma once
 
-#ifndef TYPELESS_POD_HPP_INCLUDED
-#define TYPELESS_POD_HPP_INCLUDED
+#ifndef ERASED_POD_HPP_INCLUDED
+#define ERASED_POD_HPP_INCLUDED
 
 #include <cstddef>      //  std::size_t
 #include <cstring>      //  std::memcpy, std::memset
 #include <type_traits>  //  std::is_trivially_copyable_v
 
-#include "types/typeless_traits.hpp"
+#include "system/system_type_registration.hpp"
 
 //==============================================================================
-//  TTypelessPod
-//  Inline fixed-capacity POD typeless storage
+//  TErasedPod
+//  Inline fixed-capacity POD erased storage
 //==============================================================================
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
-class TTypelessPod
+class TErasedPod
 {
 private:
-    static_assert((PayloadSize > 0u), "TTypelessPod payload size must be non-zero.");
-    static_assert((PayloadAlign > 0u), "TTypelessPod payload alignment must be non-zero.");
-    static_assert(((PayloadAlign & (PayloadAlign - 1u)) == 0u), "TTypelessPod payload alignment must be a power of two.");
+    static_assert((PayloadSize > 0u), "TErasedPod payload size must be non-zero.");
+    static_assert((PayloadAlign > 0u), "TErasedPod payload alignment must be non-zero.");
+    static_assert(((PayloadAlign & (PayloadAlign - 1u)) == 0u), "TErasedPod payload alignment must be a power of two.");
 
 public:
 
     //  Default lifetime
-    TTypelessPod() noexcept = default;
-    TTypelessPod(const TTypelessPod&) noexcept = default;
-    TTypelessPod& operator=(const TTypelessPod&) noexcept = default;
-    ~TTypelessPod() noexcept = default;
+    TErasedPod() noexcept = default;
+    TErasedPod(const TErasedPod&) noexcept = default;
+    TErasedPod& operator=(const TErasedPod&) noexcept = default;
+    ~TErasedPod() noexcept = default;
 
     void clear() noexcept;
     bool is_empty() const noexcept;
-    std::size_t query_type_id() const noexcept;
+    type_ids::id_type query_type_id() const noexcept;
 
     template<typename T> static constexpr bool is_compatible_with() noexcept;
 
@@ -69,44 +69,44 @@ private:
 
     void clear_payload() noexcept;
 
-    std::size_t m_type_id = 0u;
+    type_ids::id_type m_type_id = 0u;
     alignas(PayloadAlign) unsigned char m_payload[PayloadSize]{};
 };
 
 //==============================================================================
-//  TTypelessPodFor
+//  TErasedPodFor
 //  Convenience alias for storage shaped by a payload-layout type
 //==============================================================================
 
 template<typename TPayloadShape>
-using TTypelessPodFor = TTypelessPod<sizeof(TPayloadShape), alignof(TPayloadShape)>;
+using TErasedPodFor = TErasedPod<sizeof(TPayloadShape), alignof(TPayloadShape)>;
 
 //==============================================================================
-//  TTypelessPod out of class function bodies
+//  TErasedPod out of class function bodies
 //==============================================================================
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
-void TTypelessPod<PayloadSize, PayloadAlign>::clear() noexcept
+void TErasedPod<PayloadSize, PayloadAlign>::clear() noexcept
 {
     m_type_id = 0u;
     clear_payload();
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
-bool TTypelessPod<PayloadSize, PayloadAlign>::is_empty() const noexcept
+bool TErasedPod<PayloadSize, PayloadAlign>::is_empty() const noexcept
 {
     return m_type_id == 0u;
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
-std::size_t TTypelessPod<PayloadSize, PayloadAlign>::query_type_id() const noexcept
+type_ids::id_type TErasedPod<PayloadSize, PayloadAlign>::query_type_id() const noexcept
 {
     return m_type_id;
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
 template<typename T>
-constexpr bool TTypelessPod<PayloadSize, PayloadAlign>::is_compatible_with() noexcept
+constexpr bool TErasedPod<PayloadSize, PayloadAlign>::is_compatible_with() noexcept
 {
     return std::is_trivially_copyable_v<T>
         && (sizeof(T) <= PayloadSize)
@@ -115,14 +115,14 @@ constexpr bool TTypelessPod<PayloadSize, PayloadAlign>::is_compatible_with() noe
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
 template<typename T>
-bool TTypelessPod<PayloadSize, PayloadAlign>::is_a() const noexcept
+bool TErasedPod<PayloadSize, PayloadAlign>::is_a() const noexcept
 {
     return m_type_id == k_type_id_v<T>;
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
 template<typename T>
-bool TTypelessPod<PayloadSize, PayloadAlign>::assign(const T& value) noexcept
+bool TErasedPod<PayloadSize, PayloadAlign>::assign(const T& value) noexcept
 {
     validate_payload_type<T>();
 
@@ -134,7 +134,7 @@ bool TTypelessPod<PayloadSize, PayloadAlign>::assign(const T& value) noexcept
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
 template<typename T>
-bool TTypelessPod<PayloadSize, PayloadAlign>::copy_to(T& out) const noexcept
+bool TErasedPod<PayloadSize, PayloadAlign>::copy_to(T& out) const noexcept
 {
     validate_payload_type<T>();
 
@@ -149,18 +149,18 @@ bool TTypelessPod<PayloadSize, PayloadAlign>::copy_to(T& out) const noexcept
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
 template<typename T>
-constexpr void TTypelessPod<PayloadSize, PayloadAlign>::validate_payload_type() noexcept
+constexpr void TErasedPod<PayloadSize, PayloadAlign>::validate_payload_type() noexcept
 {
-    static_assert((k_type_id_v<T> != 0u), "TTypelessPod reserves type id zero for empty storage.");
-    static_assert(std::is_trivially_copyable_v<T>, "TTypelessPod requires trivially copyable payloads.");
-    static_assert((sizeof(T) <= PayloadSize), "TTypelessPod payload storage is too small.");
-    static_assert((alignof(T) <= PayloadAlign), "TTypelessPod payload storage is under-aligned.");
+    static_assert((k_type_id_v<T> != 0u), "TErasedPod reserves type id zero for empty storage.");
+    static_assert(std::is_trivially_copyable_v<T>, "TErasedPod requires trivially copyable payloads.");
+    static_assert((sizeof(T) <= PayloadSize), "TErasedPod payload storage is too small.");
+    static_assert((alignof(T) <= PayloadAlign), "TErasedPod payload storage is under-aligned.");
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
-void TTypelessPod<PayloadSize, PayloadAlign>::clear_payload() noexcept
+void TErasedPod<PayloadSize, PayloadAlign>::clear_payload() noexcept
 {
     std::memset(m_payload, 0, PayloadSize);
 }
 
-#endif  //  #ifndef TYPELESS_POD_HPP_INCLUDED
+#endif  //  #ifndef ERASED_POD_HPP_INCLUDED

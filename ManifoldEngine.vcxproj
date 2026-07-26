@@ -177,12 +177,14 @@
     <ClCompile Include="src\platform\threading\thread_lifetime.cpp" />
     <ClCompile Include="src\platform\threading\thread_priority.cpp" />
     <ClCompile Include="src\platform\threading\wait_word.cpp" />
+    <ClCompile Include="src\system\erased_owner.cpp" />
+    <ClCompile Include="src\system\erased_owner_transport.cpp" />
     <ClCompile Include="src\system\system_context.cpp" />
     <ClCompile Include="src\system\system_ids.cpp" />
     <ClCompile Include="src\tests\ByteBuffers_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryToken_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryView_test_suite.cpp" />
-    <ClCompile Include="src\tests\MemoryTypeless_test_suite.cpp" />
+    <ClCompile Include="src\tests\ErasedOwner_test_suite.cpp" />
     <ClCompile Include="src\tests\StringBuffers_test_suite.cpp" />
     <ClCompile Include="src\tests\TInstance_test_suite.cpp" />
     <ClCompile Include="src\tests\TMpmcTransport_test_suite.cpp" />
@@ -228,7 +230,6 @@
     <ClInclude Include="include\memory\memory_policies.hpp" />
     <ClInclude Include="include\memory\memory_token.hpp" />
     <ClInclude Include="include\memory\memory_view.hpp" />
-    <ClInclude Include="include\memory\memory_typeless.hpp" />
     <ClInclude Include="include\platform\filesystem\file.hpp" />
     <ClInclude Include="include\platform\filesystem\internal\file_utils.hpp" />
     <ClInclude Include="include\platform\filesystem\log.hpp" />
@@ -248,7 +249,12 @@
     <ClInclude Include="include\platform\threading\thread_priority.hpp" />
     <ClInclude Include="include\platform\threading\wait_word.hpp" />
     <ClInclude Include="include\platform\windows_include.hpp" />
+    <ClInclude Include="include\system\erased_owner.hpp" />
+    <ClInclude Include="include\system\erased_owner_transport.hpp" />
+    <ClInclude Include="include\system\erased_pod.hpp" />
     <ClInclude Include="include\system\system_context.hpp" />
+    <ClInclude Include="include\system\system_type_registration.hpp" />
+    <ClInclude Include="include\system\transported_types.hpp" />
     <ClInclude Include="include\system\runtime_ids.def" />
     <ClInclude Include="include\system\system_ids.hpp" />
     <ClInclude Include="include\system\thread_ids.def" />
@@ -258,7 +264,7 @@
     <ClInclude Include="include\tests\CMemoryToken_test_suite.hpp" />
     <ClInclude Include="include\tests\run_tests.hpp" />
     <ClInclude Include="include\tests\CMemoryView_test_suite.hpp" />
-    <ClInclude Include="include\tests\MemoryTypeless_test_suite.hpp" />
+    <ClInclude Include="include\tests\ErasedOwner_test_suite.hpp" />
     <ClInclude Include="include\tests\StringBuffers_test_suite.hpp" />
     <ClInclude Include="include\tests\TInstance_test_suite.hpp" />
     <ClInclude Include="include\tests\TMpmcTransport_test_suite.hpp" />
@@ -287,9 +293,6 @@
     <ClInclude Include="include\threading\transports\TRingTransport.hpp" />
     <ClInclude Include="include\types\atomic_types.hpp" />
     <ClInclude Include="include\types\fp16data_t.hpp" />
-    <ClInclude Include="include\types\typeless.hpp" />
-    <ClInclude Include="include\types\typeless_pod.hpp" />
-    <ClInclude Include="include\types\typeless_traits.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
@@ -309,9 +312,11 @@
     <None Include="docs\engineering-aphorisms.md" />
     <None Include="docs\engineering-principles.md" />
     <None Include="docs\memory\memory_subsystem.md" />
-    <None Include="docs\threading\mpmc_transport_handoff.md" />
-    <None Include="docs\memory\memory_typeless.md" />
+    <None Include="docs\project\completed_milestones.md" />
+    <None Include="docs\project\future_work_notes.md" />
+    <None Include="docs\system\erased_owner.md" />
     <None Include="docs\origins.md" />
+    <None Include="docs\threading\transports\TMpmcTransport.md" />
     <None Include="docs\threading\transports\TOwningTransport.md" />
     <None Include="docs\threading\transports\TQueueTransport.md" />
     <None Include="docs\threading\transports\TRingTransport.md" />

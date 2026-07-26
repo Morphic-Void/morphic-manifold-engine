@@ -171,6 +171,7 @@ public:
 
 private:
     friend class CStringBuffer;
+    friend class CErasedOwner;
 
     [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept
     {
@@ -414,6 +415,18 @@ public:
     [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
 
 private:
+    friend class CErasedOwner;
+
+    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept
+    {
+        return m_token.owns_storage() ? m_token.context() : nullptr;
+    }
+    void unsafe_replace_memory_context_without_accounting(
+        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept
+    {
+        m_token.unsafe_replace_context_without_accounting(expected_source, target);
+    }
+
     memory::CMemoryToken m_token{ 1u, 1u };
     MetaByteRectBuffer m_meta;
 };
