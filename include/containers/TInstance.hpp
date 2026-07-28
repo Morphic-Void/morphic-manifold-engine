@@ -56,7 +56,6 @@ class TInstance final
     static_assert(!std::is_const_v<T>, "TInstance<T> should not own const-qualified types.");
     static_assert(!std::is_volatile_v<T>, "TInstance<T> should not own volatile-qualified types.");
     static_assert(std::is_nothrow_destructible_v<T>, "TInstance<T> requires T to be nothrow destructible.");
-    static_assert(sizeof(T) <= 0xffffu, "TInstance<T> element size exceeds the memory token stride field.");
     static_assert(sizeof(T) <= memory::k_byte_size_ceiling, "TInstance<T> element size exceeds the shared byte ceiling.");
 
 public:
@@ -106,7 +105,7 @@ private:
     static constexpr std::size_t k_element_size = sizeof(T);
     static constexpr std::size_t k_align = memory::t_default_align<T>();
 
-    memory::CMemoryToken m_token{ k_element_size, k_align };
+    memory::CMemoryToken m_token{ 1u, k_align };
 };
 
 //==============================================================================
@@ -144,12 +143,12 @@ template<typename T>
 inline bool TInstance<T>::is_valid() const noexcept
 {
     if (!m_token.is_relocatable() ||
-        (m_token.stride() != k_element_size) || (m_token.storage_alignment() != k_align) ||
-        (m_token.count() > 1u))
+        (m_token.stride() != 1u) ||
+        (m_token.storage_alignment() != k_align))
     {
         return false;
     }
-    return (object_ptr() != nullptr) ? (m_token.count() == 1u) : (m_token.count() == 0u);
+    return (object_ptr() != nullptr) ? (m_token.count() == k_element_size) : (m_token.count() == 0u);
 }
 
 template<typename T>
@@ -204,7 +203,7 @@ inline bool TInstance<T>::emplace(TArgs&&... args) noexcept
     {   //  existing storage - preserve owner identity, deconstruct and reconstruct in-place
         ptr->~T();
     }
-    else if (m_token.allocate(1u))
+    else if (m_token.allocate(k_element_size))
     {   //  storage allocated
         ptr = object_ptr();
     }
