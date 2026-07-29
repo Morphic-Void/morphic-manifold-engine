@@ -21,8 +21,15 @@ struct alignas(128) TCacheLineAtomic
 {
     static_assert(sizeof(std::atomic<T>) <= 128u, "Atomic object is larger than 128 bytes.");
 
-    std::atomic<T> value;
-    std::uint8_t padding[128u - sizeof(std::atomic<T>)];
+    TCacheLineAtomic() noexcept = default;
+
+    TCacheLineAtomic(const T initial_value) noexcept
+        : value{ initial_value }
+    {
+    }
+
+    std::atomic<T> value{ T{ 0u } };
+    std::uint8_t padding[128u - sizeof(std::atomic<T>)]{ 0u };
 };
 
 #endif	//	#ifndef	__ATOMIC_TYPES_INCLUDED__

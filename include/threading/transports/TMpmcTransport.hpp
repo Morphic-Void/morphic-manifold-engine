@@ -108,8 +108,8 @@ public:
 
 private:
     alignas(128) Slot m_slots[k_capacity];
-    TCacheLineAtomic<std::uint32_t> m_enqueue_position{ { 0u }, { 0u } };
-    TCacheLineAtomic<std::uint32_t> m_dequeue_position{ { 0u }, { 0u } };
+    TCacheLineAtomic<std::uint32_t> m_enqueue_position{};
+    TCacheLineAtomic<std::uint32_t> m_dequeue_position{};
 };
 
 template<typename T, std::uint32_t t_capacity_hint>
@@ -226,8 +226,9 @@ private:
 
     TMpmcIndexRing<t_capacity_hint> m_supplier_ring{ true };
     TMpmcIndexRing<t_capacity_hint> m_populated_ring{ false };
-    TCacheLineAtomic<std::uint32_t> m_status_word{ { static_cast<std::uint32_t>(EMpmcTransportStatus::open) }, { 0u } };
-    TCacheLineAtomic<std::uint32_t> m_outstanding_count{ { 0u }, { 0u } };
+    TCacheLineAtomic<std::uint32_t> m_status_word{
+        static_cast<std::uint32_t>(EMpmcTransportStatus::open) };
+    TCacheLineAtomic<std::uint32_t> m_outstanding_count{};
     alignas(128) T m_arena[k_capacity];
 };
 
