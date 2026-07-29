@@ -226,8 +226,7 @@ private:
 
     TMpmcIndexRing<t_capacity_hint> m_supplier_ring{ true };
     TMpmcIndexRing<t_capacity_hint> m_populated_ring{ false };
-    TCacheLineAtomic<std::uint32_t> m_status_word{
-        static_cast<std::uint32_t>(EMpmcTransportStatus::open) };
+    TCacheLineAtomic<std::uint32_t> m_status_word{ static_cast<std::uint32_t>(EMpmcTransportStatus::open) };
     TCacheLineAtomic<std::uint32_t> m_outstanding_count{};
     alignas(128) T m_arena[k_capacity];
 };
