@@ -54,7 +54,7 @@ int Log::write_va(const char* format, std::va_list args) noexcept
 
 bool Log::flush() noexcept
 {
-    return (m_stream != nullptr) ? std::fflush(m_stream) : false;
+    return (m_stream != nullptr) && (std::fflush(m_stream) == 0);
 }
 
 bool Log::flush_durable() noexcept
