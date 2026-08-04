@@ -142,24 +142,33 @@ inline void* CMemoryAllocator::allocate(
     const std::size_t conditioned_alignment,
     const std::size_t conditioned_bytes) noexcept
 {
-    if (!MV_FAIL_SAFE_ASSERT((m_allocate != nullptr) &&
-        (memory::condition_alignment(conditioned_alignment) == conditioned_alignment) &&
-        (memory::condition_bytes(conditioned_alignment, conditioned_bytes) == conditioned_bytes)))
+    if ((m_allocate == nullptr) ||
+        (memory::condition_alignment(conditioned_alignment) != conditioned_alignment) ||
+        (memory::condition_bytes(conditioned_alignment, conditioned_bytes) != conditioned_bytes))
     {
+        MV_ERROR("CMemoryAllocator::allocate received an invalid conditioned allocation request");
         return nullptr;
     }
+
     return m_allocate(m_context, conditioned_alignment, conditioned_bytes);
 }
 
 inline bool CMemoryAllocator::deallocate(const std::size_t conditioned_alignment, void* const ptr) noexcept
 {
-    if (!MV_FAIL_SAFE_ASSERT((m_deallocate != nullptr) &&
-        (memory::condition_alignment(conditioned_alignment) == conditioned_alignment) &&
-        (ptr != nullptr)))
+    if ((m_deallocate == nullptr) ||
+        (memory::condition_alignment(conditioned_alignment) != conditioned_alignment) ||
+        (ptr == nullptr))
     {
+        MV_ERROR("CMemoryAllocator::deallocate received an invalid conditioned deallocation request");
         return false;
     }
-    return MV_FAIL_SAFE_ASSERT(m_deallocate(m_context, conditioned_alignment, ptr));
+
+    if (!m_deallocate(m_context, conditioned_alignment, ptr))
+    {
+        MV_ERROR("CMemoryAllocator::deallocate failed");
+        return false;
+    }
+    return true;
 }
 
 //==============================================================================
@@ -174,8 +183,11 @@ inline CMemoryContext::CMemoryContext(CMemoryAllocator& allocator, const system_
 
 inline CMemoryContext::~CMemoryContext() noexcept
 {
-    MV_FAIL_SAFE_ASSERT((m_live_allocations.load(std::memory_order_relaxed) == 0u) &&
-        (m_live_allocated_bytes.load(std::memory_order_relaxed) == 0u));
+    if ((m_live_allocations.load(std::memory_order_relaxed) != 0u) ||
+        (m_live_allocated_bytes.load(std::memory_order_relaxed) != 0u))
+    {
+        MV_ERROR("CMemoryContext was destroyed with live allocations still recorded");
+    }
 }
 
 inline std::uint32_t CMemoryContext::get_live_allocation_count() const noexcept
@@ -272,22 +284,36 @@ inline void* CMemoryContext::allocate(
 {
     const std::size_t conditioned_alignment = condition_alignment(requested_alignment);
     const std::size_t conditioned_bytes = condition_bytes(conditioned_alignment, requested_bytes);
-    if (!MV_FAIL_SAFE_ASSERT(validate(conditioned_alignment, conditioned_bytes)) ||
-        !MV_FAIL_SAFE_ASSERT(add(1u, conditioned_bytes)))
+    if (!validate(conditioned_alignment, conditioned_bytes))
     {
+        MV_ERROR("CMemoryContext::allocate received an invalid allocation request");
+        return nullptr;
+    }
+
+    if (!add(1u, conditioned_bytes))
+    {
+        MV_ERROR("CMemoryContext::allocate failed to add allocation accounting");
         return nullptr;
     }
 
     void* const ptr = m_allocator.allocate(conditioned_alignment, conditioned_bytes);
     if (ptr == nullptr)
     {
-        (void)MV_FAIL_SAFE_ASSERT(sub(1u, conditioned_bytes));
+        if (!sub(1u, conditioned_bytes))
+        {
+            MV_ERROR("CMemoryContext::allocate failed to roll back allocation accounting");
+        }
         return nullptr;
     }
-    if (!MV_FAIL_SAFE_ASSERT((reinterpret_cast<std::uintptr_t>(ptr) & (conditioned_alignment - 1u)) == 0u))
+
+    if ((reinterpret_cast<std::uintptr_t>(ptr) & (conditioned_alignment - 1u)) != 0u)
     {
+        MV_ERROR("CMemoryContext::allocate returned a misaligned pointer");
         (void)m_allocator.deallocate(conditioned_alignment, ptr);
-        (void)MV_FAIL_SAFE_ASSERT(sub(1u, conditioned_bytes));
+        if (!sub(1u, conditioned_bytes))
+        {
+            MV_ERROR("CMemoryContext::allocate failed to roll back allocation accounting after misalignment");
+        }
         return nullptr;
     }
     return ptr;
@@ -300,14 +326,23 @@ inline void CMemoryContext::deallocate(
 {
     const std::size_t conditioned_alignment = condition_alignment(requested_alignment);
     const std::size_t conditioned_bytes = condition_bytes(conditioned_alignment, requested_bytes);
-    if (!MV_FAIL_SAFE_ASSERT(validate(conditioned_alignment, conditioned_bytes, ptr)) ||
-        !MV_FAIL_SAFE_ASSERT(sub(1u, conditioned_bytes)))
+    if (!validate(conditioned_alignment, conditioned_bytes, ptr))
     {
+        MV_ERROR("CMemoryContext::deallocate received an invalid deallocation request");
+        return;
+    }
+
+    if (!sub(1u, conditioned_bytes))
+    {
+        MV_ERROR("CMemoryContext::deallocate failed to subtract allocation accounting");
         return;
     }
     if (!m_allocator.deallocate(conditioned_alignment, ptr))
     {
-        (void)MV_FAIL_SAFE_ASSERT(add(1u, conditioned_bytes));
+        if (!add(1u, conditioned_bytes))
+        {
+            MV_ERROR("CMemoryContext::deallocate failed to restore allocation accounting after allocator failure");
+        }
     }
 }
 
@@ -321,18 +356,20 @@ inline bool reattribute(
     {
         return true;
     }
-    if (!MV_FAIL_SAFE_ASSERT(from.is_compatible_with(to) &&
-        (allocation_count != 0u) && (bytes != 0u)))
+    if (!from.is_compatible_with(to) ||
+        (allocation_count == 0u) || (bytes == 0u))
     {
+        MV_ERROR("memory::reattribute received an invalid attribution transfer request");
         return false;
     }
     if (!to.add(allocation_count, bytes))
     {
         return false;
     }
-    if (!MV_FAIL_SAFE_ASSERT(from.sub(allocation_count, bytes)))
+    if (!from.sub(allocation_count, bytes))
     {
-        MV_HARD_ASSERT(to.sub(allocation_count, bytes));
+        MV_ERROR("memory::reattribute failed to remove accounting from the source context");
+        MV_ASSERT(to.sub(allocation_count, bytes));
         return false;
     }
     return true;

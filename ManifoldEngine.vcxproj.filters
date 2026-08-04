@@ -82,6 +82,9 @@
     <Filter Include="docs\project">
       <UniqueIdentifier>{acc6f994-d5f4-4d02-89b5-2a7df903587f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="docs\debug">
+      <UniqueIdentifier>{201620b4-eec3-4a2d-87fc-7fbd0a8d4601}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\threading">
       <UniqueIdentifier>{7d987152-6b93-4b7f-a705-e5e93914b562}</UniqueIdentifier>
     </Filter>
@@ -177,6 +180,15 @@
     <ClInclude Include="include\debug\debug.hpp">
       <Filter>include\debug</Filter>
     </ClInclude>
+    <ClInclude Include="include\debug\macros.hpp">
+      <Filter>include\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="include\debug\event_arguments.hpp">
+      <Filter>include\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="include\debug\service.hpp">
+      <Filter>include\debug</Filter>
+    </ClInclude>
     <ClInclude Include="include\algo\validate_permutations.hpp">
       <Filter>include\algo</Filter>
     </ClInclude>
@@ -250,6 +262,9 @@
       <Filter>include\tests</Filter>
     </ClInclude>
     <ClInclude Include="include\tests\CMemoryView_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\DebugService_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
     <ClInclude Include="include\tests\ByteBuffers_test_suite.hpp">
@@ -340,6 +355,9 @@
       <Filter>include\threading</Filter>
     </ClInclude>
     <ClInclude Include="include\platform\system\process_priority.hpp">
+      <Filter>include\platform\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\platform\system\debugger.hpp">
       <Filter>include\platform\system</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\CCountingSemaphore.hpp">
@@ -446,6 +464,12 @@
     <ClCompile Include="src\debug\debug.cpp">
       <Filter>src\debug</Filter>
     </ClCompile>
+    <ClCompile Include="src\debug\event_arguments.cpp">
+      <Filter>src\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="src\debug\service.cpp">
+      <Filter>src\debug</Filter>
+    </ClCompile>
     <ClCompile Include="src\tests\TQueueTransport_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
@@ -459,6 +483,9 @@
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\CMemoryView_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\DebugService_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\ByteBuffers_test_suite.cpp">
@@ -537,6 +564,9 @@
       <Filter>src\threading</Filter>
     </ClCompile>
     <ClCompile Include="src\platform\system\process_priority.cpp">
+      <Filter>src\platform\system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\system\debugger.cpp">
       <Filter>src\platform\system</Filter>
     </ClCompile>
     <ClCompile Include="src\threading\CCountingSemaphore.cpp">
@@ -620,6 +650,15 @@
     </None>
     <None Include="docs\codebase-ethos-primer.md">
       <Filter>docs</Filter>
+    </None>
+    <None Include="docs\debug\debug_system_audit.md">
+      <Filter>docs\debug</Filter>
+    </None>
+    <None Include="docs\debug\debug_system_interface.md">
+      <Filter>docs\debug</Filter>
+    </None>
+    <None Include="docs\debug\debug_service_substrate.md">
+      <Filter>docs\debug</Filter>
     </None>
     <None Include="docs\system\erased_owner.md">
       <Filter>docs\system</Filter>

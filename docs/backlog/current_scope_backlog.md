@@ -20,6 +20,12 @@ backlog:
 
 ## Subsequent Cross-Cutting Work
 
+- Update documentation describing AI involvement, contribution, authorship, and
+  specification so it reflects the current collaborative workflow.
+- Add command-line selection of named tests and test groups without requiring
+  the complete aggregate suite.
+- Rebrand the public infrastructure to avoid confusion with *Manifold Garden*,
+  including repository names and links.
 - Complete allocator bootstrap ordering before removing the temporary fallback
   allocator.
 - Resume thread provisioning, TLS, and formal threading stress tests when the

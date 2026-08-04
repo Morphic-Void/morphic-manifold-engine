@@ -728,10 +728,10 @@ inline bool CByteBuffer::is_ready() const noexcept
                 MetaByteBuffer meta{ size, capacity };
                 m_token = std::move(token);
                 m_meta = meta;
-                MV_HARD_ASSERT(m_token.storage_alignment() == norm_align);
-                MV_HARD_ASSERT(m_meta.size == size);
-                MV_HARD_ASSERT(m_meta.capacity == capacity);
-                MV_HARD_ASSERT(is_ready());
+                MV_ASSERT(m_token.storage_alignment() == norm_align);
+                MV_ASSERT(m_meta.size == size);
+                MV_ASSERT(m_meta.capacity == capacity);
+                MV_ASSERT(is_ready());
                 return true;
             }
             return false;
@@ -788,10 +788,10 @@ inline bool CByteBuffer::is_ready() const noexcept
             MetaByteBuffer meta{ view.size(), view.size() };
             m_token = std::move(token);
             m_meta = meta;
-            MV_HARD_ASSERT(m_token.storage_alignment() == view.align());
-            MV_HARD_ASSERT(m_meta.size == view.size());
-            MV_HARD_ASSERT(m_meta.capacity == view.size());
-            MV_HARD_ASSERT(is_ready());
+            MV_ASSERT(m_token.storage_alignment() == view.align());
+            MV_ASSERT(m_meta.size == view.size());
+            MV_ASSERT(m_meta.capacity == view.size());
+            MV_ASSERT(is_ready());
             return true;
         }
         return false;
@@ -1070,11 +1070,11 @@ inline bool CByteRectBuffer::is_ready() const noexcept
                     MetaByteRectBuffer meta{ row_pitch, row_width, row_count };
                     m_token = std::move(token);
                     m_meta = meta;
-                    MV_HARD_ASSERT(m_token.storage_alignment() == use_align);
-                    MV_HARD_ASSERT(m_meta.row_pitch == row_pitch);
-                    MV_HARD_ASSERT(m_meta.row_width == row_width);
-                    MV_HARD_ASSERT(m_meta.row_count == row_count);
-                    MV_HARD_ASSERT(is_ready());
+                    MV_ASSERT(m_token.storage_alignment() == use_align);
+                    MV_ASSERT(m_meta.row_pitch == row_pitch);
+                    MV_ASSERT(m_meta.row_width == row_width);
+                    MV_ASSERT(m_meta.row_count == row_count);
+                    MV_ASSERT(is_ready());
                     return true;
                 }
             }
@@ -1129,11 +1129,11 @@ inline bool CByteRectBuffer::is_ready() const noexcept
             MetaByteRectBuffer meta{ row_pitch, row_width, row_count };
             m_token = std::move(token);
             m_meta = meta;
-            MV_HARD_ASSERT(m_token.storage_alignment() == row_align);
-            MV_HARD_ASSERT(m_meta.row_pitch == row_pitch);
-            MV_HARD_ASSERT(m_meta.row_width == row_width);
-            MV_HARD_ASSERT(m_meta.row_count == row_count);
-            MV_HARD_ASSERT(is_ready());
+            MV_ASSERT(m_token.storage_alignment() == row_align);
+            MV_ASSERT(m_meta.row_pitch == row_pitch);
+            MV_ASSERT(m_meta.row_width == row_width);
+            MV_ASSERT(m_meta.row_count == row_count);
+            MV_ASSERT(is_ready());
             return true;
         }
         return false;

@@ -663,9 +663,11 @@ inline bool CStringBuffer::ensure_free(const std::size_t length) noexcept
 
 [[nodiscard]] inline bool CStringBuffer::assert_invariants() const noexcept
 {
-    const bool valid = MV_FAIL_SAFE_ASSERT(check_invariants());
+    const bool valid = check_invariants();
     if (!valid)
-    {   //  Re-enter for debugger stepping on failure.
+    {
+        MV_ERROR("CStringBuffer invariant check failed");
+        //  Re-enter for debugger stepping on failure.
         (void)check_invariants();
     }
     return valid;
@@ -717,19 +719,19 @@ inline void CStringBuffer::unsafe_replace_memory_context_without_accounting(
 
     const std::size_t old_size = m_buffer.size();
     const std::size_t new_size = old_size + length + 2u;
-    MV_HARD_ASSERT(new_size >= old_size);
+    MV_ASSERT(new_size >= old_size);
 
     if (m_buffer.set_size(new_size))
     {
         std::uint8_t* const base = m_buffer.data();
-        MV_HARD_ASSERT(base != nullptr);
-        MV_HARD_ASSERT(new_size <= m_buffer.capacity());
+        MV_ASSERT(base != nullptr);
+        MV_ASSERT(new_size <= m_buffer.capacity());
 
         base[old_size] = 0u;
         std::memcpy((base + old_size + 1u), string, length);
         base[old_size + 1u + length] = 0u;
 
-        MV_HARD_ASSERT(assert_invariants());
+        MV_ASSERT(assert_invariants());
         return old_size + 1u;
     }
 
@@ -834,7 +836,7 @@ inline bool CStableStrings::sort() noexcept
 
     if (m_string_refs.size() > 2u)
     {   //  there is something to sort
-        MV_SELF_ASSERT(check_integrity());
+        MV_DEBUG_ONLY(check_integrity());
 
         CStringBuffer string_buffer;
         TPodVector<StringRef> string_refs;
@@ -891,7 +893,7 @@ inline bool CStableStrings::sort() noexcept
                 m_ref_index_to_id = std::move(ref_index_to_id);
                 m_id_to_ref_index = std::move(id_to_ref_index);
                 m_sorted_ref_indices = std::move(sorted_ref_indices);
-                MV_SELF_ASSERT(check_integrity());
+                MV_DEBUG_ONLY(check_integrity());
             }
         }
     }
@@ -925,7 +927,11 @@ inline bool CStableStrings::initialise(const std::size_t string_count, const std
         }
     }
 
-    return MV_FAIL_SAFE_ASSERT(success);
+    if (!success)
+    {
+        MV_ERROR("CStableStrings::initialise failed");
+    }
+    return success;
 }
 
 inline bool CStableStrings::ensure_free(const std::size_t length) noexcept
@@ -939,7 +945,11 @@ inline bool CStableStrings::ensure_free(const std::size_t length) noexcept
         m_id_to_ref_index.ensure_free(1u) &&
         m_sorted_ref_indices.ensure_free(1u);
 
-    return MV_FAIL_SAFE_ASSERT(success);
+    if (!success)
+    {
+        MV_ERROR("CStableStrings::ensure_free failed");
+    }
+    return success;
 }
 
 inline bool CStableStrings::shrink_to_fit() noexcept
@@ -1286,20 +1296,20 @@ inline std::size_t CStableStrings::private_append(const std::uint8_t* const stri
         }
         else if (ensure_free(length))
         {   //  Guaranteed-commit path:
-            MV_HARD_ASSERT((insert_at != k_invalid_ref_index) && (insert_at <= m_sorted_ref_indices.size()));
+            MV_ASSERT((insert_at != k_invalid_ref_index) && (insert_at <= m_sorted_ref_indices.size()));
 
             id = m_string_refs.size();
 
             const std::size_t offset = m_string_buffer.append(string, length);
-            MV_HARD_ASSERT(offset != CStringBuffer::k_invalid_offset);
+            MV_ASSERT(offset != CStringBuffer::k_invalid_offset);
 
             const bool ok_ref = m_string_refs.push_back(StringRef{ offset, length });
             const bool ok_ref_to_id = m_ref_index_to_id.push_back(id);
             const bool ok_id_to_ref = m_id_to_ref_index.push_back(id);
             const bool ok_sorted = m_sorted_ref_indices.insert(insert_at, id);
 
-            MV_HARD_ASSERT(ok_ref && ok_ref_to_id && ok_id_to_ref && ok_sorted);
-            MV_HARD_ASSERT(check_integrity());
+            MV_ASSERT(ok_ref && ok_ref_to_id && ok_id_to_ref && ok_sorted);
+            MV_ASSERT(check_integrity());
         }
     }
     else if (initialise(
@@ -1309,15 +1319,15 @@ inline std::size_t CStableStrings::private_append(const std::uint8_t* const stri
         id = 1u;
 
         const std::size_t offset = m_string_buffer.append(string, length);
-        MV_HARD_ASSERT(offset != CStringBuffer::k_invalid_offset);
+        MV_ASSERT(offset != CStringBuffer::k_invalid_offset);
 
         const bool ok_ref = m_string_refs.push_back(StringRef{ offset, length });
         const bool ok_ref_to_id = m_ref_index_to_id.push_back(id);
         const bool ok_id_to_ref = m_id_to_ref_index.push_back(id);
         const bool ok_sorted = m_sorted_ref_indices.push_back(id);
 
-        MV_HARD_ASSERT(ok_ref && ok_ref_to_id && ok_id_to_ref && ok_sorted);
-        MV_HARD_ASSERT(check_integrity());
+        MV_ASSERT(ok_ref && ok_ref_to_id && ok_id_to_ref && ok_sorted);
+        MV_ASSERT(check_integrity());
     }
 
     return id;
@@ -1325,7 +1335,8 @@ inline std::size_t CStableStrings::private_append(const std::uint8_t* const stri
 
 [[nodiscard]] inline bool CStableStrings::failed_integrity_check() noexcept
 {
-    return MV_FAIL_SAFE_ASSERT(false);
+    MV_ERROR("CStableStrings integrity check failed");
+    return false;
 }
 
 #endif  //  #ifndef STRING_BUFFERS_HPP_INCLUDED

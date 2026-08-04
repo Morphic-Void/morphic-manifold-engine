@@ -40,6 +40,7 @@
 #include "threading/threading.hpp"
 
 #include "debug/debug.hpp"
+#include "debug/service.hpp"
 
 struct ThreadConfig
 {
@@ -103,13 +104,13 @@ inline void CThreadContext::startup() noexcept
 
 std::uint32_t CThreadContext::wait_for_new_epoch(const uint32_t epoch) noexcept
 {
-    debug_utils::debug_output("Thread (%s): Waiting epoch=%u\n", m_resources.config.name, epoch);
+    MV_TRACE("Waiting epoch={}", epoch);
 
     mark_waiting();
     std::uint32_t new_epoch = m_resources.wait_predicate.wait_until_not_equal(m_resources.parking_ticket, epoch);
     mark_running();
 
-    debug_utils::debug_output("Thread (%s): Running epoch=%u\n", m_resources.config.name, new_epoch);
+    MV_TRACE("Running epoch={}", new_epoch);
 
     return new_epoch;
 }
@@ -249,18 +250,20 @@ private:
 
 std::uint32_t CHostWorkerThread::entry_point(void* user_data) noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(user_data != nullptr))
+    if (user_data == nullptr)
     {
-        CThreadResources& resources = *static_cast<CThreadResources*>(user_data);
-        CHostWorkerThread thread(resources);
-        return thread.main();
+        MV_ERROR("CHostWorkerThread entry received a null user_data pointer");
+        return ~0u;
     }
-    return ~0u;
+
+    CThreadResources& resources = *static_cast<CThreadResources*>(user_data);
+    CHostWorkerThread thread(resources);
+    return thread.main();
 }
 
 std::uint32_t CHostWorkerThread::main() noexcept
 {
-    debug_utils::debug_output("Worker (%s): Starting\n", m_context.get_name());
+    MV_INFO("Worker starting");
 
     //  Standard thread startup
     m_context.startup();
@@ -272,13 +275,13 @@ std::uint32_t CHostWorkerThread::main() noexcept
         threading::CPodThreadMsg inbound_msg;
         if (m_context.read(inbound_msg))
         {
-            debug_utils::debug_output("Worker (%s): Message received\n", m_context.get_name());
+            MV_TRACE("Worker message received");
 
             switch (inbound_msg.payload.query_type_id())
             {
                 case (k_type_id_v<FileLoadRequest>):
                 {
-                    debug_utils::debug_output("Worker (%s): File load request\n", m_context.get_name());
+                    MV_DETAIL("Worker file load request");
 
                     FileLoadRequest request;
                     (void)inbound_msg.payload.copy_to(request);
@@ -293,7 +296,7 @@ std::uint32_t CHostWorkerThread::main() noexcept
                 }
                 case (k_type_id_v<FileSaveRequest>):
                 {
-                    debug_utils::debug_output("Worker (%s): File save request\n", m_context.get_name());
+                    MV_DETAIL("Worker file save request");
 
                     FileSaveRequest request;
                     (void)inbound_msg.payload.copy_to(request);
@@ -307,7 +310,7 @@ std::uint32_t CHostWorkerThread::main() noexcept
                 }
                 case (k_type_id_v<TgaEncodeRequest>):
                 {
-                    debug_utils::debug_output("Worker (%s): TGA encode request\n", m_context.get_name());
+                    MV_DETAIL("Worker TGA encode request");
 
                     TgaEncodeRequest request;
                     (void)inbound_msg.payload.copy_to(request);
@@ -322,7 +325,7 @@ std::uint32_t CHostWorkerThread::main() noexcept
                 }
                 case (k_type_id_v<TgaDecodeRequest>):
                 {
-                    debug_utils::debug_output("Worker (%s): TGA decode request\n", m_context.get_name());
+                    MV_DETAIL("Worker TGA decode request");
 
                     TgaDecodeRequest request;
                     (void)inbound_msg.payload.copy_to(request);
@@ -337,7 +340,8 @@ std::uint32_t CHostWorkerThread::main() noexcept
                 }
                 default:
                 {
-                    debug_utils::debug_output("Worker (%s): Unrecognised message type (%d)\n", m_context.get_name(), inbound_msg.payload.query_type_id());
+                    MV_DETAIL("Worker unrecognised message type {}",
+                        inbound_msg.payload.query_type_id());
 
                     UnrecognisedMsg unrecognised;
                     unrecognised.msg_id = inbound_msg.payload.query_type_id();
@@ -356,7 +360,7 @@ std::uint32_t CHostWorkerThread::main() noexcept
     }
     m_context.mark_exited();
 
-    debug_utils::debug_output("Worker (%s): Exited\n", m_context.get_name());
+    MV_INFO("Worker exited");
 
     return 0u;
 }
@@ -395,18 +399,20 @@ private:
 
 std::uint32_t CApplicationThread::entry_point(void* user_data) noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(user_data != nullptr))
+    if (user_data == nullptr)
     {
-        CThreadResources& resources = *static_cast<CThreadResources*>(user_data);
-        CApplicationThread thread(resources);
-        return thread.main();
+        MV_ERROR("CApplicationThread entry received a null user_data pointer");
+        return ~0u;
     }
-    return ~0u;
+
+    CThreadResources& resources = *static_cast<CThreadResources*>(user_data);
+    CApplicationThread thread(resources);
+    return thread.main();
 }
 
 std::uint32_t CApplicationThread::main() noexcept
 {
-    debug_utils::debug_output("Application: Starting\n");
+    MV_INFO("Application: Starting");
 
     //  Standard thread startup
     m_context.startup();
@@ -451,7 +457,7 @@ std::uint32_t CApplicationThread::main() noexcept
 
     m_context.mark_running();
 
-    debug_utils::debug_output("Application: Running\n");
+    MV_INFO("Application: Running");
 
     while (!m_context.exit_requested())
     {
@@ -461,7 +467,7 @@ std::uint32_t CApplicationThread::main() noexcept
             m_context.advance_heartbeat();
             perf_counter.update();
 
-            debug_utils::debug_output("Application: Heartbeat\n");
+            MV_TRACE("Application: Heartbeat");
         }
 
         bool state_updated = false;
@@ -475,13 +481,13 @@ std::uint32_t CApplicationThread::main() noexcept
                 break;
             }
 
-            debug_utils::debug_output("Application: Message received\n");
+            MV_TRACE("Application: Message received");
 
             switch (inbound_msg.payload.query_type_id())
             {
                 case (k_type_id_v<TgaLoadResult>):
                 {
-                    debug_utils::debug_output("Application: TGA load result\n");
+                    MV_DETAIL("Application: TGA load result");
 
                     TgaLoadResult tga_load_result;
                     (void)inbound_msg.payload.copy_to(tga_load_result);
@@ -494,7 +500,7 @@ std::uint32_t CApplicationThread::main() noexcept
                 }
                 case (k_type_id_v<TgaSaveResult>):
                 {
-                    debug_utils::debug_output("Application: TGA save result\n");
+                    MV_DETAIL("Application: TGA save result");
 
                     TgaSaveResult tga_save_result;
                     (void)inbound_msg.payload.copy_to(tga_save_result);
@@ -505,7 +511,8 @@ std::uint32_t CApplicationThread::main() noexcept
                 }
                 default:
                 {
-                    debug_utils::debug_output("Application: Unrecognised message type (%d)\n", inbound_msg.payload.query_type_id());
+                    MV_DETAIL("Application: Unrecognised message type {}",
+                        inbound_msg.payload.query_type_id());
 
                     UnrecognisedMsg unrecognised;
                     unrecognised.msg_id = inbound_msg.payload.query_type_id();
@@ -566,7 +573,7 @@ std::uint32_t CApplicationThread::main() noexcept
     }
     m_context.mark_exited();
 
-    debug_utils::debug_output("Application: Exited\n");
+    MV_INFO("Application: Exited");
 
     return 0u;
 }
@@ -576,7 +583,31 @@ namespace host
 
 int host()
 {
-    debug_utils::debug_output("Host: Starting\n");
+    MV_INFO("Host: Starting");
+
+    TInstance<debug_system::CDebugServiceState> debug_service_owner =
+        TInstance<debug_system::CDebugServiceState>::create();
+    debug_system::CDebugServiceState* debug_service = nullptr;
+    bool debug_service_installed = false;
+    bool debug_service_started = false;
+    if (debug_service_owner)
+    {
+        debug_service = debug_service_owner.operator->();
+        const bool debug_logs_opened =
+            debug_service->configure_log_paths(
+                "manifold_debug.log",
+                "manifold_debug_direct.log") &&
+            debug_service->open_logs();
+        if (debug_logs_opened)
+        {
+            debug_service_installed =
+                debug_system::install_service(debug_service);
+            if (debug_service_installed)
+            {
+                debug_service_started = debug_service->start();
+            }
+        }
+    }
 
     static const ThreadConfig thread_configs[3]{
         {system_ids::bg_file_io, "bg_file_io", platform::threading::EThreadPriority::Background, CHostWorkerThread::get_entry_point()},
@@ -644,14 +675,17 @@ int host()
         std::uint64_t ticks_per_second = perf_count_converter.query_ticks_per_second();
 
         CThreadPackage& application_package = *thread_packages.get_object(thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::application)]);
-        while (application_package.query_state() != threading::EThreadRunState::Exited)
+        while ((application_package.query_state() != threading::EThreadRunState::Exited) &&
+            ((debug_service == nullptr) ||
+                (debug_service->read_shutdown_request() ==
+                    debug_system::EShutdownReason::none)))
         {
             std::uint64_t tick_delta = perf_counter.query_delta();
             if ((tick_delta * 500u) >= ticks_per_second)
             {
                 perf_counter.update();
 
-                debug_utils::debug_output("Host: Service OS Pump\n");
+                MV_TRACE("Host: Service OS Pump");
             }
 
             for (int32_t inbound_slot = thread_packages.first_live(); inbound_slot >= 0; inbound_slot = thread_packages.next_live(inbound_slot))
@@ -660,13 +694,13 @@ int host()
                 threading::CPodThreadMsg inbound_msg;
                 while (inbound_package.read(inbound_msg))
                 {
-                    debug_utils::debug_output("Host: Recieved a message\n");
+                    MV_TRACE("Host: Recieved a message");
 
                     switch (inbound_msg.payload.query_type_id())
                     {
                         case (k_type_id_v<FileSaveResult>):
                         {
-                            debug_utils::debug_output("Host: Recieved a file save result\n");
+                            MV_DETAIL("Host: Recieved a file save result");
 
                             FileSaveResult result;
                             (void)inbound_msg.payload.copy_to(result);
@@ -682,7 +716,7 @@ int host()
                         }
                         case (k_type_id_v<TgaLoadRequest>):
                         {
-                            debug_utils::debug_output("Host: Recieved a TGA load request\n");
+                            MV_DETAIL("Host: Recieved a TGA load request");
 
                             TgaLoadRequest tga_load_request;
                             (void)inbound_msg.payload.copy_to(tga_load_request);
@@ -700,7 +734,7 @@ int host()
                         }
                         case (k_type_id_v<TgaSaveRequest>):
                         {
-                            debug_utils::debug_output("Host: Recieved a TGA save request\n");
+                            MV_DETAIL("Host: Recieved a TGA save request");
 
                             TgaSaveRequest tga_save_request;
                             (void)inbound_msg.payload.copy_to(tga_save_request);
@@ -723,12 +757,14 @@ int host()
                             UnrecognisedMsg unrecognised;
                             (void)inbound_msg.payload.copy_to(unrecognised);
 
-                            debug_utils::debug_output("Host: Recieved an unrecognised message notification (%d)\n", unrecognised.msg_id);
+                            MV_DETAIL("Host: Recieved an unrecognised message notification {}",
+                                unrecognised.msg_id);
                             break;
                         }
                         default:
                         {
-                            debug_utils::debug_output("Host: Recieved an unrecognised message type (%d)\n", inbound_msg.payload.query_type_id());
+                            MV_DETAIL("Host: Recieved an unrecognised message type {}",
+                                inbound_msg.payload.query_type_id());
                             break;
                         }
                     }
@@ -736,13 +772,13 @@ int host()
                 CErasedOwner inbound_msg_owning;
                 while (inbound_package.take_ownership(inbound_msg_owning))
                 {
-                    debug_utils::debug_output("Host: Recieved object ownership\n");
+                    MV_TRACE("Host: Recieved object ownership");
 
                     switch (inbound_msg_owning.query_type_id())
                     {
                         case (k_type_id_v<OwningFileLoadResult>):
                         {   //  for this test we know that this is in response to our own attempt to load the tga file
-                            debug_utils::debug_output("Host: Took ownership of a loaded file buffer\n");
+                            MV_DETAIL("Host: Took ownership of a loaded file buffer");
 
                             OwningFileLoadResult& result = *inbound_msg_owning.payload<OwningFileLoadResult>();
                             async_tga_load.buffer = std::move(result.buffer);
@@ -760,7 +796,7 @@ int host()
                         }
                         case (k_type_id_v<OwningTgaEncodeResult>):
                         {   //  for this test we know that this is in response to our own attempt to encode the tga file
-                            debug_utils::debug_output("Host: Took ownership of an encoded TGA file buffer\n");
+                            MV_DETAIL("Host: Took ownership of an encoded TGA file buffer");
 
                             OwningTgaEncodeResult& result = *inbound_msg_owning.payload<OwningTgaEncodeResult>();
                             async_tga_save.buffer = std::move(result.buffer);
@@ -778,7 +814,7 @@ int host()
                         }
                         case (k_type_id_v<OwningTgaDecodeResult>):
                         {   //  for this test we know that this is in response to our own attempt to decode the tga file
-                            debug_utils::debug_output("Host: Took ownership of a decoded TGA image buffer\n");
+                            MV_DETAIL("Host: Took ownership of a decoded TGA image buffer");
 
                             OwningTgaDecodeResult& result = *inbound_msg_owning.payload<OwningTgaDecodeResult>();
                             async_tga_load.rect_buffer = std::move(result.buffer);
@@ -797,8 +833,7 @@ int host()
                         }
                         default:
                         {
-                            MV_CRITICAL_ASSERT(false);
-                            debug_utils::debug_output("Host: Took ownership of an unknown object (%u)\n", inbound_msg_owning.query_type_id());
+                            MV_CRITICAL_EVENT("Host: Took ownership of an unknown object {}", inbound_msg_owning.query_type_id());
                             break;
                         }
                     }
@@ -816,8 +851,22 @@ int host()
             (void)worker_package.shutdown();
         }
     }
+
+    if (debug_service_started)
+    {
+        if (!debug_service->stop())
+        {
+            MV_ERROR("Host failed to stop the debug service cleanly");
+        }
+    }
+    if (debug_service_installed)
+    {
+        if (!debug_system::uninstall_service(debug_service))
+        {
+            MV_ERROR("Host failed to uninstall the debug service cleanly");
+        }
+    }
     return 0;
 }
 
 }   //  namespace host
-

@@ -37,11 +37,11 @@ CWaitPredicate::CWaitPredicate() noexcept : m_word(k_control_released_word)
 
 CWaitPredicate::~CWaitPredicate() noexcept
 {
-    MV_HARD_ASSERT(!m_has_control);
-    MV_HARD_ASSERT(is_control_released());
+    MV_ASSERT(!m_has_control);
+    MV_ASSERT(is_control_released());
 
 #if !MV_PLATFORM_HAS_NATIVE_WAIT_WORD
-    MV_HARD_ASSERT(!m_fallback_gate.has_control());
+    MV_ASSERT(!m_fallback_gate.has_control());
 #endif
 }
 
@@ -70,47 +70,64 @@ bool CWaitPredicate::is_control_released() const noexcept
 
 bool CWaitPredicate::acquire_control(const std::uint32_t initial_value) noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && !m_has_control && (initial_value != k_control_released_word)))
+    if (!m_valid || m_has_control || (initial_value == k_control_released_word))
     {
-        if (MV_FAIL_SAFE_ASSERT(is_control_released()))
-        {
-#if !MV_PLATFORM_HAS_NATIVE_WAIT_WORD
-            if (!MV_FAIL_SAFE_ASSERT(!m_fallback_gate.has_control()))
-            {
-                return false;
-            }
-
-            if (!m_fallback_gate.acquire_control())
-            {
-                return false;
-            }
-#endif
-            m_word.store(initial_value, std::memory_order_release);
-            m_has_control = true;
-            return true;
-        }
+        MV_ERROR("CWaitPredicate::acquire_control received an invalid control request");
+        return false;
     }
-    return false;
+
+    if (!is_control_released())
+    {
+        MV_ERROR("CWaitPredicate::acquire_control was called before the control word was released");
+        return false;
+    }
+
+#if !MV_PLATFORM_HAS_NATIVE_WAIT_WORD
+    if (m_fallback_gate.has_control())
+    {
+        MV_ERROR("CWaitPredicate::acquire_control found the fallback gate already controlled");
+        return false;
+    }
+
+    if (!m_fallback_gate.acquire_control())
+    {
+        return false;
+    }
+#endif
+
+    m_word.store(initial_value, std::memory_order_release);
+    m_has_control = true;
+    return true;
 }
 
 void CWaitPredicate::release_control() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control))
+    if (!m_valid || !m_has_control)
     {
-        const std::uint32_t previous = m_word.exchange(k_control_released_word, std::memory_order_acq_rel);
+        MV_ERROR("CWaitPredicate::release_control was called without valid control");
+        return;
+    }
 
-        MV_FAIL_SAFE_ASSERT(previous != k_control_released_word);
+    const std::uint32_t previous = m_word.exchange(k_control_released_word, std::memory_order_acq_rel);
+    if (previous == k_control_released_word)
+    {
+        MV_ERROR("CWaitPredicate::release_control found the control word already released");
+    }
 
 #if MV_PLATFORM_HAS_NATIVE_WAIT_WORD
-        wake_all_waiters_unchecked();
+    wake_all_waiters_unchecked();
 #else
-        if (MV_FAIL_SAFE_ASSERT(m_fallback_gate.has_control()))
-        {
-            m_fallback_gate.release_control();
-        }
-#endif
-        m_has_control = false;
+    if (!m_fallback_gate.has_control())
+    {
+        MV_ERROR("CWaitPredicate::release_control expected the fallback gate to be controlled");
     }
+    else
+    {
+        m_fallback_gate.release_control();
+    }
+#endif
+
+    m_has_control = false;
 }
 
 //==============================================================================
@@ -131,28 +148,31 @@ bool CWaitPredicate::wait_until_equal(CParkingTicket& ticket, const std::uint32_
 #if MV_PLATFORM_HAS_NATIVE_WAIT_WORD
     (void)ticket;
 #endif
-    if (MV_FAIL_SAFE_ASSERT(m_valid && (value != k_control_released_word)))
+    if (!m_valid || (value == k_control_released_word))
     {
-        for (;;)
+        MV_ERROR("CWaitPredicate::wait_until_equal received an invalid wait request");
+        return false;
+    }
+
+    for (;;)
+    {
+        const std::uint32_t seen = m_word.load(std::memory_order_acquire);
+
+        if (seen == value)
         {
-            const std::uint32_t seen = m_word.load(std::memory_order_acquire);
+            return true;
+        }
 
-            if (seen == value)
-            {
-                return true;
-            }
-
-            if (seen == k_control_released_word)
-            {
-                break;
-            }
+        if (seen == k_control_released_word)
+        {
+            break;
+        }
 
 #if MV_PLATFORM_HAS_NATIVE_WAIT_WORD
-            platform::threading::wait_while_equal(m_word, seen);
+        platform::threading::wait_while_equal(m_word, seen);
 #else
-            m_fallback_gate.park(ticket);
+        m_fallback_gate.park(ticket);
 #endif
-        }
     }
     return false;
 }
@@ -162,23 +182,26 @@ std::uint32_t CWaitPredicate::wait_until_not_equal(CParkingTicket& ticket, const
 #if MV_PLATFORM_HAS_NATIVE_WAIT_WORD
     (void)ticket;
 #endif
-    if (MV_FAIL_SAFE_ASSERT(m_valid && (value != k_control_released_word)))
+    if (!m_valid || (value == k_control_released_word))
     {
-        for (;;)
-        {
-            const std::uint32_t seen = m_word.load(std::memory_order_acquire);
+        MV_ERROR("CWaitPredicate::wait_until_not_equal received an invalid wait request");
+        return k_control_released_word;
+    }
 
-            if (seen != value)
-            {
-                return seen;
-            }
+    for (;;)
+    {
+        const std::uint32_t seen = m_word.load(std::memory_order_acquire);
+
+        if (seen != value)
+        {
+            return seen;
+        }
 
 #if MV_PLATFORM_HAS_NATIVE_WAIT_WORD
-            platform::threading::wait_while_equal(m_word, value);
+        platform::threading::wait_while_equal(m_word, value);
 #else
-            m_fallback_gate.park(ticket);
+        m_fallback_gate.park(ticket);
 #endif
-        }
     }
     return k_control_released_word;
 }
@@ -253,66 +276,72 @@ bool CWaitPredicate::decrement_and_wake_all() noexcept
 
 bool CWaitPredicate::set(const std::uint32_t value) noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control && (value != k_control_released_word)))
+    if (!m_valid || !m_has_control || (value == k_control_released_word))
     {
-        m_word.store(value, std::memory_order_release);
-        return true;
+        MV_ERROR("CWaitPredicate::set received an invalid state update");
+        return false;
     }
-    return false;
+
+    m_word.store(value, std::memory_order_release);
+    return true;
 }
 
 bool CWaitPredicate::increment() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control))
+    if (!m_valid || !m_has_control)
     {
-        std::uint32_t seen = m_word.load(std::memory_order_relaxed);
-
-        for (;;)
-        {
-            if (seen == k_control_released_word)
-            {
-                return false;
-            }
-
-            const std::uint32_t wanted = next_predicate_word(seen);
-
-            if (m_word.compare_exchange_weak(
-                seen, wanted, std::memory_order_release, std::memory_order_relaxed))
-            {
-                return true;
-            }
-
-            //  On failure, seen has been updated with the current m_word.
-        }
+        MV_ERROR("CWaitPredicate::increment was called without valid control");
+        return false;
     }
-    return false;
+
+    std::uint32_t seen = m_word.load(std::memory_order_relaxed);
+
+    for (;;)
+    {
+        if (seen == k_control_released_word)
+        {
+            return false;
+        }
+
+        const std::uint32_t wanted = next_predicate_word(seen);
+
+        if (m_word.compare_exchange_weak(
+            seen, wanted, std::memory_order_release, std::memory_order_relaxed))
+        {
+            return true;
+        }
+
+        //  On failure, seen has been updated with the current m_word.
+    }
 }
 
 bool CWaitPredicate::decrement() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control))
+    if (!m_valid || !m_has_control)
     {
-        std::uint32_t seen = m_word.load(std::memory_order_relaxed);
-
-        for (;;)
-        {
-            if (seen == k_control_released_word)
-            {
-                return false;
-            }
-
-            const std::uint32_t wanted = previous_predicate_word(seen);
-
-            if (m_word.compare_exchange_weak(
-                seen, wanted, std::memory_order_release, std::memory_order_relaxed))
-            {
-                return true;
-            }
-
-            //  On failure, seen has been updated with the current m_word.
-        }
+        MV_ERROR("CWaitPredicate::decrement was called without valid control");
+        return false;
     }
-    return false;
+
+    std::uint32_t seen = m_word.load(std::memory_order_relaxed);
+
+    for (;;)
+    {
+        if (seen == k_control_released_word)
+        {
+            return false;
+        }
+
+        const std::uint32_t wanted = previous_predicate_word(seen);
+
+        if (m_word.compare_exchange_weak(
+            seen, wanted, std::memory_order_release, std::memory_order_relaxed))
+        {
+            return true;
+        }
+
+        //  On failure, seen has been updated with the current m_word.
+    }
 }
 
 //==============================================================================
@@ -321,22 +350,26 @@ bool CWaitPredicate::decrement() noexcept
 
 bool CWaitPredicate::wake_one_waiter() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control))
+    if (!m_valid || !m_has_control)
     {
-        wake_one_waiter_unchecked();
-        return true;
+        MV_ERROR("CWaitPredicate::wake_one_waiter was called without valid control");
+        return false;
     }
-    return false;
+
+    wake_one_waiter_unchecked();
+    return true;
 }
 
 bool CWaitPredicate::wake_all_waiters() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(m_valid && m_has_control))
+    if (!m_valid || !m_has_control)
     {
-        wake_all_waiters_unchecked();
-        return true;
+        MV_ERROR("CWaitPredicate::wake_all_waiters was called without valid control");
+        return false;
     }
-    return false;
+
+    wake_all_waiters_unchecked();
+    return true;
 }
 
 //==============================================================================

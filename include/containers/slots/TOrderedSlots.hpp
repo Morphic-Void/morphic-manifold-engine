@@ -1126,7 +1126,7 @@ template<typename TSlotBacking, typename TIndex, typename TMeta>
                     ++rank_index;
                 }
             }
-            MV_HARD_ASSERT(rank_index == static_cast<std::int32_t>(m_capacity));
+            MV_ASSERT(rank_index == static_cast<std::int32_t>(m_capacity));
         }
     }
     return rank_map;
@@ -1639,7 +1639,7 @@ inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::apply_growth_po
 template<typename TSlotBacking, typename TIndex, typename TMeta>
 inline std::int32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::failed_validate_subtree() noexcept
 {
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     return -1;
 }
 
@@ -1792,7 +1792,7 @@ inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::unsafe_replace_memory_co
 template<typename TSlotBacking, typename TIndex, typename TMeta>
 inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::failed_integrity_check() noexcept
 {
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     return false;
 }
 

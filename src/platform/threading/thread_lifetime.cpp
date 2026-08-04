@@ -19,7 +19,6 @@
 
 #include "platform/threading/thread_lifetime.hpp"
 #include "platform/platform_defines.hpp"
-#include "debug/debug.hpp"
 
 #if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"
@@ -68,7 +67,7 @@ struct PlatformShimAccess
     static unsigned __stdcall platform_entry_point_shim(void* const arg) noexcept
     {
         CThread* const thread = static_cast<CThread*>(arg);
-        if (MV_FAIL_SAFE_ASSERT(thread != nullptr))
+        if (thread != nullptr)
         {
             return static_cast<unsigned>(thread->entry_point_shim());
         }
@@ -80,7 +79,7 @@ struct PlatformShimAccess
     static void* platform_entry_point_shim(void* const arg) noexcept
     {
         CThread* const thread = static_cast<CThread*>(arg);
-        if (MV_FAIL_SAFE_ASSERT(thread != nullptr))
+        if (thread != nullptr)
         {
             const std::uint32_t result = thread->entry_point_shim();
             return reinterpret_cast<void*>(static_cast<std::uintptr_t>(result));
@@ -122,9 +121,9 @@ bool CThread::create(
     FThreadEntry const entry_point, void* const user_data,
     const std::uint32_t stack_size_bytes) noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(!is_valid()))
+    if (!is_valid())
     {
-        if (MV_FAIL_SAFE_ASSERT((entry_point != nullptr) && (user_data != nullptr)))
+        if ((entry_point != nullptr) && (user_data != nullptr))
         {
             clear();
             m_entry_point = entry_point;
@@ -142,11 +141,11 @@ bool CThread::create(
 
 bool CThread::join_and_close() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT(is_valid()))
+    if (is_valid())
     {
 #if MV_PLATFORM_WINDOWS
         const std::uint32_t current_thread_id = static_cast<std::uint32_t>(::GetCurrentThreadId());
-        if (MV_FAIL_SAFE_ASSERT(m_windows_thread_id != current_thread_id))
+        if (m_windows_thread_id != current_thread_id)
         {
             const HANDLE handle = unpack_native_token<HANDLE>(m_native_token);
             const DWORD wait_result = ::WaitForSingleObject(handle, INFINITE);
@@ -159,7 +158,7 @@ bool CThread::join_and_close() noexcept
         }
 #elif MV_PLATFORM_HAS_PTHREADS
         const pthread_t native_thread = unpack_native_token<pthread_t>(m_native_token);
-        if (MV_FAIL_SAFE_ASSERT(::pthread_equal(::pthread_self(), native_thread) == 0))
+        if (::pthread_equal(::pthread_self(), native_thread) == 0)
         {
             const int join_result = ::pthread_join(native_thread, nullptr);
             if (join_result == 0)
@@ -194,7 +193,7 @@ void CThread::close_handle() noexcept
 
 std::uint32_t CThread::entry_point_shim() noexcept
 {
-    if (MV_FAIL_SAFE_ASSERT((m_entry_point != nullptr) && (m_user_data != nullptr)))
+    if ((m_entry_point != nullptr) && (m_user_data != nullptr))
     {
         return m_entry_point(m_user_data);
     }

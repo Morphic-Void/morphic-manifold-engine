@@ -757,7 +757,7 @@ template<typename TSlotBacking, typename TIndex>
                 }
                 ++slot_index;
             }
-            MV_HARD_ASSERT(rank_index == static_cast<std::int32_t>(m_loose_count));
+            MV_ASSERT(rank_index == static_cast<std::int32_t>(m_loose_count));
         }
     }
     return rank_map;
@@ -885,7 +885,7 @@ inline void TUnorderedSlots<TSlotBacking, TIndex>::unsafe_replace_memory_context
 template<typename TSlotBacking, typename TIndex>
 inline bool TUnorderedSlots<TSlotBacking, TIndex>::failed_integrity_check() noexcept
 {
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     return false;
 }
 

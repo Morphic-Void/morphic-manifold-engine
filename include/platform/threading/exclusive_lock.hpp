@@ -20,8 +20,12 @@
 //  block in the underlying native primitive.
 //
 //  Use of an invalid lock, release by a non-owner, destruction while owned,
-//  and destruction while waiters have been observed are asserted and fail
-//  without calling the underlying native primitive where practical.
+//  and destruction while waiters have been observed fail without calling
+//  the underlying native primitive where practical.
+//
+//  CExclusiveLock deliberately performs no debug reporting because it is a
+//  synchronization primitive used by the debug infrastructure. Contract and
+//  native-operation failures therefore have no diagnostic side effect here.
 //
 //  Concurrent destruction and use is caller misuse.
 // 
@@ -65,6 +69,7 @@ public:
 
     //  Operations
     void acquire() noexcept;
+    [[nodiscard]] bool try_acquire() noexcept;
     void release() noexcept;
 
 private:
@@ -72,6 +77,7 @@ private:
     bool initialise_native_lock() noexcept;
     bool destroy_native_lock() noexcept;
     bool acquire_native_lock() noexcept;
+    bool try_acquire_native_lock() noexcept;
     bool release_native_lock() noexcept;
 
     bool try_acquire_owner_thread_id_gate() noexcept;

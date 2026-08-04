@@ -325,7 +325,7 @@ inline T* TOrderedCollection<T, TKey>::get_object(const std::int32_t slot_index)
         if (slot.state == SlotState::Constructed)
         {
             T* const element = storage_index_ptr(slot.storage_index);
-            MV_HARD_ASSERT(element != nullptr);
+            MV_ASSERT(element != nullptr);
             return element;
         }
     }
@@ -349,7 +349,7 @@ inline const T* TOrderedCollection<T, TKey>::get_object(const std::int32_t slot_
         if (slot.state == SlotState::Constructed)
         {
             const T* const element = storage_index_ptr(slot.storage_index);
-            MV_HARD_ASSERT(element != nullptr);
+            MV_ASSERT(element != nullptr);
             return element;
         }
     }
@@ -426,7 +426,7 @@ inline std::int32_t TOrderedCollection<T, TKey>::emplace(const TKey& key, TArgs&
     //  Fetch or map backing storage
     T* element = nullptr;
     SlotData& slot = this->m_slots[static_cast<std::size_t>(slot_index)];
-    MV_HARD_ASSERT(slot.state != SlotState::Constructed);
+    MV_ASSERT(slot.state != SlotState::Constructed);
     if (slot.state == SlotState::Unmapped)
     {
         element = storage_map_index(slot.storage_index);
@@ -442,7 +442,7 @@ inline std::int32_t TOrderedCollection<T, TKey>::emplace(const TKey& key, TArgs&
     if (element == nullptr)
     {
         (void)slot_meta_class::erase(slot_index);
-        MV_HARD_ASSERT(false);
+        MV_ASSERT(false);
         return -1;
     }
 
@@ -470,7 +470,7 @@ inline bool TOrderedCollection<T, TKey>::erase(const std::int32_t slot_index) no
         if (slot.state == SlotState::Constructed)
         {
             T* const element = storage_index_ptr(slot.storage_index);
-            MV_HARD_ASSERT(element != nullptr);
+            MV_ASSERT(element != nullptr);
             if (element != nullptr)
             {
                 element->~T();
@@ -714,7 +714,7 @@ inline void TOrderedCollection<T, TKey>::deconstruct_payload() noexcept
         if (slot.state == SlotState::Constructed)
         {
             T* element = storage_index_ptr(slot.storage_index);
-            MV_HARD_ASSERT(element != nullptr);
+            MV_ASSERT(element != nullptr);
             if (element != nullptr)
             {
                 element->~T();
@@ -728,7 +728,7 @@ inline void TOrderedCollection<T, TKey>::deconstruct_payload() noexcept
 template<typename T, typename TKey>
 inline bool TOrderedCollection<T, TKey>::failed_integrity_check() noexcept
 {
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     return false;
 }
 

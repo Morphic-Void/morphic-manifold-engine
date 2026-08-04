@@ -417,7 +417,7 @@ inline bool TPodUnorderedSlots<T>::reattribute(memory::CMemoryContext* target) n
 template<typename T>
 inline bool TPodUnorderedSlots<T>::failed_integrity_check() noexcept
 {
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     return false;
 }
 

@@ -9,25 +9,7 @@
 //  Barebones debugging utilities
 
 #include <atomic>       //  std::atomic
-#include <cstdarg>      //  std::va_list, va_start, va_end
-#include <cstdio>       //  std::vsnprintf()
-
-#if defined(_MSC_VER)
-#include <intrin.h>     //  __debugbreak
-#elif !defined(__clang__) && !defined(__GNUC__)
-#include <cstdlib>      //  std::abort
-#endif
-
 #include "debug/debug.hpp"
-#include "platform/platform_defines.hpp"
-
-#if MV_PLATFORM_WINDOWS
-#include "platform/windows_include.hpp"
-#endif
-
-//==============================================================================
-//  Debug trapping
-//==============================================================================
 
 namespace debug_utils
 {
@@ -37,64 +19,6 @@ static std::atomic<bool> s_asserts_enabled{ true };
 bool enable_asserts(const bool enable) noexcept
 {
     return s_asserts_enabled.exchange(enable, std::memory_order_relaxed);
-}
-
-inline bool asserts_enabled() noexcept
-{
-    return s_asserts_enabled.load(std::memory_order_acquire);
-}
-
-static std::atomic<std::uint32_t> s_debug_event_ordinal{ 0u };
-
-inline std::uint32_t new_debug_event_ordinal() noexcept
-{
-    return s_debug_event_ordinal.fetch_add(1u, std::memory_order_relaxed);
-}
-
-void hard_fail() noexcept
-{
-    if (asserts_enabled())
-    {
-#if defined(_MSC_VER)
-        __debugbreak();
-#elif defined(__clang__) || defined(__GNUC__)
-        __builtin_trap();
-#else
-        std::abort();
-#endif
-    }
-}
-
-bool fail_safe(const bool success) noexcept
-{
-    if (!success)
-    {
-        hard_fail();
-    }
-    return success;
-}
-
-void debug_output(const char* format, ...) noexcept
-{
-    char buffer[1024];
-    bool success = false;
-    const std::uint32_t ordinal = new_debug_event_ordinal();
-    int offset = std::snprintf(buffer, sizeof(buffer), "[%06u] ", ordinal);
-    if ((offset >= 0) && (offset < static_cast<int>(sizeof(buffer))))
-    {
-        va_list args;
-        va_start(args, format);
-        const int written = std::vsnprintf((buffer + offset), (sizeof(buffer) - static_cast<std::size_t>(offset)), format, args);
-        va_end(args);
-        if (written >= 0)
-        {
-            success = true;
-        }
-    }
-
-#if MV_PLATFORM_WINDOWS
-    ::OutputDebugStringA(success ? buffer : "[debug output format failure]\n");
-#endif
 }
 
 }   //  namespace debug_utils

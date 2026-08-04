@@ -25,16 +25,6 @@ a permanent subsystem contract.
 
 ## Debug Infrastructure
 
-`MV_CRITICAL_ASSERT` currently aliases `MV_HARD_ASSERT`. It marks an
-architectural or accounting failure with no ordinary local recovery path:
-development should stop, while a published build may need to report the fault
-and continue in a degraded state.
-
-The debug infrastructure should replace that alias with structured reporting
-and define the published-build policy. `MV_FAIL_SAFE_ASSERT` sites and the
-policy for allocation or shutdown after a critical failure should be reviewed
-as part of the same work.
-
 For `CErasedOwnerTransport`, an unexpected read-time reattribution failure is
 an accounting or corruption boundary. The item is still delivered rather than
 discarded, and the critical-reporting path records the violation.

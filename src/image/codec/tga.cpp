@@ -693,7 +693,13 @@ CByteBuffer encode(const CByteRectConstView& view, const EncodeOptions& options)
     const std::uint32_t tga_element_bytes = state.use_clut ? 1u : wide_element_bytes;
 
     //  construct the tga file memory image
-    if (MV_FAIL_SAFE_ASSERT((tga_file_bytes <= memory::k_byte_size_ceiling) && buffer.allocate(static_cast<std::size_t>(tga_file_bytes))))
+    if (tga_file_bytes > memory::k_byte_size_ceiling)
+    {
+        MV_ERROR("TGA encode output exceeded the byte-size ceiling");
+        return buffer;
+    }
+
+    if (buffer.allocate(static_cast<std::size_t>(tga_file_bytes)))
     {
         (void)buffer.set_size(static_cast<std::size_t>(tga_file_bytes));
 
@@ -781,6 +787,10 @@ CByteBuffer encode(const CByteRectConstView& view, const EncodeOptions& options)
                 body = state.write_raw(body, row, 0u, state.width);
             }
         }
+    }
+    else
+    {
+        MV_ERROR("TGA encode failed to allocate the output buffer");
     }
     return buffer;
 }

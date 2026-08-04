@@ -26,6 +26,10 @@
 //
 //  Destroying a valid CThread releases/abandons join ownership. It does
 //  not implicitly join.
+//
+//  CThread deliberately performs no debug reporting because it provides the
+//  writer-thread lifetime used by the debug infrastructure. Failures are
+//  observable through return values where supplied and are otherwise silent.
 
 #pragma once
 

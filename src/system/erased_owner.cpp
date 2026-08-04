@@ -141,7 +141,7 @@ std::uint32_t CErasedOwner::hazard_bit(const mount_point_ids::id_type mount_poin
     const bool valid =
         mount_point_ids::is_valid_index(index)
         && (index.raw_value() < mount_point_ids::k_count);
-    MV_HARD_ASSERT(valid);
+    MV_ASSERT(valid);
     return valid ? (std::uint32_t{ 1u } << static_cast<std::uint32_t>(index.raw_value())) : 0u;
 }
 

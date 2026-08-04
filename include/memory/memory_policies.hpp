@@ -116,7 +116,7 @@ inline std::size_t base_stepped_growth(
     const std::size_t pow2_stepping,
     const std::size_t maximum_capacity) noexcept
 {   //  pow2_stepping must be a power of 2 and >= 2.
-    MV_HARD_ASSERT((pow2_stepping >= 2) && bit_ops::is_pow2(pow2_stepping));
+    MV_ASSERT((pow2_stepping >= 2) && bit_ops::is_pow2(pow2_stepping));
     if (required >= maximum_capacity)
     {
         return maximum_capacity;
@@ -141,7 +141,7 @@ inline std::size_t capped_growth_rate_curve(
     const std::size_t pow2_stepping,
     const std::size_t maximum_capacity) noexcept
 {   //  pow2_stepping must be a power of 2 and >= 2.
-    MV_HARD_ASSERT((pow2_stepping >= 2) && bit_ops::is_pow2(pow2_stepping));
+    MV_ASSERT((pow2_stepping >= 2) && bit_ops::is_pow2(pow2_stepping));
     return std::min(
         base_growth_curve(required, maximum_capacity),
         base_stepped_growth(required, pow2_stepping, maximum_capacity));

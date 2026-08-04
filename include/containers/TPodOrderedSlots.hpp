@@ -494,7 +494,7 @@ inline bool TPodOrderedSlots<T, TKey>::reattribute(memory::CMemoryContext* targe
 template<typename T, typename TKey>
 inline bool TPodOrderedSlots<T, TKey>::failed_integrity_check() noexcept
 {
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     return false;
 }
 

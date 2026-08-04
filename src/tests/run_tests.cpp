@@ -10,6 +10,7 @@
 #include "tests/ByteBuffers_test_suite.hpp"
 #include "tests/CMemoryToken_test_suite.hpp"
 #include "tests/CMemoryView_test_suite.hpp"
+#include "tests/DebugService_test_suite.hpp"
 #include "tests/ErasedOwner_test_suite.hpp"
 #include "tests/StringBuffers_test_suite.hpp"
 #include "tests/TInstance_test_suite.hpp"
@@ -45,6 +46,9 @@ int run_tests()
 
     int instance_test_result = run_instance_tests();
     cumulative_result += instance_test_result;
+
+    int debug_service_test_result = run_debug_service_tests();
+    cumulative_result += debug_service_test_result;
 
     int pod_fifo_test_result = run_pod_fifo_tests();
     cumulative_result += pod_fifo_test_result;

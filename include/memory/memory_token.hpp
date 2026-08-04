@@ -799,7 +799,7 @@ inline std::uint32_t CMemoryToken::memory_allocation_count() const noexcept
     }
     const std::size_t buffer_count = buffer_count_for(m_count);
     const std::size_t allocation_count = buffer_count + ((buffer_count > 1u) ? 1u : 0u);
-    MV_HARD_ASSERT(allocation_count <= std::numeric_limits<std::uint32_t>::max());
+    MV_ASSERT(allocation_count <= std::numeric_limits<std::uint32_t>::max());
     return static_cast<std::uint32_t>(allocation_count);
 }
 
@@ -870,7 +870,7 @@ inline void CMemoryToken::unsafe_replace_context_without_accounting(
     const bool valid = (target != nullptr) && (!owns_storage() ||
         ((expected_source != nullptr) && (m_context == expected_source) &&
             expected_source->is_compatible_with(*target)));
-    MV_HARD_ASSERT(valid);
+    MV_ASSERT(valid);
     if (valid)
     {
         m_context = target;

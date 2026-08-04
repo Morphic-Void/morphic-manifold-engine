@@ -273,7 +273,7 @@ inline T* TUnorderedCollection<T>::get_object(const std::int32_t slot_index) noe
         if (slot.state == SlotState::Constructed)
         {
             T* const element = storage_index_ptr(slot.storage_index);
-            MV_HARD_ASSERT(element != nullptr);
+            MV_ASSERT(element != nullptr);
             return element;
         }
     }
@@ -290,7 +290,7 @@ inline const T* TUnorderedCollection<T>::get_object(const std::int32_t slot_inde
         if (slot.state == SlotState::Constructed)
         {
             const T* const element = storage_index_ptr(slot.storage_index);
-            MV_HARD_ASSERT(element != nullptr);
+            MV_ASSERT(element != nullptr);
             return element;
         }
     }
@@ -374,7 +374,7 @@ inline std::int32_t TUnorderedCollection<T>::emplace(TArgs&&... args) noexcept
     if (element == nullptr)
     {
         (void)slot_meta_class::erase(slot_index);
-        MV_HARD_ASSERT(false);
+        MV_ASSERT(false);
         return -1;
     }
 
@@ -394,7 +394,7 @@ inline bool TUnorderedCollection<T>::erase(const std::int32_t slot_index) noexce
         if (slot.state == SlotState::Constructed)
         {
             T* const element = storage_index_ptr(slot.storage_index);
-            MV_HARD_ASSERT(element != nullptr);
+            MV_ASSERT(element != nullptr);
             if (element != nullptr)
             {
                 element->~T();
@@ -632,7 +632,7 @@ inline void TUnorderedCollection<T>::deconstruct_payload() noexcept
         if (slot.state == SlotState::Constructed)
         {
             T* element = storage_index_ptr(slot.storage_index);
-            MV_HARD_ASSERT(element != nullptr);
+            MV_ASSERT(element != nullptr);
             if (element != nullptr)
             {
                 element->~T();
@@ -646,7 +646,7 @@ inline void TUnorderedCollection<T>::deconstruct_payload() noexcept
 template<typename T>
 inline bool TUnorderedCollection<T>::failed_integrity_check() noexcept
 {
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     return false;
 }
 

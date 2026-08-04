@@ -109,7 +109,7 @@ inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) 
     CErasedOwner owner;
     memory::CMemoryToken storage{ sizeof(T), alignof(T), context };
     const bool allocated = storage.allocate(1u, false);
-    MV_HARD_ASSERT(allocated);
+    MV_ASSERT(allocated);
     if (allocated)
     {
         ::new (storage.data()) T();

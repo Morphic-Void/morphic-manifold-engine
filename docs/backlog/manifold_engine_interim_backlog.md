@@ -913,6 +913,76 @@ This should remain later backlog work because its useful shape depends on more p
 
 ---
 
+## 13.2 Documentation of AI involvement and authorship
+
+**Status:** Open
+**Scale:** Small/Medium
+**Domain:** Documentation / project governance
+
+### Purpose
+
+Update the project documentation describing AI involvement, contribution,
+authorship, and specification so that it accurately reflects the current
+collaborative workflow.
+
+### Scope
+
+- Audit existing authorship, contribution, and AI-assistance statements.
+- Distinguish human specification and decision authority from AI-assisted
+  reasoning, implementation, review, testing, and documentation.
+- Establish consistent terminology across source headers and project
+  documentation.
+- Update contributor-facing guidance where the current workflow affects
+  expectations or attribution.
+
+---
+
+## 13.3 Named test and test-group selection
+
+**Status:** Open
+**Scale:** Small/Medium
+**Domain:** Testing / developer tooling
+
+### Purpose
+
+Allow command-line selection of named tests or test groups without invoking the
+complete aggregate suite.
+
+### Scope
+
+- Define stable names for individual suites and useful groups.
+- Preserve a default mode that runs the complete suite.
+- Support selecting one or more names from the command line.
+- Report unknown or conflicting selections clearly.
+- Keep aggregate pass/fail exit behaviour suitable for automation.
+- Consider listing available tests and groups from the executable.
+
+---
+
+## 13.4 Public infrastructure rebranding
+
+**Status:** Open
+**Scale:** Medium
+**Domain:** Codebase hygiene / project identity
+
+### Purpose
+
+Rename the public infrastructure to avoid confusion with *Manifold Garden*.
+
+### Scope
+
+- Select a distinct public project and infrastructure name.
+- Rename public repository names where appropriate.
+- Update repository links and other public references.
+- Update project, solution, binary, namespace, documentation, and visible
+  branding references according to the chosen migration boundary.
+- Identify compatibility or redirect requirements before changing public
+  locations.
+- Verify that package, build, CI, badge, and external integration references
+  remain valid after migration.
+
+---
+
 # 14. Higher-level consumer systems
 
 These remain placeholders. They are intentionally not decomposed yet.

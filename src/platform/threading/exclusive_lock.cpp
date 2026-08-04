@@ -18,7 +18,6 @@
 
 #include "platform/threading/exclusive_lock.hpp"
 #include "platform/platform_defines.hpp"
-#include "debug/debug.hpp"
 
 #if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"
@@ -50,17 +49,17 @@ CExclusiveLock::~CExclusiveLock() noexcept
 
     const std::uint32_t waiter_count = m_waiter_count.load(std::memory_order_acquire);
 
-    if (MV_FAIL_SAFE_ASSERT(waiter_count == 0u))
+    if (waiter_count == 0u)
     {
-        if (MV_FAIL_SAFE_ASSERT(try_acquire_owner_thread_id_gate()))
+        if (try_acquire_owner_thread_id_gate())
         {
             const bool is_owned = m_owner_thread_id.is_valid();
 
             release_owner_thread_id_gate();
 
-            if (MV_FAIL_SAFE_ASSERT(!is_owned))
+            if (!is_owned)
             {
-                if (MV_FAIL_SAFE_ASSERT(destroy_native_lock()))
+                if (destroy_native_lock())
                 {
                     m_valid = false;
                     m_owner_thread_id = CPlatformThreadId();
@@ -87,14 +86,14 @@ bool CExclusiveLock::is_valid() const noexcept
 
 void CExclusiveLock::acquire() noexcept
 {
-    if (!MV_FAIL_SAFE_ASSERT(m_valid))
+    if (!m_valid)
     {
         return;
     }
 
     const CPlatformThreadId current_thread_id = query_current_thread_id();
 
-    if (!MV_FAIL_SAFE_ASSERT(current_thread_id.is_valid()))
+    if (!current_thread_id.is_valid())
     {
         return;
     }
@@ -103,13 +102,13 @@ void CExclusiveLock::acquire() noexcept
 
     const bool acquired = acquire_native_lock();
 
-    if (!MV_FAIL_SAFE_ASSERT(acquired))
+    if (!acquired)
     {
         m_waiter_count.fetch_sub(1u, std::memory_order_acq_rel);
         return;
     }
 
-    if (!MV_FAIL_SAFE_ASSERT(try_acquire_owner_thread_id_gate()))
+    if (!try_acquire_owner_thread_id_gate())
     {
         (void)release_native_lock();
         m_waiter_count.fetch_sub(1u, std::memory_order_acq_rel);
@@ -123,28 +122,66 @@ void CExclusiveLock::acquire() noexcept
     m_waiter_count.fetch_sub(1u, std::memory_order_acq_rel);
 }
 
+bool CExclusiveLock::try_acquire() noexcept
+{
+    if (!m_valid)
+    {
+        return false;
+    }
+
+    const CPlatformThreadId current_thread_id = query_current_thread_id();
+
+    if (!current_thread_id.is_valid())
+    {
+        return false;
+    }
+
+    if (!try_acquire_native_lock())
+    {
+        return false;
+    }
+
+    if (!try_acquire_owner_thread_id_gate())
+    {
+        (void)release_native_lock();
+        return false;
+    }
+
+    const bool is_owned = m_owner_thread_id.is_valid();
+    if (is_owned)
+    {
+        release_owner_thread_id_gate();
+        (void)release_native_lock();
+        return false;
+    }
+
+    m_owner_thread_id = current_thread_id;
+    release_owner_thread_id_gate();
+    return true;
+}
+
 void CExclusiveLock::release() noexcept
 {
-    if (!MV_FAIL_SAFE_ASSERT(m_valid))
+    if (!m_valid)
     {
         return;
     }
 
     const CPlatformThreadId current_thread_id = query_current_thread_id();
 
-    if (!MV_FAIL_SAFE_ASSERT(current_thread_id.is_valid()))
+    if (!current_thread_id.is_valid())
     {
         return;
     }
 
-    if (!MV_FAIL_SAFE_ASSERT(try_acquire_owner_thread_id_gate()))
+    if (!try_acquire_owner_thread_id_gate())
     {
         return;
     }
 
     const bool is_owner = (m_owner_thread_id == current_thread_id);
 
-    if (!MV_FAIL_SAFE_ASSERT(is_owner))
+    if (!is_owner)
     {
         release_owner_thread_id_gate();
         return;
@@ -154,7 +191,7 @@ void CExclusiveLock::release() noexcept
 
     release_owner_thread_id_gate();
 
-    (void)MV_FAIL_SAFE_ASSERT(release_native_lock());
+    (void)release_native_lock();
 }
 
 //==============================================================================
@@ -246,6 +283,27 @@ bool CExclusiveLock::acquire_native_lock() noexcept
 #elif MV_PLATFORM_HAS_PTHREADS
 
     const int result = ::pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(m_opaque));
+
+    return (result == 0);
+
+#else
+
+    return false;
+
+#endif
+}
+
+bool CExclusiveLock::try_acquire_native_lock() noexcept
+{
+#if MV_PLATFORM_WINDOWS
+
+    return TryAcquireSRWLockExclusive(
+        reinterpret_cast<SRWLOCK*>(m_opaque)) != FALSE;
+
+#elif MV_PLATFORM_HAS_PTHREADS
+
+    const int result =
+        ::pthread_mutex_trylock(reinterpret_cast<pthread_mutex_t*>(m_opaque));
 
     return (result == 0);
 

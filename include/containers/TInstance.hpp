@@ -154,28 +154,28 @@ inline bool TInstance<T>::is_valid() const noexcept
 template<typename T>
 inline T& TInstance<T>::operator*() noexcept
 {
-    MV_HARD_ASSERT(object_ptr() != nullptr);
+    MV_ASSERT(object_ptr() != nullptr);
     return *object_ptr();
 }
 
 template<typename T>
 inline const T& TInstance<T>::operator*() const noexcept
 {
-    MV_HARD_ASSERT(object_ptr() != nullptr);
+    MV_ASSERT(object_ptr() != nullptr);
     return *object_ptr();
 }
 
 template<typename T>
 inline T* TInstance<T>::operator->() noexcept
 {
-    MV_HARD_ASSERT(object_ptr() != nullptr);
+    MV_ASSERT(object_ptr() != nullptr);
     return object_ptr();
 }
 
 template<typename T>
 inline const T* TInstance<T>::operator->() const noexcept
 {
-    MV_HARD_ASSERT(object_ptr() != nullptr);
+    MV_ASSERT(object_ptr() != nullptr);
     return object_ptr();
 }
 

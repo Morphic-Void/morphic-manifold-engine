@@ -270,6 +270,13 @@ static constexpr std::uint64_t k_invalid_id_mask = ~(k_module_id_mask | k_thread
 namespace system_id_registry
 {
 
+struct STypeRegistration
+{
+    type_ids::id_type id{ 0u };
+    type_ids::index_type index{ type_ids::k_invalid_index };
+    const char* name{ nullptr };
+};
+
 struct SMountPointRegistration
 {
     mount_point_ids::id_type id{};
@@ -292,6 +299,8 @@ struct SModuleRegistration
     const char* name{ nullptr };
 };
 
+[[nodiscard]] const STypeRegistration* types() noexcept;
+[[nodiscard]] std::size_t type_count() noexcept;
 [[nodiscard]] const SMountPointRegistration* mount_points() noexcept;
 [[nodiscard]] std::size_t mount_point_count() noexcept;
 [[nodiscard]] const SThreadRegistration* threads() noexcept;
@@ -299,8 +308,24 @@ struct SModuleRegistration
 [[nodiscard]] const SModuleRegistration* modules() noexcept;
 [[nodiscard]] std::size_t module_count() noexcept;
 
+[[nodiscard]] const STypeRegistration* find_type(type_ids::id_type id) noexcept;
+[[nodiscard]] const SMountPointRegistration* find_mount_point(mount_point_ids::id_type id) noexcept;
+[[nodiscard]] const SThreadRegistration* find_thread(thread_ids::id_type id) noexcept;
+[[nodiscard]] const SModuleRegistration* find_module(module_ids::id_type id) noexcept;
+
+[[nodiscard]] const char* lookup_type_name(type_ids::id_type id) noexcept;
+[[nodiscard]] const char* lookup_mount_point_name(mount_point_ids::id_type id) noexcept;
+[[nodiscard]] const char* lookup_thread_name(thread_ids::id_type id) noexcept;
+[[nodiscard]] const char* lookup_module_name(module_ids::id_type id) noexcept;
+[[nodiscard]] bool format_system_name(
+    system_ids::id_type id,
+    char* destination,
+    std::size_t destination_capacity,
+    std::size_t& out_size) noexcept;
+
 [[nodiscard]] bool has_mount_point(mount_point_ids::id_type id) noexcept;
 [[nodiscard]] mount_point_ids::id_type lookup_mount_point_id(module_ids::id_type id) noexcept;
+[[nodiscard]] bool validate_type_registrations() noexcept;
 [[nodiscard]] bool validate_mount_point_registrations() noexcept;
 [[nodiscard]] bool validate_thread_registrations() noexcept;
 [[nodiscard]] bool validate_module_registrations() noexcept;

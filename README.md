@@ -4,6 +4,13 @@ A C++17 game engine developed by Morphic Void. It is being built from first prin
 
 This repository currently contains the initial project structure and test infrastructure. Additional systems and documentation will be added as the engine evolves.
 
+This repository is developed using a mixed human/AI workflow. The project's
+direction, specifications, architectural decisions, and final acceptance are
+owned by Ritchie Brannan / Morphic Void Limited. AI tools are used in varying
+degrees for drafting, refactoring, review, testing, and documentation. File
+attribution is intended to reflect where the substantive ideas and content came
+from, not merely which party produced the final wording or keystrokes.
+
 ## License
 
 Licensed under the MIT License. See the LICENSE file for details.

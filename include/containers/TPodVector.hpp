@@ -86,7 +86,7 @@ template<typename T>
 T& pod_vector_oob_ref() noexcept
 {
     static_assert(!std::is_const_v<T>, "pod_vector_oob_ref<T>() requires non-const T.");
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     static T last_gasp{};
     std::memset(&last_gasp, 0, sizeof(T));
     return last_gasp;
@@ -96,7 +96,7 @@ template<typename T>
 const T& pod_vector_oob_const_ref() noexcept
 {
     static_assert(!std::is_const_v<T>, "pod_vector_oob_const_ref<T>() requires non-const T.");
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     static T last_gasp{};
     std::memset(&last_gasp, 0, sizeof(T));
     return last_gasp;
@@ -106,7 +106,7 @@ template<typename T>
 T& pod_vector_empty_ref() noexcept
 {
     static_assert(!std::is_const_v<T>, "pod_vector_empty_ref<T>() requires non-const T.");
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     static T last_gasp{};
     std::memset(&last_gasp, 0, sizeof(T));
     return last_gasp;
@@ -117,7 +117,7 @@ template<typename T>
 const T& pod_vector_empty_const_ref() noexcept
 {
     static_assert(!std::is_const_v<T>, "pod_vector_empty_const_ref<T>() requires non-const T.");
-    MV_HARD_ASSERT(false);
+    MV_ASSERT(false);
     static T last_gasp{};
     std::memset(&last_gasp, 0, sizeof(T));
     return last_gasp;

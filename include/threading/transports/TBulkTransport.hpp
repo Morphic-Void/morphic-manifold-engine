@@ -198,7 +198,7 @@ inline bool TBulk<T>::publish() noexcept
 template<typename T>
 inline T* TBulk<T>::producer_data() noexcept
 {
-    MV_HARD_ASSERT(m_producer_output_payload_index < k_null_payload_index);
+    MV_ASSERT(m_producer_output_payload_index < k_null_payload_index);
     return &m_data[(m_producer_output_payload_index < k_null_payload_index) ? m_producer_output_payload_index : 0u];
 }
 
@@ -219,7 +219,10 @@ inline bool TBulk<T>::discard_and_acquire() noexcept
 template<typename T>
 inline T* TBulk<T>::consumer_data() noexcept
 {
-    (void)MV_FAIL_SAFE_ASSERT(m_consumer_payload_index <= k_null_payload_index);
+    if (m_consumer_payload_index > k_null_payload_index)
+    {
+        MV_ERROR("TBulk::consumer_data observed an invalid consumer payload index");
+    }
     return (m_consumer_payload_index < k_null_payload_index) ? &m_data[m_consumer_payload_index] : nullptr;
 }
 
