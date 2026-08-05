@@ -100,7 +100,7 @@ template<typename T>
 [[nodiscard]] T read_value(const SEventArguments& arguments, const std::size_t payload_offset) noexcept
 {
     T value{};
-    std::memcpy(&value, arguments.payload + payload_offset, sizeof(value));
+    std::memcpy(&value, (arguments.payload + payload_offset), sizeof(value));
     return value;
 }
 
@@ -109,11 +109,7 @@ template<typename T>
     return append_argument(output, arguments, type, payload_offset, EInsertionFormat::default_value);
 }
 
-[[nodiscard]] EEventFormatResult append_integer_hex(
-    SOutput& output,
-    const std::uint64_t value,
-    const bool uppercase,
-    const char prefix) noexcept
+[[nodiscard]] EEventFormatResult append_integer_hex(SOutput& output, const std::uint64_t value, const bool uppercase, const char prefix) noexcept
 {
     char text[64]{};
     int size = 0;
@@ -153,12 +149,9 @@ template<typename T>
             return '#';
         }
         case EInsertionFormat::x_hex_lower:
-        {
-            return 'x';
-        }
         case EInsertionFormat::x_hex_upper:
         {
-            return 'X';
+            return 'x';
         }
         default:
         {
@@ -167,9 +160,7 @@ template<typename T>
     }
 }
 
-[[nodiscard]] EEventFormatResult append_type_id(
-    SOutput& output,
-    const type_ids::id_type id) noexcept
+[[nodiscard]] EEventFormatResult append_type_id(SOutput& output, const type_ids::id_type id) noexcept
 {
     const char* const name = system_id_registry::lookup_type_name(id);
     if (name != nullptr)
@@ -208,8 +199,7 @@ template<typename T>
     char text[64]{};
     int size = 0;
 
-    const bool hexadecimal =
-        (insertion_format != EInsertionFormat::default_value);
+    const bool hexadecimal = (insertion_format != EInsertionFormat::default_value);
 
     switch (type)
     {
@@ -338,10 +328,7 @@ template<typename T>
     return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
 }
 
-[[nodiscard]] EInsertionFormat parse_insertion_format(
-    const char* const format,
-    const std::size_t format_size,
-    std::size_t& index) noexcept
+[[nodiscard]] EInsertionFormat parse_insertion_format(const char* const format, const std::size_t format_size, std::size_t& index) noexcept
 {
     if ((index + 1u) < format_size)
     {
@@ -433,12 +420,10 @@ EEventFormatResult format_event_text(
             return EEventFormatResult::malformed_format;
         }
 
-        event_formatting::EInsertionFormat insertion_format =
-            event_formatting::EInsertionFormat::default_value;
+        event_formatting::EInsertionFormat insertion_format = event_formatting::EInsertionFormat::default_value;
         if ((character == '#') || (character == 'x') || (character == 'X'))
         {
-            insertion_format = event_formatting::parse_insertion_format(
-                format, format_size, index);
+            insertion_format = event_formatting::parse_insertion_format(format, format_size, index);
         }
 
         const char token = format[index];
