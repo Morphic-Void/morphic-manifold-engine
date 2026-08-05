@@ -1,8 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   TPodFifo_test_suite.cpp
-//  Author: OpenAI Codex
+//  Primary implementation: OpenAI tools
+//  Used, occasionally adjusted, and accepted by: Ritchie Brannan
 //  Date:   14 Jul 26
 
 #include <cstddef>
@@ -329,3 +331,4 @@ int run_pod_fifo_tests()
     std::cout << "TPodFifo: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return (ctx.failed == 0) ? 0 : 1;
 }
+

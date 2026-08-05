@@ -3,7 +3,8 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   service.hpp
-//  Author: OpenAI Codex
+//  Primary implementation: OpenAI tools
+//  Reviewed and accepted by: Ritchie Brannan
 //  Date:   28 Jul 26
 //
 //  Bounded executable-owned debug service substrate.
@@ -477,3 +478,4 @@ template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std:
 }   //  namespace debug_system
 
 #endif  //  #ifndef DEBUG_SERVICE_HPP_INCLUDED
+

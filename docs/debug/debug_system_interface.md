@@ -2,14 +2,15 @@ Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 License: MIT (see LICENSE file in repository root)
 
 File:   debug_system_interface.md
-Author: ChatGPT / OpenAI
+Primary draft: OpenAI tools
+Reviewed and accepted by: Ritchie Brannan
 Date:   27 Jul 2026
 
 # Debug System Public Interface
 
 ## Purpose
 
-This document defines the caller-facing contract for the replacement Manifold
+This document defines the caller-facing contract for the replacement Morphic
 Engine debug system.
 
 It covers:

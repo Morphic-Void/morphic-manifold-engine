@@ -1,2 +1,23 @@
-# Normalize text files and require LF in the working tree.
-* text=auto eol=lf
+# Normalize text files by default.
+* text=auto
+
+# Keep ordinary project text files on LF.
+*.c text eol=lf
+*.cc text eol=lf
+*.cpp text eol=lf
+*.cxx text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.def text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.vcxproj text eol=lf
+*.filters text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.gitmodules text eol=lf
+
+# Visual Studio solution files are happier as CRLF.
+*.sln text eol=crlf

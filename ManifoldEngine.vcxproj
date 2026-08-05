@@ -233,7 +233,7 @@
     <ClCompile Include="src\host\host.cpp" />
     <ClCompile Include="src\host\host_context.cpp" />
     <ClCompile Include="src\image\codec\tga.cpp" />
-    <ClCompile Include="src\main\ManifoldEngine.cpp" />
+    <ClCompile Include="src\main\MorphicEngine.cpp" />
     <ClCompile Include="src\memory\memory_context.cpp" />
     <ClCompile Include="src\platform\filesystem\file.cpp" />
     <ClCompile Include="src\platform\filesystem\internal\file_utils.cpp" />

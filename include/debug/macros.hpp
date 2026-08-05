@@ -1,8 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   macros.hpp
-//  Author: OpenAI Codex
+//  Primary implementation: OpenAI tools
+//  Reviewed and accepted by: Ritchie Brannan
 //  Date:   3 Aug 26
 //
 //  Public debug reporting macros.
@@ -161,3 +163,4 @@
     } while (0)
 
 #endif  //  #ifndef DEBUG_MACROS_HPP_INCLUDED
+

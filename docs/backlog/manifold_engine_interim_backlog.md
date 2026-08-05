@@ -3,15 +3,10 @@ License: MIT (see LICENSE file in repository root)
 
 File:   manifold_engine_interim_backlog.md  
 Author: Ritchie Brannan  
-Date:   Updated 12 May 26  
+Drafting and editorial assistance: OpenAI tools  
+Date:   Updated 5 Aug 26  
 
 This represents the second run capture of the backlog.
-
-The capture was originally created by ChatGPT after describing
-my expected "to do" list to it and after having it ask me clarifying
-questions and perform some initial grouping.  
-
-Updates and maintainence of this backlog also heavily use ChatGPT.
 
 Some of the elements described here are already present, some of the questions
 listed I already have answers for.  
@@ -19,10 +14,10 @@ listed I already have answers for.
 This does represent what was in my head and in my notebooks regarding the design.  
 
 
-# Manifold Engine Backlog - Interim Capture v2
+# Morphic Engine Backlog - Interim Capture v2
 
 **Status:** Updated interim backlog  
-**Purpose:** Local archive, stepping-off point, and backup for known Manifold Engine backlog elements.  
+**Purpose:** Local archive, stepping-off point, and backup for known Morphic Engine backlog elements.  
 **Update intent:** Incorporates changes since the first interim capture, removes completed items from the active backlog, and reflects the current short-term pivot toward text ingestion and JSON infrastructure.
 
 This document remains an interim backlog. It is not a full dependency graph, schedule, or implementation design. It is a scope and work-organisation aid.

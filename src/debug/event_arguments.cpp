@@ -3,7 +3,8 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   event_arguments.cpp
-//  Author: OpenAI Codex
+//  Primary implementation: OpenAI tools
+//  Reviewed and accepted by: Ritchie Brannan
 //  Date:   29 Jul 26
 //
 //  Bounded argument decoding and formatting for transported debug events.

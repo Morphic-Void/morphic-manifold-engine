@@ -2,14 +2,15 @@ Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 License: MIT (see LICENSE file in repository root)
 
 File:   debug_system_audit.md
-Author: ChatGPT / OpenAI
+Primary draft: OpenAI tools
+Reviewed and accepted by: Ritchie Brannan
 Date:   26 Jul 2026
 
 # Debug System Audit
 
 ## Purpose
 
-This document records the pre-redesign state of the Manifold Engine runtime
+This document records the pre-redesign state of the Morphic Engine runtime
 debug surface and its call sites. It is an audit, not the contract for the
 replacement system.
 

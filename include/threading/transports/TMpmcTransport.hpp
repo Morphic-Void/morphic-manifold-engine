@@ -3,7 +3,8 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   TMpmcTransport.hpp
-//  Author: ChatGPT / OpenAI
+//  Primary implementation: OpenAI tools
+//  Reviewed and accepted by: Ritchie Brannan
 //  Date:   21 Jul 26
 //
 //  Requirements:

@@ -2,7 +2,7 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 // 
-//  File:   ManifoldEngine.cpp
+//  File:   MorphicEngine.cpp
 //  Author: Ritchie Brannan
 //  Date:   24 Apr 26
 //

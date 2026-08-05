@@ -9,7 +9,7 @@ Date:   2 Jun 2026
 
 ## Overview
 
-The Manifold Engine memory subsystem defines the low-level allocation, ownership, view, and accounting contracts used by containers and related infrastructure.
+The Morphic Engine memory subsystem defines the low-level allocation, ownership, view, and accounting contracts used by containers and related infrastructure.
 
 The subsystem separates:
 

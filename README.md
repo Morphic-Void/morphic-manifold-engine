@@ -1,4 +1,4 @@
-# The Manifold Engine
+# The Morphic Engine
 
 A C++17 game engine developed by Morphic Void. It is being built from first principles with an emphasis on clear structure, modular systems, and long-term maintainability.
 
@@ -10,6 +10,17 @@ owned by Ritchie Brannan / Morphic Void Limited. AI tools are used in varying
 degrees for drafting, refactoring, review, testing, and documentation. File
 attribution is intended to reflect where the substantive ideas and content came
 from, not merely which party produced the final wording or keystrokes.
+
+This project treats human and AI contribution as complementary rather than
+zero-sum. They are not the same, and their strengths, limits, and failure
+modes are not the same, but there are meaningful overlaps in how both operate
+within constraint. Human engineering is creative work, but it is not creation
+from nothing: it is shaped by language, prior art, tools, hardware, shared
+practice, and the accumulated influence of other people's ideas. AI operates
+under different constraints and by different mechanisms, but it is likewise not
+a source of pure independent novelty. In both cases, much of the value lies in
+selection, combination, rejection, refinement, and the imposition of useful
+constraints.
 
 ## License
 

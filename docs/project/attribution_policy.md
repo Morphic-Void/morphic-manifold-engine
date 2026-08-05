@@ -4,7 +4,7 @@ License: MIT (see LICENSE file in repository root)
 File:   attribution_policy.md
 Author: Ritchie Brannan
 Drafting and editorial assistance: OpenAI tools
-Date:   29 Jul 2026
+Date:   5 Aug 26
 
 # Attribution Policy
 
@@ -25,6 +25,17 @@ acceptance remain with Ritchie Brannan / Morphic Void Limited.
 AI tools may assist with drafting, refactoring, review, implementation,
 testing, summarisation, and documentation, but they do not replace project
 ownership or final technical authority.
+
+## Accountable adoption
+
+If code or documentation is retained in this repository, it is here by the
+decision and authority of Ritchie Brannan / Morphic Void Limited.
+
+Differences in origin matter for attribution, but they do not dilute
+responsibility for what is adopted and retained in the framework.
+
+This should not be read as a public warranty or a guarantee of fitness for
+purpose.
 
 ## General attribution rule
 
@@ -83,12 +94,17 @@ Typical header:
 This category is expected to apply more often to selected documentation, test
 harnesses, or support files than to the main body of the production code.
 
+Where the human role is primarily practical use rather than close authorship
+review, a suitable secondary line may be:
+
+- `Used, occasionally adjusted, and accepted by: Ritchie Brannan`
+
 ## Documentation-specific guidance
 
 Different documentation classes may deserve different treatment.
 
 High-level project documents such as ethos, principles, backlog, roadmap,
-origins, and similar project-direction artefacts should usually be treated as
+origins, and similar project-direction artifacts should usually be treated as
 human-authored where they primarily express Ritchie Brannan's thinking,
 priorities, design direction, or engineering judgment, even if AI tools helped
 aggregate notes, improve structure, or polish wording.

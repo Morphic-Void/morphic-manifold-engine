@@ -3,7 +3,8 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   service.cpp
-//  Author: OpenAI Codex
+//  Primary implementation: OpenAI tools
+//  Reviewed and accepted by: Ritchie Brannan
 //  Date:   28 Jul 26
 //
 //  Bounded executable-owned debug service substrate.

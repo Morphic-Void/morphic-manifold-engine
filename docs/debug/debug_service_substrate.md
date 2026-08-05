@@ -2,7 +2,8 @@ Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 License: MIT (see LICENSE file in repository root)
 
 File:   debug_service_substrate.md
-Author: OpenAI Codex
+Primary draft: OpenAI tools
+Reviewed and accepted by: Ritchie Brannan
 Date:   28 Jul 2026
 
 # Debug Service Substrate

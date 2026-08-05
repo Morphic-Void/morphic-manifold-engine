@@ -1,8 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   debugger.cpp
-//  Author: OpenAI Codex
+//  Primary implementation: OpenAI tools
+//  Reviewed and accepted by: Ritchie Brannan
 //  Date:   31 Jul 26
 //
 //  Current-process debugger interaction and fail-fast termination.
@@ -85,3 +87,4 @@ void break_into_debugger() noexcept
 }
 
 }   //  namespace platform::system
+

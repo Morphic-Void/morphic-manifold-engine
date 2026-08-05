@@ -2,7 +2,8 @@ Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 License: MIT (see LICENSE file in repository root)
 
 File:   TMpmcTransport.md
-Author: ChatGPT / OpenAI
+Primary draft: OpenAI tools
+Reviewed and accepted by: Ritchie Brannan
 Date:   26 Jul 2026
 
 # TMpmcTransport

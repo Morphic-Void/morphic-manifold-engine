@@ -9,7 +9,7 @@ Date:   2 May 26
 
 ## Overview
 
-The Manifold Engine did not begin from a blank conceptual state.
+The Morphic Engine did not begin from a blank conceptual state.
 
 It is the active reconstruction of ideas, constraints, and lessons that were
 first explored in an earlier proof-of-concept project. That project was a
@@ -21,7 +21,7 @@ Its value was exploratory. It helped identify the shape of the game, the
 engine, the editor, and the supporting tooling that would be needed for a more
 deliberate implementation.
 
-The Manifold Engine is the result of carrying those lessons forward while
+The Morphic Engine is the result of carrying those lessons forward while
 rebuilding the systems under stricter rules for ownership, allocation, module
 boundaries, validation, documentation, and long-term maintainability.
 
@@ -29,7 +29,7 @@ boundaries, validation, documentation, and long-term maintainability.
 
 The earlier proof-of-concept project was an old working prototype.
 
-Its newest parts were around a decade old when The Manifold Engine began to be
+Its newest parts were around a decade old when The Morphic Engine began to be
 rebuilt, and some of its oldest parts were older still. Much of the work dated
 from an earlier development period and then sat dormant while professional
 consulting work took priority.
@@ -76,9 +76,9 @@ were part of the semantic structure of the world itself.
 That pushed the active project toward a purpose-built engine and editor rather
 than a conventional engine with a large layer of project-specific workarounds.
 
-## What influenced The Manifold Engine
+## What influenced The Morphic Engine
 
-The proof of concept influenced The Manifold Engine at the level of system
+The proof of concept influenced The Morphic Engine at the level of system
 shape, not implementation reuse.
 
 Several broad directions were carried forward:
@@ -95,7 +95,7 @@ Several broad directions were carried forward:
 
 The active implementation is intentionally more disciplined than the prototype.
 
-The Manifold Engine rebuilds the useful ideas under stricter constraints around:
+The Morphic Engine rebuilds the useful ideas under stricter constraints around:
 
 - ownership
 - allocation
@@ -107,12 +107,12 @@ The Manifold Engine rebuilds the useful ideas under stricter constraints around:
 - documentation
 - long-term maintainability
 
-The proof of concept helped identify the direction. The Manifold Engine defines
+The proof of concept helped identify the direction. The Morphic Engine defines
 the current implementation.
 
 ## What was not carried forward
 
-The Manifold Engine is not a direct continuation of the proof-of-concept
+The Morphic Engine is not a direct continuation of the proof-of-concept
 codebase.
 
 The old code was exploratory and provisional. Some of it reflected earlier
@@ -143,7 +143,7 @@ Most games should not start by trying to recreate Unreal, Unity, Godot, or any
 other broad commercial engine. Existing engines are powerful, mature, and
 supported by much larger teams and ecosystems.
 
-The Manifold Engine is not trying to compete with those engines.
+The Morphic Engine is not trying to compete with those engines.
 
 It is being built because this game has specific spatial and authoring
 requirements that do not align cleanly with conventional engine and editor
@@ -226,7 +226,7 @@ In short:
 
 ## Design constraints
 
-The Manifold Engine is shaped by strong resource and maintenance constraints.
+The Morphic Engine is shaped by strong resource and maintenance constraints.
 
 Those constraints are not treated as universal proof that every engine should be
 written this way. They are viability conditions for this specific project.
@@ -257,7 +257,7 @@ and used for this specific game.
 The proof-of-concept project established useful evidence about the shape of the
 game and its supporting technology.
 
-The Manifold Engine is the active project that carries those lessons forward.
+The Morphic Engine is the active project that carries those lessons forward.
 
 It is a reconstruction, not a continuation. It is narrower than a
 general-purpose public engine, but more deliberate than the prototype that came

@@ -3,7 +3,8 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   event_arguments.hpp
-//  Author: OpenAI Codex
+//  Primary implementation: OpenAI tools
+//  Reviewed and accepted by: Ritchie Brannan
 //  Date:   29 Jul 26
 //
 //  Bounded argument encoding for transported debug events.
@@ -207,3 +208,4 @@ template<typename... Args>
 }   //  namespace debug_system
 
 #endif  //  #ifndef DEBUG_EVENT_ARGUMENTS_HPP_INCLUDED
+

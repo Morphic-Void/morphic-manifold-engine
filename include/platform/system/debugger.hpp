@@ -1,8 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   debugger.hpp
-//  Author: OpenAI Codex
+//  Primary implementation: OpenAI tools
+//  Reviewed and accepted by: Ritchie Brannan
 //  Date:   31 Jul 26
 //
 //  Requirements:
@@ -28,3 +30,4 @@ void break_into_debugger() noexcept;
 }   //  namespace platform::system
 
 #endif  //  #ifndef DEBUGGER_HPP_INCLUDED
+

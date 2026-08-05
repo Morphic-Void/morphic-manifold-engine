@@ -20,8 +20,6 @@ backlog:
 
 ## Subsequent Cross-Cutting Work
 
-- Update documentation describing AI involvement, contribution, authorship, and
-  specification so it reflects the current collaborative workflow.
 - Add command-line selection of named tests and test groups without requiring
   the complete aggregate suite.
 - Rebrand the public infrastructure to avoid confusion with *Manifold Garden*,
