@@ -13,9 +13,9 @@ Date:   28 Jul 2026
 `debug/service.hpp` and `debug/service.cpp` provide the first bounded
 implementation checkpoint for the replacement debug system.
 
-The service substrate sits beside the placeholder implementation in
-`debug/debug.cpp`. The replacement public macros are included through
-`debug/debug.hpp`; existing usage migration remains separate.
+The service substrate now directly underpins the replacement public macros in
+`debug/macros.hpp`. The legacy facade and placeholder implementation were
+retired once usage migration completed.
 
 This checkpoint establishes:
 
@@ -237,25 +237,29 @@ uint64
 float32
 float64
 inline_text
-external_string_reference
-external_path_reference
+type_id
 ```
 
 Boolean values consume no payload bytes. `CInlineText16` owns exactly 16 bytes,
 including a guaranteed terminator, and therefore carries at most 15 text
-characters. External string and path references reserve stable tag values and
-eight payload bytes but deliberately have no public wrappers or resolvers yet.
-Four tag values remain unassigned.
+characters. `type_ids::id_type` consumes four payload bytes and formats as a
+registered symbolic name when one exists, otherwise as an explicit
+`unregistered-type:0x...` or `invalid-type:0x...` diagnostic. Five tag values
+remain reserved and unassigned.
 
 Unsupported C++ argument types, more than eight arguments, and a payload over
 64 bytes are compile-time errors. Pointers, references as transported state,
 arbitrary strings, and implicit object conversions are not admitted.
 
-The initial format grammar supports sequential `{}` substitutions plus `{{`
-and `}}` escaped braces. Argument types determine their default textual
-representation. There are no formatting modifiers in this checkpoint.
-Malformed formats, descriptor inconsistencies, unsupported reserved reference
-types, and formatting-buffer exhaustion are explicit formatter results.
+The initial format grammar supports sequential `{}` substitutions, `{{` and
+`}}` escaped braces, and hexadecimal integer insertions written as `#{}`,
+`x{}`, or `X{}` immediately before the substitution token. Hexadecimal
+formatting applies only to transported 32-bit and 64-bit signed or unsigned
+integer arguments. Signed values are formatted as unsigned values of their
+encoded width so negative values preserve their encoded two's-complement bit
+pattern. Malformed formats, descriptor inconsistencies, unsupported
+hexadecimal uses, reserved tags, and formatting-buffer exhaustion are explicit
+formatter results.
 
 The transport retains a provisional capacity hint of 128, giving its typed
 arena a fixed 64 KiB footprint. The copied format and source capacities remain
@@ -367,9 +371,10 @@ lifecycle calls rather than redesign the service.
 - tag ordering and zero-payload boolean encoding;
 - the eight-argument and 64-byte payload boundaries;
 - integer, floating-point, boolean, and inline-text formatting;
-- sequential substitutions and escaped braces;
+- transported type-id formatting and valid/unregistered/invalid fallback;
+- sequential substitutions, escaped braces, and hexadecimal insertions;
 - malformed format, mismatched argument, invalid descriptor, unsupported
-  reserved-reference, and output-capacity results;
+  hexadecimal use, reserved-tag, and output-capacity results;
 - writer startup and state publication;
 - MPMC legacy-text and typed-event delivery;
 - ambient system identity capture on the producer;

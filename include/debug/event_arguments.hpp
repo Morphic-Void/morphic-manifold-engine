@@ -20,6 +20,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "system/system_ids.hpp"
+
 namespace debug_system
 {
 
@@ -39,8 +41,12 @@ enum class EEventArgumentType : std::uint8_t
     float32 = 7u,
     float64 = 8u,
     inline_text = 9u,
-    external_string_reference = 10u,
-    external_path_reference = 11u
+    type_id = 10u,
+    reserved11 = 11u,
+    reserved12 = 12u,
+    reserved13 = 13u,
+    reserved14 = 14u,
+    reserved15 = 15u
 };
 
 enum class EEventFormatResult : std::uint32_t
@@ -120,6 +126,7 @@ MV_DEFINE_EVENT_ARGUMENT_TRAITS(std::uint64_t, EEventArgumentType::uint64);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(float, EEventArgumentType::float32);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(double, EEventArgumentType::float64);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(CInlineText16, EEventArgumentType::inline_text);
+MV_DEFINE_EVENT_ARGUMENT_TRAITS(type_ids::id_type, EEventArgumentType::type_id);
 
 #undef MV_DEFINE_EVENT_ARGUMENT_TRAITS
 
@@ -208,4 +215,3 @@ template<typename... Args>
 }   //  namespace debug_system
 
 #endif  //  #ifndef DEBUG_EVENT_ARGUMENTS_HPP_INCLUDED
-

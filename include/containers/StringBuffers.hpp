@@ -59,7 +59,7 @@
 #include "ByteBuffers.hpp"
 #include "TPodVector.hpp"
 
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 //==============================================================================
 //  Forward declarations

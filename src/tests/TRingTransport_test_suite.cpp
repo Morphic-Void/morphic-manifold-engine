@@ -19,7 +19,7 @@
 #include "threading/transports/TRingTransport.hpp"
 #include "tests/TRingTransport_test_suite.hpp"
 #include "memory/memory_context.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 using threading::transports::TRing;
 
@@ -449,8 +449,5 @@ int test_ring_transport()
 
 int run_ring_transport_tests()
 {
-    debug_utils::disable_asserts();
-    int result = tests::test_ring_transport();
-    debug_utils::enable_asserts();
-    return result;
+    return tests::test_ring_transport();
 }

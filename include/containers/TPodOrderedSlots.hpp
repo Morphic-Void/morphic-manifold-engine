@@ -39,7 +39,7 @@
 #include "slots/SlotsRankMap.hpp"
 #include "TPodVector.hpp"
 
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 //==============================================================================
 //  TPodOrderedSlots<T, TKey>

@@ -39,7 +39,7 @@
 #include "system/transported_types.hpp"
 #include "threading/threading.hpp"
 
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 #include "debug/service.hpp"
 
 struct ThreadConfig

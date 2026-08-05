@@ -304,15 +304,20 @@ The transport-facing contract is:
   errors and do not implicitly select another reporting path.
 
 The initial supported set covers fixed-width signed and unsigned integers,
-`bool`, `float`, `double`, and an owning 16-byte inline text value. Encoding
-reserves distinct 64-bit external string-reference and path-reference tags,
-although wrappers and lookup are deferred. The technical limit is eight
-arguments and 64 payload bytes. Boolean truth is carried by its type tag and
-uses no payload bytes.
+`bool`, `float`, `double`, `type_ids::id_type`, and an owning 16-byte inline
+text value. The technical limit is eight arguments and 64 payload bytes.
+Boolean truth is carried by its type tag and uses no payload bytes.
 
-The initial format grammar provides sequential `{}` substitutions and `{{` or
-`}}` escaped braces. Types select their default representation. Formatting
-modifiers are deferred until a concrete need justifies extending the grammar.
+The initial format grammar provides sequential `{}` substitutions, `{{` or
+`}}` escaped braces, and hexadecimal integer insertions written as `#{}`,
+`x{}`, or `X{}` immediately at the insertion site. `#{}` emits lowercase
+digits prefixed with `#`; `x{}` emits lowercase digits prefixed with `x`;
+`X{}` emits uppercase digits prefixed with `X`. Hexadecimal formatting applies
+only to transported 32-bit and 64-bit signed or unsigned integer arguments.
+Signed values are formatted as unsigned values of their encoded width so their
+two's-complement bit pattern is preserved. Other transported argument types
+must reject a hexadecimal insertion explicitly rather than silently falling
+back.
 
 Without generated static data, the bounded format literal is copied into the
 event and interpreted by the writer. A possible future generated-data mode may

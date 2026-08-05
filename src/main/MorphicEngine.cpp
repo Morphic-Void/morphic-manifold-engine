@@ -28,7 +28,7 @@
 #include "containers/TPodVector.hpp"
 #include "containers/TOrderedCollection.hpp"
 #include "containers/TUnorderedCollection.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 #include "host/host.hpp"
 #include "host/host_context.hpp"
 #include "image/codec/tga.hpp"

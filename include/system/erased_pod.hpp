@@ -69,7 +69,7 @@ private:
 
     void clear_payload() noexcept;
 
-    type_ids::id_type m_type_id = 0u;
+    type_ids::id_type m_type_id{};
     alignas(PayloadAlign) unsigned char m_payload[PayloadSize]{};
 };
 
@@ -88,14 +88,14 @@ using TErasedPodFor = TErasedPod<sizeof(TPayloadShape), alignof(TPayloadShape)>;
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
 void TErasedPod<PayloadSize, PayloadAlign>::clear() noexcept
 {
-    m_type_id = 0u;
+    m_type_id = type_ids::id_type{};
     clear_payload();
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
 bool TErasedPod<PayloadSize, PayloadAlign>::is_empty() const noexcept
 {
-    return m_type_id == 0u;
+    return m_type_id == type_ids::id_type{};
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
@@ -151,7 +151,7 @@ template<std::size_t PayloadSize, std::size_t PayloadAlign>
 template<typename T>
 constexpr void TErasedPod<PayloadSize, PayloadAlign>::validate_payload_type() noexcept
 {
-    static_assert((k_type_id_v<T> != 0u), "TErasedPod reserves type id zero for empty storage.");
+    static_assert((k_type_id_v<T> != type_ids::id_type{}), "TErasedPod reserves type id zero for empty storage.");
     static_assert(std::is_trivially_copyable_v<T>, "TErasedPod requires trivially copyable payloads.");
     static_assert((sizeof(T) <= PayloadSize), "TErasedPod payload storage is too small.");
     static_assert((alignof(T) <= PayloadAlign), "TErasedPod payload storage is under-aligned.");

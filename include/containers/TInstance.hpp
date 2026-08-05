@@ -46,7 +46,7 @@
 #include "memory/memory_policies.hpp"
 #include "memory/memory_token.hpp"
 
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 template<typename T>
 class TInstance final

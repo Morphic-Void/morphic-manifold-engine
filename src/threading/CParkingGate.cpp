@@ -12,7 +12,7 @@
 
 #include "threading/CParkingGate.hpp"
 #include "platform/threading/processor_relax.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 namespace threading
 {

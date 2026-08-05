@@ -15,7 +15,7 @@
 
 #include "platform/threading/thread_priority.hpp"
 #include "platform/platform_defines.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 #if MV_PLATFORM_WINDOWS
 #include "platform/windows_include.hpp"

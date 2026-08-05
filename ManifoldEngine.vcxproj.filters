@@ -177,9 +177,6 @@
     <ClInclude Include="include\bit_utils\spatial_codes.hpp">
       <Filter>include\bit_utils</Filter>
     </ClInclude>
-    <ClInclude Include="include\debug\debug.hpp">
-      <Filter>include\debug</Filter>
-    </ClInclude>
     <ClInclude Include="include\debug\macros.hpp">
       <Filter>include\debug</Filter>
     </ClInclude>
@@ -460,9 +457,6 @@
     </ClCompile>
     <ClCompile Include="src\memory\memory_context.cpp">
       <Filter>src\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="src\debug\debug.cpp">
-      <Filter>src\debug</Filter>
     </ClCompile>
     <ClCompile Include="src\debug\event_arguments.cpp">
       <Filter>src\debug</Filter>

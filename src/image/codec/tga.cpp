@@ -215,7 +215,7 @@
 #include "image/codec/tga.hpp"
 #include "memory/memory_policies.hpp"
 #include "containers/ByteBuffers.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 namespace image::codec::tga
 {

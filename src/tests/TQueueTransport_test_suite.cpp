@@ -20,7 +20,7 @@
 #include "threading/transports/TQueueTransport.hpp"
 #include "tests/TQueueTransport_test_suite.hpp"
 #include "memory/memory_context.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 using threading::transports::TQueue;
 
@@ -713,8 +713,5 @@ int test_queue_transport()
 
 int run_queue_transport_tests()
 {
-    debug_utils::disable_asserts();
-    int result = tests::test_queue_transport();
-    debug_utils::enable_asserts();
-    return result;
+    return tests::test_queue_transport();
 }

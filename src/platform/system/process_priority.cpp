@@ -15,7 +15,7 @@
 
 #include "platform/system/process_priority.hpp"
 #include "platform/platform_defines.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 #if defined(MV_PLATFORM_WINDOWS)
 #include "platform/windows_include.hpp"

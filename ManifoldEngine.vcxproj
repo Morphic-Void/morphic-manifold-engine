@@ -227,7 +227,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-      <ClCompile Include="src\debug\debug.cpp" />
       <ClCompile Include="src\debug\event_arguments.cpp" />
       <ClCompile Include="src\debug\service.cpp" />
     <ClCompile Include="src\host\host.cpp" />
@@ -298,7 +297,6 @@
     <ClInclude Include="include\containers\TPodUnorderedSlots.hpp" />
     <ClInclude Include="include\containers\TPodVector.hpp" />
     <ClInclude Include="include\containers\TUnorderedCollection.hpp" />
-      <ClInclude Include="include\debug\debug.hpp" />
       <ClInclude Include="include\debug\macros.hpp" />
       <ClInclude Include="include\debug\event_arguments.hpp" />
       <ClInclude Include="include\debug\service.hpp" />

@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 #include "memory/memory_context.hpp"
 #include "system/erased_owner.hpp"
 #include "system/erased_owner_transport.hpp"
@@ -173,9 +173,7 @@ void test_allocation_failure_is_canonical(TTestContext& ctx)
         &state, allocate_test_memory, deallocate_test_memory, system_ids::host);
     memory::CMemoryContext context(allocator, system_ids::host);
 
-    (void)debug_utils::disable_asserts();
     CErasedOwner owner = CErasedOwner::create<OwningFileLoadResult>(&context);
-    (void)debug_utils::enable_asserts();
 
     TEST_EXPECT(ctx, owner.is_empty());
     TEST_EXPECT(ctx, !owner.is_ready());

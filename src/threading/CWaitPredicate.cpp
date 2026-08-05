@@ -12,7 +12,7 @@
 
 #include "threading/CWaitPredicate.hpp"
 #include "platform/platform_defines.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 #if MV_PLATFORM_HAS_NATIVE_WAIT_WORD
 #include "platform/threading/wait_word.hpp"

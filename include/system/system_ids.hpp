@@ -77,6 +77,7 @@ public:
     [[nodiscard]] constexpr Repr raw_value() const noexcept { return m_value; }
     [[nodiscard]] constexpr bool is_valid() const noexcept { return m_value != Repr{ 0 }; }
     explicit constexpr operator bool() const noexcept { return is_valid(); }
+    constexpr operator Repr() const noexcept { return m_value; }
 
 private:
     Repr m_value{ 0 };
@@ -154,8 +155,7 @@ struct TEncodedField
     {
         return is_valid_index(index)
             ? id_type(static_cast<Repr>(
-                bit_ops::spread_to_even_bits(((index.raw_value() + 1u) & k_payload_mask) ^ k_payload_mask)
-                << k_id_field_shift))
+                bit_ops::spread_to_even_bits(((index.raw_value() + 1u) & k_payload_mask) ^ k_payload_mask) << k_id_field_shift))
             : id_type{};
     }
 
@@ -192,7 +192,7 @@ struct CSystemIdTag {};
 
 namespace type_ids
 {
-using id_type = std::uint32_t;
+using id_type = system_id_util::TValue<system_id_util::CTypeIdTag, std::uint32_t>;
 using index_type = std::uint32_t;
 static constexpr std::uint32_t k_id_field_mask = 0x55555555u;      //  16 payload bits
 static constexpr std::uint32_t k_payload_mask = 0x0000ffffu;

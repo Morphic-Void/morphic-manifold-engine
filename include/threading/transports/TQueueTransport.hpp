@@ -51,7 +51,7 @@
 #include "memory/memory_policies.hpp"
 #include "memory/memory_token.hpp"
 #include "bit_utils/bit_ops.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 namespace threading::transports
 {

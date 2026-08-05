@@ -17,7 +17,7 @@
 #include "threading/transports/TOwningTransport.hpp"
 #include "tests/TOwningTransport_test_suite.hpp"
 #include "memory/memory_context.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 using threading::transports::TOwning;
 
@@ -624,8 +624,5 @@ int test_owning_transport()
 
 int run_owning_transport_tests()
 {
-    debug_utils::disable_asserts();
-    int result = tests::test_owning_transport();
-    debug_utils::enable_asserts();
-    return result;
+    return tests::test_owning_transport();
 }

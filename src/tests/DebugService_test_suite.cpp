@@ -14,7 +14,7 @@
 #include <type_traits>
 
 #include "containers/TInstance.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 #include "debug/service.hpp"
 #include "platform/filesystem/internal/file_utils.hpp"
 #include "platform/path/native_path.hpp"
@@ -164,6 +164,7 @@ void test_argument_encoding(TTestContext& ctx)
     static_assert(
         debug_system::is_supported_event_argument_v<
             debug_system::CInlineText16>);
+    static_assert(debug_system::is_supported_event_argument_v<type_ids::id_type>);
     static_assert(!debug_system::is_supported_event_argument_v<const char*>);
 
     const debug_system::SEventArguments empty =
@@ -232,6 +233,14 @@ void test_argument_encoding(TTestContext& ctx)
     TEST_EXPECT(ctx,
         argument_type(inline_text, 0u) ==
         debug_system::EEventArgumentType::inline_text);
+
+    const debug_system::SEventArguments type_id =
+        debug_system::encode_event_arguments(type_ids::file_load_request);
+    TEST_EXPECT(ctx, type_id.parameter_count == 1u);
+    TEST_EXPECT(ctx, type_id.payload_size == 4u);
+    TEST_EXPECT(ctx,
+        argument_type(type_id, 0u) ==
+        debug_system::EEventArgumentType::type_id);
 }
 
 void test_argument_formatting(TTestContext& ctx)
@@ -280,10 +289,73 @@ void test_argument_formatting(TTestContext& ctx)
         format_event(
             output,
             sizeof(output),
+            "#{}, x{}, X{}",
+            debug_system::encode_event_arguments(
+                std::uint32_t{ 0xabcd1234u },
+                std::int32_t{ -1 },
+                std::uint64_t{ 0x1234abcdefULL }),
+            output_size) ==
+        debug_system::EEventFormatResult::success);
+    TEST_EXPECT(ctx,
+        std::strcmp(
+            output,
+            "#abcd1234, xffffffff, X1234ABCDEF") == 0);
+
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "0x{} 0X{}",
+            debug_system::encode_event_arguments(
+                std::uint32_t{ 0x2au },
+                std::int64_t{ -1 }),
+            output_size) ==
+        debug_system::EEventFormatResult::success);
+    TEST_EXPECT(ctx,
+        std::strcmp(
+            output,
+            "0x2a 0XFFFFFFFFFFFFFFFF") == 0);
+
+    char expected_type_output[160]{};
+    const type_ids::id_type unregistered_type_id =
+        type_ids::encode_id(type_ids::k_count);
+    const int expected_type_output_size = std::snprintf(
+        expected_type_output,
+        sizeof(expected_type_output),
+        "file_load_request | unregistered-type:0x%08x | invalid-type:0x%08x",
+        static_cast<unsigned int>(unregistered_type_id),
+        0x00000002u);
+    TEST_EXPECT(ctx, expected_type_output_size > 0);
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "{} | {} | {}",
+            debug_system::encode_event_arguments(
+                type_ids::file_load_request,
+                unregistered_type_id,
+                type_ids::id_type{ 0x00000002u }),
+            output_size) ==
+        debug_system::EEventFormatResult::success);
+    TEST_EXPECT(ctx, std::strcmp(output, expected_type_output) == 0);
+
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
             "{} {}",
             debug_system::encode_event_arguments(std::uint32_t{ 1u }),
             output_size) ==
         debug_system::EEventFormatResult::argument_mismatch);
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "#{}",
+            debug_system::encode_event_arguments(
+                debug_system::CInlineText16{ "small text" }),
+            output_size) ==
+        debug_system::EEventFormatResult::unsupported_argument);
     TEST_EXPECT(ctx,
         format_event(
             output,
@@ -325,19 +397,19 @@ void test_argument_formatting(TTestContext& ctx)
             output_size) ==
         debug_system::EEventFormatResult::invalid_descriptor);
 
-    debug_system::SEventArguments external_reference{};
-    external_reference.type_tags = static_cast<std::uint32_t>(
-        debug_system::EEventArgumentType::external_string_reference);
-    external_reference.parameter_count = 1u;
-    external_reference.payload_size = 8u;
+    debug_system::SEventArguments reserved_type{};
+    reserved_type.type_tags = static_cast<std::uint32_t>(
+        debug_system::EEventArgumentType::reserved11);
+    reserved_type.parameter_count = 1u;
+    reserved_type.payload_size = 0u;
     TEST_EXPECT(ctx,
         format_event(
             output,
             sizeof(output),
             "{}",
-            external_reference,
+            reserved_type,
             output_size) ==
-        debug_system::EEventFormatResult::unsupported_argument);
+        debug_system::EEventFormatResult::invalid_descriptor);
 }
 
 void test_system_id_name_registry(TTestContext& ctx)
@@ -614,8 +686,23 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             debug_system::EShutdownReason::none,
             "typed {} {} {}",
             std::int32_t{ -7 },
-            true,
+            type_ids::file_load_request,
             debug_system::CInlineText16{ "payload" })));
+
+    const type_ids::id_type unregistered_type_id =
+        type_ids::encode_id(type_ids::k_count);
+    TEST_EXPECT(ctx,
+        (debug_system::process_event<
+            debug_system::EEventLevel::error,
+            debug_system::EEventType::event>(
+            source_file,
+            source_line + 1u,
+            breakpoint_override,
+            true,
+            debug_system::EShutdownReason::none,
+            "typed {} {}",
+            unregistered_type_id,
+            type_ids::id_type{ 0x00000002u })));
 
     char oversized[debug_system::k_event_text_capacity + 32u];
     std::memset(oversized, 'x', sizeof(oversized) - 1u);
@@ -623,7 +710,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     TEST_EXPECT(ctx, debug_system::submit_text(oversized));
     MV_REPORT("rich %s %d %.1f", "report", 42, 3.5);
     const std::uint32_t panic_incident_id = service->allocate_incident_id();
-    TEST_EXPECT(ctx, panic_incident_id == 7u);
+    TEST_EXPECT(ctx, panic_incident_id == 8u);
     const debug_system::SEventUsagePoint panic_usage_point{
         source_file, sizeof(source_file) - 1u, source_line + 2u };
     TEST_EXPECT(ctx,
@@ -708,10 +795,21 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     const int source_marker_size = std::snprintf(
         source_marker,
         sizeof(source_marker),
-        "[%s:%u] typed -7 true payload",
+        "[%s:%u] typed -7 file_load_request payload",
         source_suffix,
         source_line);
     TEST_EXPECT(ctx, source_marker_size > 0);
+
+    char type_fallback_marker[192]{};
+    const int type_fallback_marker_size = std::snprintf(
+        type_fallback_marker,
+        sizeof(type_fallback_marker),
+        "[%s:%u] typed unregistered-type:0x%08x invalid-type:0x%08x",
+        source_suffix,
+        source_line + 1u,
+        static_cast<unsigned int>(unregistered_type_id),
+        0x00000002u);
+    TEST_EXPECT(ctx, type_fallback_marker_size > 0);
 
     TEST_EXPECT(ctx, file_contains(event_path, "[0000000001]"));
     TEST_EXPECT(ctx, !file_contains(event_path, system_marker));
@@ -724,22 +822,25 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     TEST_EXPECT(ctx, file_contains(event_path, "[0000000004]"));
     TEST_EXPECT(ctx, file_contains(event_path, "[error:event]"));
     TEST_EXPECT(ctx, file_contains(event_path, source_marker));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000005]"));
-    TEST_EXPECT(ctx, !file_contains(direct_path, system_marker));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000005]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[error:event]"));
+    TEST_EXPECT(ctx, file_contains(event_path, type_fallback_marker));
     TEST_EXPECT(ctx, file_contains(direct_path, "[0000000006]"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "rich report 42 3.5"));
+    TEST_EXPECT(ctx, !file_contains(direct_path, system_marker));
     TEST_EXPECT(ctx, file_contains(direct_path, "[0000000007]"));
+    TEST_EXPECT(ctx, file_contains(direct_path, "rich report 42 3.5"));
+    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000008]"));
     TEST_EXPECT(ctx, file_contains(direct_path, "[panic:event]"));
     TEST_EXPECT(ctx, file_contains(direct_path, "panic substrate record"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000008]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000009]"));
     TEST_EXPECT(ctx, file_contains(event_path, unregistered_marker));
     TEST_EXPECT(ctx,
         file_contains(event_path, "unregistered system identity"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000009]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000010]"));
     TEST_EXPECT(ctx, file_contains(event_path, invalid_marker));
     TEST_EXPECT(ctx, file_contains(event_path, "invalid system identity"));
 #if MV_DEVELOPMENT_BUILD
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000010]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000011]"));
     TEST_EXPECT(ctx,
         file_contains(event_path,
             "Assertion failed: std::uint32_t{} == 1u"));
@@ -789,4 +890,3 @@ int run_debug_service_tests()
         << ctx.failed << " failed\n";
     return (ctx.failed == 0) ? 0 : 1;
 }
-

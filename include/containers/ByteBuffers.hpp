@@ -40,7 +40,7 @@
 #include "memory/memory_token.hpp"
 #include "memory/memory_view.hpp"
 #include "bit_utils/bit_ops.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 //==============================================================================
 //  Forward declarations

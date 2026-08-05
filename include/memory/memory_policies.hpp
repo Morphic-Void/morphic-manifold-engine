@@ -21,7 +21,7 @@
 #include <type_traits>  //  std::is_same_v
 
 #include "bit_utils/bit_ops.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 namespace memory
 {

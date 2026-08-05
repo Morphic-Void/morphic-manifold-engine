@@ -42,7 +42,7 @@
 #include <cstdint>      //  std::uint32_t
 #include <type_traits>  //  std::is_const_v, std::is_trivially_copyable_v
 
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 namespace threading::transports
 {

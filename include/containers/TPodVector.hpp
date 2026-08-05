@@ -42,7 +42,7 @@
 #include "memory/memory_token.hpp"
 #include "memory/memory_view.hpp"
 #include "ByteBuffers.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 //==============================================================================
 //  Forward declarations

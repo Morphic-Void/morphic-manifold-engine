@@ -22,7 +22,7 @@
 #include "bit_utils/bit_ops.hpp"
 #include "system/system_context.hpp"
 #include "platform/platform_defines.hpp"
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 
 namespace memory
 {

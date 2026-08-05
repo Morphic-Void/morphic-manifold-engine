@@ -19,7 +19,7 @@
 #include <type_traits>  //  std::is_nothrow_*_v
 #include <utility>      //  std::move
 
-#include "debug/debug.hpp"
+#include "debug/macros.hpp"
 #include "memory/memory_token.hpp"
 #include "system/system_type_registration.hpp"
 
