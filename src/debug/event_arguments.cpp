@@ -117,18 +117,13 @@ template<typename T>
     if (prefix != 0)
     {
         size = std::snprintf(
-            text,
-            sizeof(text),
-            uppercase ? "%c%llX" : "%c%llx",
-            prefix,
-            static_cast<unsigned long long>(value));
+            text, sizeof(text), (uppercase ? "%c%llX" : "%c%llx"),
+            prefix, static_cast<unsigned long long>(value));
     }
     else
     {
         size = std::snprintf(
-            text,
-            sizeof(text),
-            uppercase ? "%llX" : "%llx",
+            text, sizeof(text), (uppercase ? "%llX" : "%llx"),
             static_cast<unsigned long long>(value));
     }
 
@@ -177,8 +172,7 @@ template<typename T>
     char text[64]{};
     const bool valid = type_ids::is_valid_id(id);
     const int size = std::snprintf(
-        text,
-        sizeof(text),
+        text, sizeof(text),
         valid ? "unregistered-type:0x%08x" : "invalid-type:0x%08x",
         static_cast<unsigned int>(id));
     if ((size < 0) || (static_cast<std::size_t>(size) >= sizeof(text)))
