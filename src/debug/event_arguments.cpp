@@ -20,27 +20,12 @@ namespace debug_system
 namespace event_formatting
 {
 
-enum class EInsertionFormat : std::uint8_t
-{
-    default_value = 0u,
-    hash_hex_lower,
-    x_hex_lower,
-    x_hex_upper
-};
-
 struct SOutput
 {
     char* destination;
     std::size_t capacity;
     std::size_t size;
 };
-
-[[nodiscard]] EEventFormatResult append_argument(
-    SOutput& output,
-    const SEventArguments& arguments,
-    const EEventArgumentType type,
-    const std::size_t payload_offset,
-    const EInsertionFormat insertion_format) noexcept;
 
 [[nodiscard]] EEventArgumentType get_type(const SEventArguments& arguments, const std::size_t index) noexcept
 {
@@ -104,53 +89,78 @@ template<typename T>
     return value;
 }
 
-[[nodiscard]] EEventFormatResult append_argument(SOutput& output, const SEventArguments& arguments, const EEventArgumentType type, const std::size_t payload_offset) noexcept
+[[nodiscard]] EEventFormatResult append_integer_hex(
+    SOutput& output,
+    const std::uint64_t value,
+    const char insertion_specifier) noexcept
 {
-    return append_argument(output, arguments, type, payload_offset, EInsertionFormat::default_value);
-}
+    const char* format = nullptr;
+    switch (insertion_specifier)
+    {
+        case '#':
+        {
+            format = "#%llx";
+            break;
+        }
+        case 'x':
+        {
+            format = "x%llx";
+            break;
+        }
+        case 'X':
+        {
+            format = "x%llX";
+            break;
+        }
+        default:
+        {
+            return EEventFormatResult::invalid_descriptor;
+        }
+    }
 
-[[nodiscard]] EEventFormatResult append_integer_hex(SOutput& output, const std::uint64_t value, const bool uppercase, const char prefix) noexcept
-{
     char text[64]{};
-    int size = 0;
-
-    if (prefix != 0)
-    {
-        size = std::snprintf(
-            text, sizeof(text), (uppercase ? "%c%llX" : "%c%llx"),
-            prefix, static_cast<unsigned long long>(value));
-    }
-    else
-    {
-        size = std::snprintf(
-            text, sizeof(text), (uppercase ? "%llX" : "%llx"),
-            static_cast<unsigned long long>(value));
-    }
-
-    if ((size < 0) || (static_cast<std::size_t>(size) >= sizeof(text)))
-    {
-        return EEventFormatResult::invalid_descriptor;
-    }
+    const int size = std::snprintf(text, sizeof(text), format, static_cast<unsigned long long>(value));
 
     return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
 }
 
-[[nodiscard]] char insertion_prefix(const EInsertionFormat insertion_format) noexcept
+[[nodiscard]] EEventFormatResult append_hex_argument(
+    SOutput& output,
+    const SEventArguments& arguments,
+    const EEventArgumentType type,
+    const std::size_t payload_offset,
+    const char insertion_specifier) noexcept
 {
-    switch (insertion_format)
+    switch (type)
     {
-        case EInsertionFormat::hash_hex_lower:
+        case EEventArgumentType::int32:
+        case EEventArgumentType::uint32:
         {
-            return '#';
+            return append_integer_hex(
+                output,
+                read_value<std::uint32_t>(arguments, payload_offset),
+                insertion_specifier);
         }
-        case EInsertionFormat::x_hex_lower:
-        case EInsertionFormat::x_hex_upper:
+        case EEventArgumentType::int64:
+        case EEventArgumentType::uint64:
         {
-            return 'x';
+            return append_integer_hex(
+                output,
+                read_value<std::uint64_t>(arguments, payload_offset),
+                insertion_specifier);
+        }
+        case EEventArgumentType::false_value:
+        case EEventArgumentType::true_value:
+        case EEventArgumentType::float32:
+        case EEventArgumentType::float64:
+        case EEventArgumentType::inline_text:
+        case EEventArgumentType::type_id:
+        {
+            return EEventFormatResult::unsupported_argument;
         }
         default:
         {
-            return 0;
+            return EEventFormatResult::invalid_descriptor;
         }
     }
 }
@@ -171,14 +181,9 @@ template<typename T>
 
     char text[64]{};
     const bool valid = type_ids::is_valid_id(id);
-    const int size = std::snprintf(
-        text, sizeof(text),
+    const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-type:0x%08x" : "invalid-type:0x%08x",
         static_cast<unsigned int>(id));
-    if ((size < 0) || (static_cast<std::size_t>(size) >= sizeof(text)))
-    {
-        return EEventFormatResult::invalid_descriptor;
-    }
 
     return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
 }
@@ -187,108 +192,53 @@ template<typename T>
     SOutput& output,
     const SEventArguments& arguments,
     const EEventArgumentType type,
-    const std::size_t payload_offset,
-    const EInsertionFormat insertion_format) noexcept
+    const std::size_t payload_offset) noexcept
 {
     char text[64]{};
     int size = 0;
-
-    const bool hexadecimal = (insertion_format != EInsertionFormat::default_value);
 
     switch (type)
     {
         case EEventArgumentType::false_value:
         {
-            if (hexadecimal)
-            {
-                return EEventFormatResult::unsupported_argument;
-            }
             return append(output, "false", 5u) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
         }
         case EEventArgumentType::true_value:
         {
-            if (hexadecimal)
-            {
-                return EEventFormatResult::unsupported_argument;
-            }
             return append(output, "true", 4u) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
         }
         case EEventArgumentType::int32:
         {
-            if (hexadecimal)
-            {
-                return append_integer_hex(
-                    output,
-                    static_cast<std::uint32_t>(read_value<std::int32_t>(arguments, payload_offset)),
-                    insertion_format == EInsertionFormat::x_hex_upper,
-                    insertion_prefix(insertion_format));
-            }
             size = std::snprintf(text, sizeof(text), "%d", read_value<std::int32_t>(arguments, payload_offset));
             break;
         }
         case EEventArgumentType::uint32:
         {
-            if (hexadecimal)
-            {
-                return append_integer_hex(
-                    output,
-                    read_value<std::uint32_t>(arguments, payload_offset),
-                    insertion_format == EInsertionFormat::x_hex_upper,
-                    insertion_prefix(insertion_format));
-            }
             size = std::snprintf(text, sizeof(text), "%u", read_value<std::uint32_t>(arguments, payload_offset));
             break;
         }
         case EEventArgumentType::int64:
         {
-            if (hexadecimal)
-            {
-                return append_integer_hex(
-                    output,
-                    static_cast<std::uint64_t>(read_value<std::int64_t>(arguments, payload_offset)),
-                    insertion_format == EInsertionFormat::x_hex_upper,
-                    insertion_prefix(insertion_format));
-            }
             size = std::snprintf(text, sizeof(text), "%lld", static_cast<long long>(read_value<std::int64_t>(arguments, payload_offset)));
             break;
         }
         case EEventArgumentType::uint64:
         {
-            if (hexadecimal)
-            {
-                return append_integer_hex(
-                    output,
-                    read_value<std::uint64_t>(arguments, payload_offset),
-                    insertion_format == EInsertionFormat::x_hex_upper,
-                    insertion_prefix(insertion_format));
-            }
             size = std::snprintf(text, sizeof(text), "%llu", static_cast<unsigned long long>(read_value<std::uint64_t>(arguments, payload_offset)));
             break;
         }
         case EEventArgumentType::float32:
         {
-            if (hexadecimal)
-            {
-                return EEventFormatResult::unsupported_argument;
-            }
             size = std::snprintf(text, sizeof(text), "%.9g", static_cast<double>(read_value<float>(arguments, payload_offset)));
             break;
         }
         case EEventArgumentType::float64:
         {
-            if (hexadecimal)
-            {
-                return EEventFormatResult::unsupported_argument;
-            }
             size = std::snprintf(text, sizeof(text), "%.17g", read_value<double>(arguments, payload_offset));
             break;
         }
         case EEventArgumentType::inline_text:
         {
-            if (hexadecimal)
-            {
-                return EEventFormatResult::unsupported_argument;
-            }
             const char* const value = reinterpret_cast<const char*>(arguments.payload + payload_offset);
             const void* const terminator = std::memchr(value, 0, k_inline_text_capacity);
             if (terminator == nullptr)
@@ -301,11 +251,6 @@ template<typename T>
         }
         case EEventArgumentType::type_id:
         {
-            if (hexadecimal)
-            {
-                return EEventFormatResult::unsupported_argument;
-            }
-
             return append_type_id(output, read_value<type_ids::id_type>(arguments, payload_offset));
         }
         default:
@@ -314,41 +259,7 @@ template<typename T>
         }
     }
 
-    if ((size < 0) || (static_cast<std::size_t>(size) >= sizeof(text)))
-    {
-        return EEventFormatResult::invalid_descriptor;
-    }
-
     return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
-}
-
-[[nodiscard]] EInsertionFormat parse_insertion_format(const char* const format, const std::size_t format_size, std::size_t& index) noexcept
-{
-    if ((index + 1u) < format_size)
-    {
-        const char character = format[index];
-        const char next = format[index + 1u];
-
-        if ((character == '#') && (next == '{'))
-        {
-            ++index;
-            return EInsertionFormat::hash_hex_lower;
-        }
-
-        if ((character == 'x') && (next == '{'))
-        {
-            ++index;
-            return EInsertionFormat::x_hex_lower;
-        }
-
-        if ((character == 'X') && (next == '{'))
-        {
-            ++index;
-            return EInsertionFormat::x_hex_upper;
-        }
-    }
-
-    return EInsertionFormat::default_value;
 }
 
 [[nodiscard]] EEventFormatResult validate(
@@ -405,29 +316,18 @@ EEventFormatResult format_event_text(
     event_formatting::SOutput output{ destination, destination_capacity, 0u };
     std::size_t argument_index = 0u;
     std::size_t payload_offset = 0u;
+    std::size_t literal_begin = 0u;
 
     for (std::size_t index = 0u; index < format_size; ++index)
     {
-        const char character = format[index];
-        if (character == 0)
+        const char token = format[index];
+        if (token == 0)
         {
             return EEventFormatResult::malformed_format;
         }
 
-        event_formatting::EInsertionFormat insertion_format = event_formatting::EInsertionFormat::default_value;
-        if ((character == '#') || (character == 'x') || (character == 'X'))
-        {
-            insertion_format = event_formatting::parse_insertion_format(format, format_size, index);
-        }
-
-        const char token = format[index];
-
         if ((token != '{') && (token != '}'))
         {
-            if (!event_formatting::append(output, &character, 1u))
-            {
-                return EEventFormatResult::output_too_small;
-            }
             continue;
         }
 
@@ -437,36 +337,75 @@ EEventFormatResult format_event_text(
         }
 
         const char next = format[index + 1u];
-        if (next == token)
+        if ((token == '{') && (next == '}'))
         {
-            if (!event_formatting::append(output, &token, 1u))
+            std::size_t insertion_begin = index;
+            if (index > literal_begin)
+            {
+                const char preceding = format[index - 1u];
+                if ((preceding == '#') || (preceding == 'x') || (preceding == 'X'))
+                {
+                    --insertion_begin;
+                }
+            }
+
+            if (!event_formatting::append(output, format + literal_begin, insertion_begin - literal_begin))
             {
                 return EEventFormatResult::output_too_small;
             }
+
+            if (argument_index >= arguments.parameter_count)
+            {
+                return EEventFormatResult::argument_mismatch;
+            }
+
+            const EEventArgumentType type = event_formatting::get_type(arguments, argument_index);
+            EEventFormatResult result;
+            if (insertion_begin < index)
+            {
+                result = event_formatting::append_hex_argument(
+                    output, arguments, type, payload_offset, format[insertion_begin]);
+            }
+            else
+            {
+                result = event_formatting::append_argument(
+                    output, arguments, type, payload_offset);
+            }
+
+            if (result != EEventFormatResult::success)
+            {
+                return result;
+            }
+
+            payload_offset += event_formatting::payload_size(type);
+            ++argument_index;
             ++index;
+            literal_begin = index + 1u;
             continue;
         }
 
-        if ((token != '{') || (next != '}'))
+        if (next != token)
         {
             return EEventFormatResult::malformed_format;
         }
 
-        if (argument_index >= arguments.parameter_count)
+        if (!event_formatting::append(output, format + literal_begin, index - literal_begin))
         {
-            return EEventFormatResult::argument_mismatch;
+            return EEventFormatResult::output_too_small;
         }
 
-        const EEventArgumentType type = event_formatting::get_type(arguments, argument_index);
-        const EEventFormatResult result = event_formatting::append_argument(output, arguments, type, payload_offset, insertion_format);
-        if (result != EEventFormatResult::success)
+        if (!event_formatting::append(output, &token, 1u))
         {
-            return result;
+            return EEventFormatResult::output_too_small;
         }
 
-        payload_offset += event_formatting::payload_size(type);
-        ++argument_index;
         ++index;
+        literal_begin = index + 1u;
+    }
+
+    if (!event_formatting::append(output, format + literal_begin, format_size - literal_begin))
+    {
+        return EEventFormatResult::output_too_small;
     }
 
     if (argument_index != arguments.parameter_count)

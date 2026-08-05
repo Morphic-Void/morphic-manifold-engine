@@ -312,7 +312,7 @@ The initial format grammar provides sequential `{}` substitutions, `{{` or
 `}}` escaped braces, and hexadecimal integer insertions written as `#{}`,
 `x{}`, or `X{}` immediately at the insertion site. `#{}` emits lowercase
 digits prefixed with `#`; `x{}` emits lowercase digits prefixed with `x`;
-`X{}` emits uppercase digits prefixed with `X`. Hexadecimal formatting applies
+`X{}` emits uppercase digits prefixed with `x`. Hexadecimal formatting applies
 only to transported 32-bit and 64-bit signed or unsigned integer arguments.
 Signed values are formatted as unsigned values of their encoded width so their
 two's-complement bit pattern is preserved. Other transported argument types

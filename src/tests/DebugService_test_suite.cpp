@@ -299,7 +299,7 @@ void test_argument_formatting(TTestContext& ctx)
     TEST_EXPECT(ctx,
         std::strcmp(
             output,
-            "#abcd1234, xffffffff, X1234ABCDEF") == 0);
+            "#abcd1234, xffffffff, x1234ABCDEF") == 0);
 
     TEST_EXPECT(ctx,
         format_event(
@@ -314,7 +314,17 @@ void test_argument_formatting(TTestContext& ctx)
     TEST_EXPECT(ctx,
         std::strcmp(
             output,
-            "0x2a 0XFFFFFFFFFFFFFFFF") == 0);
+            "0x2a 0xFFFFFFFFFFFFFFFF") == 0);
+
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "#{{ x{{ X{{ {{ }}",
+            debug_system::encode_event_arguments(),
+            output_size) ==
+        debug_system::EEventFormatResult::success);
+    TEST_EXPECT(ctx, std::strcmp(output, "#{ x{ X{ { }") == 0);
 
     char expected_type_output[160]{};
     const type_ids::id_type unregistered_type_id =
