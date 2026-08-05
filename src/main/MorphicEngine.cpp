@@ -73,11 +73,20 @@ bool test_tga()
     return success;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+    if (should_print_usage(argc, argv))
+    {
+        print_usage();
+        return 0;
+    }
+
     host::host_context_install();
     host::host();
     platform::system::set_current_process_priority(platform::system::EProcessPriority::AboveNormal);
     const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();
-    return run_tests();
+    (void)hw_threads_supported;
+
+    const ETestRunMode test_run_mode = parse_test_run_mode(argc, argv);
+    return run_tests(test_run_mode);
 }

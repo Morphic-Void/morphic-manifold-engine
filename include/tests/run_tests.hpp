@@ -11,6 +11,17 @@
 #ifndef RUN_TESTS_HPP_INCLUDED
 #define RUN_TESTS_HPP_INCLUDED
 
-int run_tests();
+enum class ETestRunMode
+{
+    none = 0,
+    core = 1,
+    moderate = 2,
+    full = 3
+};
+
+bool should_print_usage(int argc, char** argv);
+void print_usage();
+ETestRunMode parse_test_run_mode(int argc, char** argv);
+int run_tests(ETestRunMode mode);
 
 #endif  //  RUN_TESTS_HPP_INCLUDED
