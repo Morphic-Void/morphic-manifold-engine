@@ -12,12 +12,13 @@
 //
 //  Inline POD erased storage.
 //
-//  Provides fixed-capacity erased storage for POD payloads identified by
-//  project type ids. Payloads may be value-initialised in place and accessed
-//  directly without copying.
+//  Provides fixed-capacity, at least 16-byte-aligned erased storage for POD
+//  payloads identified by project type ids. Payloads may be value-initialised
+//  in place and accessed directly without copying.
 //
 //  This is a value mechanism only. Redefinition begins the lifetime of a
-//  trivial payload in place; it does not allocate or transfer ownership.
+//  trivial payload in place; it does not allocate or transfer ownership. The
+//  tag belongs to the carrier and is preserved when the payload is redefined.
 //
 //  The shared type-to-id binding is provided by
 //  system/system_type_registration.hpp.
@@ -28,6 +29,7 @@
 #define ERASED_POD_HPP_INCLUDED
 
 #include <cstddef>      //  std::size_t
+#include <cstdint>      //  std::uint32_t, std::uint64_t
 #include <cstring>      //  std::memset
 #include <new>          //  placement new, std::launder
 #include <type_traits>  //  std::is_standard_layout_v, std::is_trivial_v
@@ -47,7 +49,19 @@ private:
     static_assert((PayloadAlign > 0u), "TErasedPod payload alignment must be non-zero.");
     static_assert(((PayloadAlign & (PayloadAlign - 1u)) == 0u), "TErasedPod payload alignment must be a power of two.");
 
+    struct SHeader
+    {
+        type_ids::id_type type_id{ type_ids::undefined };
+        std::uint32_t tag{ 0u };
+        std::uint64_t reserved{ 0u };
+    };
+
+    static_assert(sizeof(SHeader) == 16u, "TErasedPod header must occupy 16 bytes.");
+
 public:
+
+    static constexpr std::size_t k_payload_size = PayloadSize;
+    static constexpr std::size_t k_payload_align = (PayloadAlign < 16u) ? 16u : PayloadAlign;
 
     //  Default lifetime
     TErasedPod() noexcept = default;
@@ -56,13 +70,15 @@ public:
     ~TErasedPod() noexcept = default;
 
     [[nodiscard]] type_ids::id_type query_type_id() const noexcept;
+    [[nodiscard]] std::uint32_t query_tag() const noexcept;
+    void set_tag(std::uint32_t tag) noexcept;
 
     template<typename T> static constexpr bool is_compatible_with() noexcept;
 
     template<typename T> [[nodiscard]] bool is_a() const noexcept;
 
-    //  Redefinition clears every byte after the type id through the end of
-    //  payload storage, then begins and value-initialises the POD in place.
+    //  Redefinition preserves the tag and reserved value, clears every byte
+    //  after the header, then begins and value-initialises the POD in place.
     template<typename T> [[nodiscard]] T& redefine() noexcept;
 
     //  Typed pointers remain valid until the storage is redefined.
@@ -73,8 +89,8 @@ private:
 
     template<typename T> static constexpr void validate_payload_type() noexcept;
 
-    type_ids::id_type m_type_id{ type_ids::undefined };
-    alignas(PayloadAlign) unsigned char m_payload[PayloadSize]{};
+    SHeader m_header{};
+    alignas(k_payload_align) unsigned char m_payload[PayloadSize]{};
 };
 
 //==============================================================================
@@ -92,7 +108,19 @@ using TErasedPodFor = TErasedPod<sizeof(TPayloadShape), alignof(TPayloadShape)>;
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
 type_ids::id_type TErasedPod<PayloadSize, PayloadAlign>::query_type_id() const noexcept
 {
-    return m_type_id;
+    return m_header.type_id;
+}
+
+template<std::size_t PayloadSize, std::size_t PayloadAlign>
+std::uint32_t TErasedPod<PayloadSize, PayloadAlign>::query_tag() const noexcept
+{
+    return m_header.tag;
+}
+
+template<std::size_t PayloadSize, std::size_t PayloadAlign>
+void TErasedPod<PayloadSize, PayloadAlign>::set_tag(const std::uint32_t tag) noexcept
+{
+    m_header.tag = tag;
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
@@ -102,7 +130,7 @@ constexpr bool TErasedPod<PayloadSize, PayloadAlign>::is_compatible_with() noexc
     return std::is_trivial_v<T>
         && std::is_standard_layout_v<T>
         && (sizeof(T) <= PayloadSize)
-        && (alignof(T) <= PayloadAlign);
+        && (alignof(T) <= k_payload_align);
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
@@ -110,7 +138,7 @@ template<typename T>
 bool TErasedPod<PayloadSize, PayloadAlign>::is_a() const noexcept
 {
     validate_payload_type<T>();
-    return m_type_id == k_type_id_v<T>;
+    return m_header.type_id == k_type_id_v<T>;
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
@@ -118,11 +146,13 @@ template<typename T>
 T& TErasedPod<PayloadSize, PayloadAlign>::redefine() noexcept
 {
     validate_payload_type<T>();
+    unsigned char* const clear_begin =
+        reinterpret_cast<unsigned char*>(this) + sizeof(m_header);
     std::memset(
-        (reinterpret_cast<unsigned char*>(this) + sizeof(m_type_id)), 0,
-        (sizeof(TErasedPod<PayloadSize, PayloadAlign>) - sizeof(m_type_id)));
+        clear_begin, 0,
+        sizeof(TErasedPod<PayloadSize, PayloadAlign>) - sizeof(m_header));
     T* const value = ::new (static_cast<void*>(m_payload)) T{};
-    m_type_id = k_type_id_v<T>;
+    m_header.type_id = k_type_id_v<T>;
     return *value;
 }
 
@@ -150,7 +180,7 @@ constexpr void TErasedPod<PayloadSize, PayloadAlign>::validate_payload_type() no
     static_assert(std::is_trivial_v<T>, "TErasedPod requires trivial payloads.");
     static_assert(std::is_standard_layout_v<T>, "TErasedPod requires standard-layout payloads.");
     static_assert((sizeof(T) <= PayloadSize), "TErasedPod payload storage is too small.");
-    static_assert((alignof(T) <= PayloadAlign), "TErasedPod payload storage is under-aligned.");
+    static_assert((alignof(T) <= k_payload_align), "TErasedPod payload storage is under-aligned.");
 }
 
 #endif  //  #ifndef ERASED_POD_HPP_INCLUDED
