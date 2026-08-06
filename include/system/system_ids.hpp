@@ -194,6 +194,7 @@ namespace type_ids
 {
 using id_type = system_id_util::TValue<system_id_util::CTypeIdTag, std::uint32_t>;
 using index_type = std::uint32_t;
+static constexpr id_type undefined{};
 static constexpr std::uint32_t k_id_field_mask = 0x55555555u;      //  16 payload bits
 static constexpr std::uint32_t k_payload_mask = 0x0000ffffu;
 static constexpr std::uint32_t k_invalid_id_mask = ~k_id_field_mask;
@@ -272,7 +273,7 @@ namespace system_id_registry
 
 struct STypeRegistration
 {
-    type_ids::id_type id{ 0u };
+    type_ids::id_type id{ type_ids::undefined };
     type_ids::index_type index{ type_ids::k_invalid_index };
     const char* name{ nullptr };
 };
@@ -340,6 +341,15 @@ struct SModuleRegistration
 namespace type_ids
 {
 
+//  Type-id states:
+//  - undefined is the canonical zero value and has no type attribution;
+//  - a valid id has a structurally valid non-zero encoding;
+//  - a registered id additionally resolves through system_id_registry::find_type().
+constexpr bool is_defined(const id_type id) noexcept
+{
+    return id != undefined;
+}
+
 constexpr bool is_valid_index(const index_type value) noexcept
 {
     return value < k_payload_mask;
@@ -347,7 +357,7 @@ constexpr bool is_valid_index(const index_type value) noexcept
 
 constexpr bool is_valid_id(const id_type id) noexcept
 {
-    return (id != 0u) && ((id & k_invalid_id_mask) == 0u);
+    return is_defined(id) && ((id & k_invalid_id_mask) == 0u);
 }
 
 constexpr index_type encode_index(const index_type value) noexcept
@@ -359,7 +369,7 @@ constexpr id_type encode_id(const index_type value) noexcept
 {
     return is_valid_index(value)
         ? static_cast<id_type>(bit_ops::spread_to_even_bits(((value + 1u) & k_payload_mask) ^ k_payload_mask) << k_id_field_shift)
-        : id_type{ 0u };
+        : undefined;
 }
 
 constexpr index_type decode_id(const id_type id) noexcept

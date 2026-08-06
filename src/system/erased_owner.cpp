@@ -279,6 +279,6 @@ void CErasedOwner::unsafe_replace_payload_memory_context_without_accounting(
 void CErasedOwner::make_canonical_empty() noexcept
 {
     m_storage = memory::CMemoryToken{};
-    m_type_id = type_ids::id_type{ 0u };
+    m_type_id = type_ids::undefined;
     m_hazards = 0u;
 }

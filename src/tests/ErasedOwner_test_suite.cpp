@@ -91,6 +91,11 @@ private:
 
 void test_registration_and_empty_state(TTestContext& ctx)
 {
+    static_assert(k_type_id_v<CByteBuffer> == type_ids::byte_buffer);
+    static_assert(k_type_id_v<CByteRectBuffer> == type_ids::byte_rect_buffer);
+    static_assert(k_type_id_v<CSimpleString> == type_ids::simple_string);
+    static_assert(k_type_id_v<CStringBuffer> == type_ids::string_buffer);
+    static_assert(k_type_id_v<CStableStrings> == type_ids::stable_strings);
     static_assert(k_is_erased_owner_payload_v<OwningFileLoadResult>);
     static_assert(!k_is_erased_owner_payload_v<FileLoadRequest>);
     static_assert(std::is_same_v<decltype(CErasedOwner{}.query_type_id()), type_ids::id_type>);
@@ -101,7 +106,7 @@ void test_registration_and_empty_state(TTestContext& ctx)
     TEST_EXPECT(ctx, owner.is_empty());
     TEST_EXPECT(ctx, !owner.is_ready());
     TEST_EXPECT(ctx, !owner);
-    TEST_EXPECT(ctx, owner.query_type_id() == type_ids::id_type{ 0u });
+    TEST_EXPECT(ctx, owner.query_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, owner.payload<OwningFileLoadResult>() == nullptr);
     TEST_EXPECT(ctx, const_owner.payload<OwningFileLoadResult>() == nullptr);
     TEST_EXPECT(ctx, !owner.has_any_hazard());
@@ -177,7 +182,7 @@ void test_allocation_failure_is_canonical(TTestContext& ctx)
 
     TEST_EXPECT(ctx, owner.is_empty());
     TEST_EXPECT(ctx, !owner.is_ready());
-    TEST_EXPECT(ctx, owner.query_type_id() == type_ids::id_type{ 0u });
+    TEST_EXPECT(ctx, owner.query_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, owner.hazard_mask() == 0u);
     TEST_EXPECT(ctx, context.get_live_allocation_count() == 0u);
 }

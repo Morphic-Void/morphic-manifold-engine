@@ -16,6 +16,7 @@
 #include <cstddef>      //  std::size_t
 
 #include "containers/ByteBuffers.hpp"
+#include "containers/StringBuffers.hpp"
 #include "image/codec/tga.hpp"
 #include "system/system_type_registration.hpp"
 
@@ -36,6 +37,12 @@ struct TgaSaveResult { bool success; };
 struct OwningFileLoadResult { std::size_t async_slot; CByteBuffer buffer; };
 struct OwningTgaEncodeResult { std::size_t async_slot; CByteBuffer buffer; };
 struct OwningTgaDecodeResult { std::size_t async_slot; CByteRectBuffer buffer; image::codec::tga::decoded_image_desc desc; };
+
+MV_REGISTER_SYSTEM_TYPE(CByteBuffer, type_ids::byte_buffer);
+MV_REGISTER_SYSTEM_TYPE(CByteRectBuffer, type_ids::byte_rect_buffer);
+MV_REGISTER_SYSTEM_TYPE(CSimpleString, type_ids::simple_string);
+MV_REGISTER_SYSTEM_TYPE(CStringBuffer, type_ids::string_buffer);
+MV_REGISTER_SYSTEM_TYPE(CStableStrings, type_ids::stable_strings);
 
 MV_REGISTER_SYSTEM_TYPE(UnrecognisedMsg, type_ids::unrecognised_msg);
 

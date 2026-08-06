@@ -42,11 +42,13 @@ inline constexpr bool k_is_erased_owner_payload_v = TIsErasedOwnerPayload<T>::va
 //  Registration macros
 //==============================================================================
 
-#define MV_REGISTER_SYSTEM_TYPE(T, type_id)       \
-template<>                                        \
-struct TTypeId<T>                                 \
-{                                                 \
-    static constexpr type_ids::id_type value = type_id; \
+#define MV_REGISTER_SYSTEM_TYPE(T, type_id_value)                         \
+template<>                                                               \
+struct TTypeId<T>                                                        \
+{                                                                        \
+    static_assert(type_ids::is_valid_id(type_id_value),                  \
+        "MV_REGISTER_SYSTEM_TYPE requires a valid, non-zero type id.");  \
+    static constexpr type_ids::id_type value = type_id_value;            \
 }
 
 #define MV_REGISTER_ERASED_OWNER_PAYLOAD(T)       \

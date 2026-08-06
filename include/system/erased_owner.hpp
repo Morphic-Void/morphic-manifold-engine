@@ -33,7 +33,7 @@ public:
     CErasedOwner& operator=(CErasedOwner&& other) noexcept;
     ~CErasedOwner() noexcept;
 
-    [[nodiscard]] bool is_empty() const noexcept { return m_type_id == type_ids::id_type{ 0u }; }
+    [[nodiscard]] bool is_empty() const noexcept { return m_type_id == type_ids::undefined; }
     [[nodiscard]] bool is_ready() const noexcept { return !is_empty() && (m_storage.data() != nullptr); }
     [[nodiscard]] explicit operator bool() const noexcept { return is_ready(); }
 
@@ -73,7 +73,7 @@ private:
     void make_canonical_empty() noexcept;
 
     memory::CMemoryToken m_storage;
-    type_ids::id_type    m_type_id{ 0u };
+    type_ids::id_type    m_type_id{ type_ids::undefined };
     std::uint32_t        m_hazards{ 0u };
 };
 

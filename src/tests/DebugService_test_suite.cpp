@@ -424,6 +424,12 @@ void test_argument_formatting(TTestContext& ctx)
 
 void test_system_id_name_registry(TTestContext& ctx)
 {
+    static_assert(type_ids::undefined == type_ids::id_type{});
+    static_assert(!type_ids::is_defined(type_ids::undefined));
+    static_assert(!type_ids::is_valid_id(type_ids::undefined));
+    static_assert(type_ids::is_defined(type_ids::byte_buffer));
+    static_assert(type_ids::is_valid_id(type_ids::byte_buffer));
+
     TEST_EXPECT(ctx, system_id_registry::type_count() == type_ids::k_count);
     TEST_EXPECT(ctx,
         system_id_registry::mount_point_count() ==
@@ -524,7 +530,7 @@ void test_system_id_name_registry(TTestContext& ctx)
     TEST_EXPECT(ctx, small_system_name[0] == 0);
     TEST_EXPECT(ctx, small_system_name_size == 0u);
 
-    TEST_EXPECT(ctx, system_id_registry::lookup_type_name(type_ids::id_type{}) == nullptr);
+    TEST_EXPECT(ctx, system_id_registry::lookup_type_name(type_ids::undefined) == nullptr);
     TEST_EXPECT(ctx, system_id_registry::lookup_mount_point_name({}) == nullptr);
     TEST_EXPECT(ctx, system_id_registry::lookup_module_name({}) == nullptr);
     TEST_EXPECT(ctx, system_id_registry::lookup_thread_name({}) == nullptr);
