@@ -41,7 +41,7 @@
 //  Inline fixed-capacity POD erased storage
 //==============================================================================
 
-template<std::size_t PayloadSize, std::size_t PayloadAlign>
+template<std::size_t PayloadSize, std::size_t PayloadAlign = 16u>
 class TErasedPod
 {
 private:
