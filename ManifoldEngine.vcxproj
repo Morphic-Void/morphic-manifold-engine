@@ -259,6 +259,7 @@
     <ClCompile Include="src\tests\CMemoryToken_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryView_test_suite.cpp" />
     <ClCompile Include="src\tests\DebugService_test_suite.cpp" />
+    <ClCompile Include="src\tests\ErasedPod_test_suite.cpp" />
     <ClCompile Include="src\tests\ErasedOwner_test_suite.cpp" />
     <ClCompile Include="src\tests\StringBuffers_test_suite.cpp" />
     <ClCompile Include="src\tests\TInstance_test_suite.cpp" />
@@ -343,6 +344,7 @@
     <ClInclude Include="include\tests\run_tests.hpp" />
     <ClInclude Include="include\tests\CMemoryView_test_suite.hpp" />
     <ClInclude Include="include\tests\DebugService_test_suite.hpp" />
+    <ClInclude Include="include\tests\ErasedPod_test_suite.hpp" />
     <ClInclude Include="include\tests\ErasedOwner_test_suite.hpp" />
     <ClInclude Include="include\tests\StringBuffers_test_suite.hpp" />
     <ClInclude Include="include\tests\TInstance_test_suite.hpp" />

@@ -80,7 +80,7 @@ public:
     constexpr operator Repr() const noexcept { return m_value; }
 
 private:
-    Repr m_value{ 0 };
+    Repr m_value;
 };
 
 template<typename Tag, typename Repr>
@@ -156,7 +156,7 @@ struct TEncodedField
         return is_valid_index(index)
             ? id_type(static_cast<Repr>(
                 bit_ops::spread_to_even_bits(((index.raw_value() + 1u) & k_payload_mask) ^ k_payload_mask) << k_id_field_shift))
-            : id_type{};
+            : id_type{ Repr{ 0 } };
     }
 
     static constexpr index_type get_index(const id_type id) noexcept
@@ -194,7 +194,7 @@ namespace type_ids
 {
 using id_type = system_id_util::TValue<system_id_util::CTypeIdTag, std::uint32_t>;
 using index_type = std::uint32_t;
-static constexpr id_type undefined{};
+static constexpr id_type undefined{ 0u };
 static constexpr std::uint32_t k_id_field_mask = 0x55555555u;      //  16 payload bits
 static constexpr std::uint32_t k_payload_mask = 0x0000ffffu;
 static constexpr std::uint32_t k_invalid_id_mask = ~k_id_field_mask;
@@ -441,7 +441,7 @@ constexpr id_type make_id(const mount_point_ids::id_type mount_point_id, const i
     return (mount_point_ids::is_valid_id(mount_point_id) && is_valid_index(module_index))
         ? id_type(mount_point_id.raw_value()
             | (bit_ops::spread_to_even_bits(((module_index.raw_value() + 1u) & k_payload_mask) ^ k_payload_mask) << k_id_field_shift))
-        : id_type{};
+        : id_type{ 0u };
 }
 
 constexpr index_type decode_id(const id_type id) noexcept
@@ -456,7 +456,7 @@ constexpr mount_point_ids::id_type get_mount_point_id(const id_type id) noexcept
 {
     return is_valid_id(id)
         ? mount_point_ids::id_type(id.raw_value() & k_mount_point_id_mask)
-        : mount_point_ids::id_type{};
+        : mount_point_ids::id_type{ 0u };
 }
 
 constexpr mount_point_ids::index_type get_mount_point_index(const id_type id) noexcept
@@ -485,21 +485,21 @@ constexpr id_type make_system_id(const module_ids::id_type module_id, const thre
 {
     return (module_ids::is_valid_id(module_id) && thread_ids::is_valid_id(thread_id))
         ? id_type(module_id.raw_value() | thread_id.raw_value())
-        : id_type{};
+        : id_type{ 0u };
 }
 
 constexpr module_ids::id_type get_module_id(const id_type system_id) noexcept
 {
     return is_valid_id(system_id)
         ? module_ids::id_type(system_id.raw_value() & k_module_id_mask)
-        : module_ids::id_type{};
+        : module_ids::id_type{ 0u };
 }
 
 constexpr thread_ids::id_type get_thread_id(const id_type system_id) noexcept
 {
     return is_valid_id(system_id)
         ? thread_ids::id_type(system_id.raw_value() & k_thread_id_mask)
-        : thread_ids::id_type{};
+        : thread_ids::id_type{ 0u };
 }
 
 constexpr mount_point_ids::id_type get_mount_point_id(const id_type system_id) noexcept

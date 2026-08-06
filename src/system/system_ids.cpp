@@ -250,7 +250,7 @@ mount_point_ids::id_type lookup_mount_point_id(const module_ids::id_type id) noe
     const SModuleRegistration* const registration = find_module(id);
     return (registration != nullptr)
         ? registration->mount_point_id
-        : mount_point_ids::id_type{};
+        : mount_point_ids::id_type{ 0u };
 }
 
 bool validate_type_registrations() noexcept

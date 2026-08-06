@@ -277,18 +277,18 @@ std::uint32_t CHostWorkerThread::main() noexcept
         {
             MV_TRACE("Worker message received");
 
-            switch (inbound_msg.payload.query_type_id())
+            switch (inbound_msg.query_payload_type_id())
             {
                 case (k_type_id_v<FileLoadRequest>):
                 {
                     MV_DETAIL("Worker file load request");
 
                     FileLoadRequest request;
-                    (void)inbound_msg.payload.copy_to(request);
+                    (void)inbound_msg.copy_payload_to(request);
                     CErasedOwner outbound_msg = CErasedOwner::create<OwningFileLoadResult>();
                     if (OwningFileLoadResult* const result = outbound_msg.payload<OwningFileLoadResult>())
                     {
-                        result->async_slot = inbound_msg.async_slot;
+                        result->async_slot = inbound_msg.query_async_slot();
                         result->buffer = platform::filesystem::loadFile(request.file);
                         (void)m_context.pass_ownership(outbound_msg);
                     }
@@ -299,12 +299,12 @@ std::uint32_t CHostWorkerThread::main() noexcept
                     MV_DETAIL("Worker file save request");
 
                     FileSaveRequest request;
-                    (void)inbound_msg.payload.copy_to(request);
+                    (void)inbound_msg.copy_payload_to(request);
                     FileSaveResult result;
                     result.success = platform::filesystem::saveFile(request.file, *request.view);
                     threading::CPodThreadMsg outbound_msg;
-                    outbound_msg.async_slot = inbound_msg.async_slot;
-                    outbound_msg.payload.assign(result);
+                    outbound_msg.set_async_slot(inbound_msg.query_async_slot());
+                    outbound_msg.assign_payload(result);
                     (void)m_context.post(outbound_msg);
                     break;
                 }
@@ -313,11 +313,11 @@ std::uint32_t CHostWorkerThread::main() noexcept
                     MV_DETAIL("Worker TGA encode request");
 
                     TgaEncodeRequest request;
-                    (void)inbound_msg.payload.copy_to(request);
+                    (void)inbound_msg.copy_payload_to(request);
                     CErasedOwner outbound_msg = CErasedOwner::create<OwningTgaEncodeResult>();
                     if (OwningTgaEncodeResult* const result = outbound_msg.payload<OwningTgaEncodeResult>())
                     {
-                        result->async_slot = inbound_msg.async_slot;
+                        result->async_slot = inbound_msg.query_async_slot();
                         result->buffer = image::codec::tga::encode(*request.view, *request.options);
                         (void)m_context.pass_ownership(outbound_msg);
                     }
@@ -328,11 +328,11 @@ std::uint32_t CHostWorkerThread::main() noexcept
                     MV_DETAIL("Worker TGA decode request");
 
                     TgaDecodeRequest request;
-                    (void)inbound_msg.payload.copy_to(request);
+                    (void)inbound_msg.copy_payload_to(request);
                     CErasedOwner outbound_msg = CErasedOwner::create<OwningTgaDecodeResult>();
                     if (OwningTgaDecodeResult* const result = outbound_msg.payload<OwningTgaDecodeResult>())
                     {
-                        result->async_slot = inbound_msg.async_slot;
+                        result->async_slot = inbound_msg.query_async_slot();
                         result->buffer = image::codec::tga::decode(*request.view, result->desc, request.vflip);
                         (void)m_context.pass_ownership(outbound_msg);
                     }
@@ -341,13 +341,13 @@ std::uint32_t CHostWorkerThread::main() noexcept
                 default:
                 {
                     MV_DETAIL("Worker unrecognised message type {}",
-                        inbound_msg.payload.query_type_id());
+                        inbound_msg.query_payload_type_id());
 
                     UnrecognisedMsg unrecognised;
-                    unrecognised.msg_id = inbound_msg.payload.query_type_id();
+                    unrecognised.msg_id = inbound_msg.query_payload_type_id();
                     threading::CPodThreadMsg outbound_msg;
-                    outbound_msg.async_slot = inbound_msg.async_slot;
-                    outbound_msg.payload.assign(unrecognised);
+                    outbound_msg.set_async_slot(inbound_msg.query_async_slot());
+                    outbound_msg.assign_payload(unrecognised);
                     (void)m_context.post(outbound_msg);
                     break;
                 }
@@ -445,8 +445,8 @@ std::uint32_t CApplicationThread::main() noexcept
         tga_load_request.file = "d:/test_input.tga";
         tga_load_request.vflip = false;
         threading::CPodThreadMsg outbound_msg;
-        outbound_msg.async_slot = 0;
-        outbound_msg.payload.assign(tga_load_request);
+        outbound_msg.set_async_slot(0);
+        outbound_msg.assign_payload(tga_load_request);
         (void)m_context.post(outbound_msg);
     }
 
@@ -483,14 +483,14 @@ std::uint32_t CApplicationThread::main() noexcept
 
             MV_TRACE("Application: Message received");
 
-            switch (inbound_msg.payload.query_type_id())
+            switch (inbound_msg.query_payload_type_id())
             {
                 case (k_type_id_v<TgaLoadResult>):
                 {
                     MV_DETAIL("Application: TGA load result");
 
                     TgaLoadResult tga_load_result;
-                    (void)inbound_msg.payload.copy_to(tga_load_result);
+                    (void)inbound_msg.copy_payload_to(tga_load_result);
                     tga_load.view = *tga_load_result.view;
                     tga_load.desc = tga_load_result.desc;
                     tga_load.success = !tga_load_result.view->is_empty();
@@ -503,7 +503,7 @@ std::uint32_t CApplicationThread::main() noexcept
                     MV_DETAIL("Application: TGA save result");
 
                     TgaSaveResult tga_save_result;
-                    (void)inbound_msg.payload.copy_to(tga_save_result);
+                    (void)inbound_msg.copy_payload_to(tga_save_result);
                     tga_save.success = tga_save_result.success;
                     tga_save.complete = true;
                     state_updated = true;
@@ -512,13 +512,13 @@ std::uint32_t CApplicationThread::main() noexcept
                 default:
                 {
                     MV_DETAIL("Application: Unrecognised message type {}",
-                        inbound_msg.payload.query_type_id());
+                        inbound_msg.query_payload_type_id());
 
                     UnrecognisedMsg unrecognised;
-                    unrecognised.msg_id = inbound_msg.payload.query_type_id();
+                    unrecognised.msg_id = inbound_msg.query_payload_type_id();
                     threading::CPodThreadMsg outbound_msg;
-                    outbound_msg.async_slot = inbound_msg.async_slot;
-                    outbound_msg.payload.assign(unrecognised);
+                    outbound_msg.set_async_slot(inbound_msg.query_async_slot());
+                    outbound_msg.assign_payload(unrecognised);
                     (void)m_context.post(outbound_msg);
                     break;
                 }
@@ -547,8 +547,8 @@ std::uint32_t CApplicationThread::main() noexcept
                     tga_save_request.options = &tga_encode_options;
 
                     threading::CPodThreadMsg outbound_msg;
-                    outbound_msg.async_slot = 0;
-                    outbound_msg.payload.assign(tga_save_request);
+                    outbound_msg.set_async_slot(0);
+                    outbound_msg.assign_payload(tga_save_request);
                     (void)m_context.post(outbound_msg);
 
                     tga_state = ETgaTestStates::waiting_for_tga_save;
@@ -696,21 +696,21 @@ int host()
                 {
                     MV_TRACE("Host: Recieved a message");
 
-                    switch (inbound_msg.payload.query_type_id())
+                    switch (inbound_msg.query_payload_type_id())
                     {
                         case (k_type_id_v<FileSaveResult>):
                         {
                             MV_DETAIL("Host: Recieved a file save result");
 
                             FileSaveResult result;
-                            (void)inbound_msg.payload.copy_to(result);
+                            (void)inbound_msg.copy_payload_to(result);
                             const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::application)];
                             CThreadPackage& outbound_package = *thread_packages.get_object(outbound_slot);
                             TgaSaveResult forward;
                             forward.success = result.success;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.async_slot = 0;
-                            outbound_msg.payload.assign(forward);
+                            outbound_msg.set_async_slot(0);
+                            outbound_msg.assign_payload(forward);
                             (void)outbound_package.post(outbound_msg);
                             break;
                         }
@@ -719,7 +719,7 @@ int host()
                             MV_DETAIL("Host: Recieved a TGA load request");
 
                             TgaLoadRequest tga_load_request;
-                            (void)inbound_msg.payload.copy_to(tga_load_request);
+                            (void)inbound_msg.copy_payload_to(tga_load_request);
                             async_tga_load.file = tga_load_request.file;
                             async_tga_load.vflip = tga_load_request.vflip;
                             const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::bg_file_io)];
@@ -727,8 +727,8 @@ int host()
                             FileLoadRequest file_load_request;
                             file_load_request.file = async_tga_load.file;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.async_slot = 0;
-                            outbound_msg.payload.assign(file_load_request);
+                            outbound_msg.set_async_slot(0);
+                            outbound_msg.assign_payload(file_load_request);
                             (void)outbound_package.post(outbound_msg);
                             break;
                         }
@@ -737,7 +737,7 @@ int host()
                             MV_DETAIL("Host: Recieved a TGA save request");
 
                             TgaSaveRequest tga_save_request;
-                            (void)inbound_msg.payload.copy_to(tga_save_request);
+                            (void)inbound_msg.copy_payload_to(tga_save_request);
                             async_tga_save.file = tga_save_request.file;
                             async_tga_save.rect_view = *tga_save_request.view;
                             async_tga_save.options = *tga_save_request.options;
@@ -747,15 +747,15 @@ int host()
                             tga_encode_request.view = &async_tga_save.rect_view;
                             tga_encode_request.options = &async_tga_save.options;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.async_slot = 0;
-                            outbound_msg.payload.assign(tga_encode_request);
+                            outbound_msg.set_async_slot(0);
+                            outbound_msg.assign_payload(tga_encode_request);
                             (void)outbound_package.post(outbound_msg);
                             break;
                         }
                         case (k_type_id_v<UnrecognisedMsg>):
                         {
                             UnrecognisedMsg unrecognised;
-                            (void)inbound_msg.payload.copy_to(unrecognised);
+                            (void)inbound_msg.copy_payload_to(unrecognised);
 
                             MV_DETAIL("Host: Recieved an unrecognised message notification {}",
                                 unrecognised.msg_id);
@@ -764,7 +764,7 @@ int host()
                         default:
                         {
                             MV_DETAIL("Host: Recieved an unrecognised message type {}",
-                                inbound_msg.payload.query_type_id());
+                                inbound_msg.query_payload_type_id());
                             break;
                         }
                     }
@@ -789,8 +789,8 @@ int host()
                             tga_decode_request.view = &async_tga_load.view;
                             tga_decode_request.vflip = async_tga_load.vflip;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.async_slot = 0;
-                            outbound_msg.payload.assign(tga_decode_request);
+                            outbound_msg.set_async_slot(0);
+                            outbound_msg.assign_payload(tga_decode_request);
                             (void)outbound_package.post(outbound_msg);
                             break;
                         }
@@ -807,8 +807,8 @@ int host()
                             file_save_request.file = async_tga_save.file;
                             file_save_request.view = &async_tga_save.view;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.async_slot = 0;
-                            outbound_msg.payload.assign(file_save_request);
+                            outbound_msg.set_async_slot(0);
+                            outbound_msg.assign_payload(file_save_request);
                             (void)outbound_package.post(outbound_msg);
                             break;
                         }
@@ -826,8 +826,8 @@ int host()
                             tga_load_result.view = &async_tga_load.rect_view;
                             tga_load_result.desc = async_tga_load.desc;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.async_slot = 0;
-                            outbound_msg.payload.assign(tga_load_result);
+                            outbound_msg.set_async_slot(0);
+                            outbound_msg.assign_payload(tga_load_result);
                             (void)outbound_package.post(outbound_msg);
                             break;
                         }

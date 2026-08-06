@@ -424,7 +424,7 @@ void test_argument_formatting(TTestContext& ctx)
 
 void test_system_id_name_registry(TTestContext& ctx)
 {
-    static_assert(type_ids::undefined == type_ids::id_type{});
+    static_assert(type_ids::undefined.raw_value() == 0u);
     static_assert(!type_ids::is_defined(type_ids::undefined));
     static_assert(!type_ids::is_valid_id(type_ids::undefined));
     static_assert(type_ids::is_defined(type_ids::byte_buffer));

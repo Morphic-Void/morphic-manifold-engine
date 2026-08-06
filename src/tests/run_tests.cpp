@@ -11,6 +11,7 @@
 #include "tests/CMemoryToken_test_suite.hpp"
 #include "tests/CMemoryView_test_suite.hpp"
 #include "tests/DebugService_test_suite.hpp"
+#include "tests/ErasedPod_test_suite.hpp"
 #include "tests/ErasedOwner_test_suite.hpp"
 #include "tests/StringBuffers_test_suite.hpp"
 #include "tests/TInstance_test_suite.hpp"
@@ -153,6 +154,9 @@ int run_tests(ETestRunMode mode)
 
     int erased_owner_test_result = run_erased_owner_tests();
     cumulative_result += erased_owner_test_result;
+
+    int erased_pod_test_result = run_erased_pod_tests();
+    cumulative_result += erased_pod_test_result;
 
     int pod_vector_test_result = run_pod_vector_tests();
     cumulative_result += pod_vector_test_result;
