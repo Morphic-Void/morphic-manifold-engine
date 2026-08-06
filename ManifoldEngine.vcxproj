@@ -255,6 +255,7 @@
     <ClCompile Include="src\system\erased_owner_transport.cpp" />
     <ClCompile Include="src\system\system_context.cpp" />
     <ClCompile Include="src\system\system_ids.cpp" />
+    <ClCompile Include="src\tests\AssetRepository_test_suite.cpp" />
     <ClCompile Include="src\tests\ByteBuffers_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryToken_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryView_test_suite.cpp" />
@@ -281,6 +282,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\algo\validate_permutations.hpp" />
+    <ClInclude Include="include\assets\asset_repository.hpp" />
     <ClInclude Include="include\bit_utils\bit_ops.hpp" />
     <ClInclude Include="include\bit_utils\bit_utils.hpp" />
     <ClInclude Include="include\bit_utils\spatial_codes.hpp" />
@@ -339,6 +341,7 @@
     <ClInclude Include="include\system\thread_ids.def" />
     <ClInclude Include="include\system\TStaticLookup.hpp" />
     <ClInclude Include="include\system\type_ids.def" />
+    <ClInclude Include="include\tests\AssetRepository_test_suite.hpp" />
     <ClInclude Include="include\tests\ByteBuffers_test_suite.hpp" />
     <ClInclude Include="include\tests\CMemoryToken_test_suite.hpp" />
     <ClInclude Include="include\tests\run_tests.hpp" />

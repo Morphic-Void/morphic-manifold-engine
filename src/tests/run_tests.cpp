@@ -7,6 +7,7 @@
 //  Date:   24 Apr 26
 
 #include "tests/run_tests.hpp"
+#include "tests/AssetRepository_test_suite.hpp"
 #include "tests/ByteBuffers_test_suite.hpp"
 #include "tests/CMemoryToken_test_suite.hpp"
 #include "tests/CMemoryView_test_suite.hpp"
@@ -145,6 +146,9 @@ int run_tests(ETestRunMode mode)
     }
 
     int cumulative_result = 0;
+
+    int asset_repository_test_result = run_asset_repository_tests();
+    cumulative_result += asset_repository_test_result;
 
     int memory_token_test_result = run_memory_token_tests();
     cumulative_result += memory_token_test_result;

@@ -22,6 +22,9 @@
     <Filter Include="include\algo">
       <UniqueIdentifier>{99886a11-10c4-4a0e-97b4-8f56150939b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\assets">
+      <UniqueIdentifier>{405d713d-a71e-4af8-a9c2-b7f60a9f2d24}</UniqueIdentifier>
+    </Filter>
     <Filter Include="docs\containers">
       <UniqueIdentifier>{0ec6a404-f567-4c50-b610-813350a0c919}</UniqueIdentifier>
     </Filter>
@@ -222,6 +225,9 @@
     <ClInclude Include="include\containers\TOrderedCollection.hpp">
       <Filter>include\containers</Filter>
     </ClInclude>
+    <ClInclude Include="include\assets\asset_repository.hpp">
+      <Filter>include\assets</Filter>
+    </ClInclude>
     <ClInclude Include="include\containers\TUnorderedCollection.hpp">
       <Filter>include\containers</Filter>
     </ClInclude>
@@ -274,6 +280,9 @@
       <Filter>include\tests</Filter>
     </ClInclude>
     <ClInclude Include="include\tests\ErasedPod_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\AssetRepository_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
     <ClInclude Include="include\tests\TPodVector_test_suite.hpp">
@@ -495,6 +504,9 @@
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\ErasedPod_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\AssetRepository_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\TPodVector_test_suite.cpp">
