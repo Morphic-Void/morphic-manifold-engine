@@ -256,6 +256,7 @@
     <ClCompile Include="src\system\system_context.cpp" />
     <ClCompile Include="src\system\system_ids.cpp" />
     <ClCompile Include="src\tests\AssetRepository_test_suite.cpp" />
+    <ClCompile Include="src\tests\AsyncState_test_suite.cpp" />
     <ClCompile Include="src\tests\ByteBuffers_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryToken_test_suite.cpp" />
     <ClCompile Include="src\tests\CMemoryView_test_suite.cpp" />
@@ -331,6 +332,7 @@
     <ClInclude Include="include\platform\threading\wait_word.hpp" />
     <ClInclude Include="include\platform\windows_include.hpp" />
     <ClInclude Include="include\system\erased_owner.hpp" />
+    <ClInclude Include="include\system\async_state.hpp" />
     <ClInclude Include="include\system\erased_owner_transport.hpp" />
     <ClInclude Include="include\system\erased_pod.hpp" />
     <ClInclude Include="include\system\system_context.hpp" />
@@ -342,6 +344,7 @@
     <ClInclude Include="include\system\TStaticLookup.hpp" />
     <ClInclude Include="include\system\type_ids.def" />
     <ClInclude Include="include\tests\AssetRepository_test_suite.hpp" />
+    <ClInclude Include="include\tests\AsyncState_test_suite.hpp" />
     <ClInclude Include="include\tests\ByteBuffers_test_suite.hpp" />
     <ClInclude Include="include\tests\CMemoryToken_test_suite.hpp" />
     <ClInclude Include="include\tests\run_tests.hpp" />

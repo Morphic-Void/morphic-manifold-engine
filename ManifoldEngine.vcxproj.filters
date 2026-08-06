@@ -252,6 +252,9 @@
     <ClInclude Include="include\system\erased_owner.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
+    <ClInclude Include="include\system\async_state.hpp">
+      <Filter>include\system</Filter>
+    </ClInclude>
     <ClInclude Include="include\system\erased_owner_transport.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
@@ -283,6 +286,9 @@
       <Filter>include\tests</Filter>
     </ClInclude>
     <ClInclude Include="include\tests\AssetRepository_test_suite.hpp">
+      <Filter>include\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tests\AsyncState_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
     <ClInclude Include="include\tests\TPodVector_test_suite.hpp">
@@ -507,6 +513,9 @@
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\AssetRepository_test_suite.cpp">
+      <Filter>src\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tests\AsyncState_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="src\tests\TPodVector_test_suite.cpp">

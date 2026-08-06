@@ -1,0 +1,127 @@
+//  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
+//  License: MIT (see LICENSE file in repository root)
+//
+//  File:   AsyncState_test_suite.cpp
+
+#include <cstdint>
+#include <iostream>
+#include <type_traits>
+
+#include "system/async_state.hpp"
+#include "system/transported_types.hpp"
+#include "tests/AsyncState_test_suite.hpp"
+
+namespace
+{
+
+struct TTestContext
+{
+    void expect(const bool condition, const char* const expression, const int line)
+    {
+        if (condition)
+        {
+            ++passed;
+        }
+        else
+        {
+            ++failed;
+            std::cerr << "AsyncState test failure at line " << line << ": " << expression << '\n';
+        }
+    }
+
+    int passed{ 0 };
+    int failed{ 0 };
+};
+
+#define TEST_EXPECT(ctx, expression) (ctx).expect(!!(expression), #expression, __LINE__)
+
+void test_state_shape_and_default_repository(TTestContext& ctx)
+{
+    static_assert(std::is_trivially_copyable_v<CASyncState>);
+    static_assert(std::is_standard_layout_v<CASyncState>);
+    static_assert(CASyncState::k_payload_size == 48u);
+    static_assert(CASyncState::k_payload_align == 16u);
+    static_assert(sizeof(CASyncState) == 64u);
+    static_assert(alignof(CASyncState) == 16u);
+
+    CASyncStates states;
+    TEST_EXPECT(ctx, states.is_valid());
+    TEST_EXPECT(ctx, states.is_empty());
+    TEST_EXPECT(ctx, !states.is_ready());
+    TEST_EXPECT(ctx, states.acquire<UnrecognisedMsg>() == -1);
+    TEST_EXPECT(ctx, states.resolve(0) == nullptr);
+    TEST_EXPECT(ctx, states.payload<UnrecognisedMsg>(0) == nullptr);
+    TEST_EXPECT(ctx, states.redefine<UnrecognisedMsg>(0) == nullptr);
+    TEST_EXPECT(ctx, !states.release(0));
+}
+
+void test_acquisition_redefinition_and_release(TTestContext& ctx)
+{
+    CASyncStates states;
+    TEST_EXPECT(ctx, states.initialise(2u));
+    TEST_EXPECT(ctx, states.is_ready());
+
+    const std::int32_t first_slot = states.acquire<UnrecognisedMsg>(41u);
+    const std::int32_t second_slot = states.acquire<FileSaveResult>(73u);
+    TEST_EXPECT(ctx, first_slot >= 0);
+    TEST_EXPECT(ctx, second_slot >= 0);
+    TEST_EXPECT(ctx, first_slot != second_slot);
+
+    CASyncState* const first_state = states.resolve(first_slot);
+    TEST_EXPECT(ctx, first_state != nullptr);
+    TEST_EXPECT(ctx, first_state->query_tag() == 41u);
+    TEST_EXPECT(ctx, first_state->is_a<UnrecognisedMsg>());
+    TEST_EXPECT(ctx, states.payload<FileSaveResult>(first_slot) == nullptr);
+
+    UnrecognisedMsg* const initial_payload = states.payload<UnrecognisedMsg>(first_slot);
+    TEST_EXPECT(ctx, initial_payload != nullptr);
+    TEST_EXPECT(ctx, initial_payload->msg_id == type_ids::undefined);
+    initial_payload->msg_id = type_ids::file_load_request;
+
+    FileSaveResult* const redefined_payload = states.redefine<FileSaveResult>(first_slot);
+    TEST_EXPECT(ctx, redefined_payload != nullptr);
+    TEST_EXPECT(ctx, !redefined_payload->success);
+    TEST_EXPECT(ctx, states.resolve(first_slot)->query_tag() == 41u);
+    TEST_EXPECT(ctx, states.payload<UnrecognisedMsg>(first_slot) == nullptr);
+    TEST_EXPECT(ctx, states.payload<FileSaveResult>(first_slot) == redefined_payload);
+
+    TEST_EXPECT(ctx, states.release(first_slot));
+    TEST_EXPECT(ctx, states.resolve(first_slot) == nullptr);
+    TEST_EXPECT(ctx, !states.release(first_slot));
+    TEST_EXPECT(ctx, states.resolve(second_slot)->query_tag() == 73u);
+    TEST_EXPECT(ctx, states.check_integrity());
+
+    TEST_EXPECT(ctx, states.release(second_slot));
+    TEST_EXPECT(ctx, states.is_empty());
+}
+
+void test_reused_slot_is_reinitialised(TTestContext& ctx)
+{
+    CASyncStates states;
+    TEST_EXPECT(ctx, states.initialise());
+
+    const std::int32_t released_slot = states.acquire<UnrecognisedMsg>(0xffffffffu);
+    TEST_EXPECT(ctx, released_slot >= 0);
+    states.payload<UnrecognisedMsg>(released_slot)->msg_id = type_ids::tga_save_request;
+    TEST_EXPECT(ctx, states.release(released_slot));
+
+    const std::int32_t acquired_slot = states.acquire<FileSaveResult>(7u);
+    TEST_EXPECT(ctx, acquired_slot >= 0);
+    TEST_EXPECT(ctx, states.resolve(acquired_slot)->query_tag() == 7u);
+    TEST_EXPECT(ctx, states.payload<FileSaveResult>(acquired_slot) != nullptr);
+    TEST_EXPECT(ctx, !states.payload<FileSaveResult>(acquired_slot)->success);
+    TEST_EXPECT(ctx, states.payload<UnrecognisedMsg>(acquired_slot) == nullptr);
+}
+
+}   //  namespace
+
+int run_async_state_tests()
+{
+    TTestContext ctx;
+    test_state_shape_and_default_repository(ctx);
+    test_acquisition_redefinition_and_release(ctx);
+    test_reused_slot_is_reinitialised(ctx);
+
+    std::cout << "AsyncState: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
+    return ctx.failed;
+}
