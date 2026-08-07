@@ -151,11 +151,17 @@
     <Filter Include="src\modules">
       <UniqueIdentifier>{f7132911-4c79-4206-be87-573987054570}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\modules\application">
+      <UniqueIdentifier>{ea457050-c3aa-48bf-bc48-dba109d8232b}</UniqueIdentifier>
+    </Filter>
     <Filter Include="include\host">
       <UniqueIdentifier>{682a690b-ab31-42ae-a796-9f0e3d8a8fab}</UniqueIdentifier>
     </Filter>
     <Filter Include="include\modules">
       <UniqueIdentifier>{210de3cd-e8f2-4189-8c29-651432a71849}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\modules\application">
+      <UniqueIdentifier>{6438ad82-ee37-4609-bdd8-c05e19d88fa2}</UniqueIdentifier>
     </Filter>
     <Filter Include="include\threading\messages">
       <UniqueIdentifier>{39411ac7-e9db-440a-8bd4-1b6de24569b7}</UniqueIdentifier>
@@ -408,8 +414,17 @@
     <ClInclude Include="include\threading\threading.hpp">
       <Filter>include\threading</Filter>
     </ClInclude>
+    <ClInclude Include="include\threading\CThreadPackage.hpp">
+      <Filter>include\threading</Filter>
+    </ClInclude>
     <ClInclude Include="include\host\host.hpp">
       <Filter>include\host</Filter>
+    </ClInclude>
+    <ClInclude Include="include\host\host_worker_thread.hpp">
+      <Filter>include\host</Filter>
+    </ClInclude>
+    <ClInclude Include="include\modules\application\application_thread.hpp">
+      <Filter>include\modules\application</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\transports\TBulkTransport.hpp">
       <Filter>include\threading\transports</Filter>
@@ -604,6 +619,15 @@
     </ClCompile>
     <ClCompile Include="src\host\host.cpp">
       <Filter>src\host</Filter>
+    </ClCompile>
+    <ClCompile Include="src\host\host_worker_thread.cpp">
+      <Filter>src\host</Filter>
+    </ClCompile>
+    <ClCompile Include="src\modules\application\application_thread.cpp">
+      <Filter>src\modules\application</Filter>
+    </ClCompile>
+    <ClCompile Include="src\threading\CThreadPackage.cpp">
+      <Filter>src\threading</Filter>
     </ClCompile>
     <ClCompile Include="src\system\erased_owner.cpp">
       <Filter>src\system</Filter>

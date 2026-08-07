@@ -231,9 +231,11 @@
       <ClCompile Include="src\debug\service.cpp" />
     <ClCompile Include="src\host\host.cpp" />
     <ClCompile Include="src\host\host_context.cpp" />
+    <ClCompile Include="src\host\host_worker_thread.cpp" />
     <ClCompile Include="src\image\codec\tga.cpp" />
     <ClCompile Include="src\main\MorphicEngine.cpp" />
     <ClCompile Include="src\memory\memory_context.cpp" />
+    <ClCompile Include="src\modules\application\application_thread.cpp" />
     <ClCompile Include="src\platform\filesystem\file.cpp" />
     <ClCompile Include="src\platform\filesystem\internal\file_utils.cpp" />
     <ClCompile Include="src\platform\filesystem\log.cpp" />
@@ -278,6 +280,7 @@
     <ClCompile Include="src\tests\TUnorderedSlots_test_harness.cpp" />
     <ClCompile Include="src\threading\CCountingSemaphore.cpp" />
     <ClCompile Include="src\threading\CParkingGate.cpp" />
+    <ClCompile Include="src\threading\CThreadPackage.cpp" />
     <ClCompile Include="src\threading\CWaitPredicate.cpp" />
     <ClCompile Include="src\types\fp16data_t.cpp" />
   </ItemGroup>
@@ -306,11 +309,13 @@
       <ClInclude Include="include\debug\service.hpp" />
     <ClInclude Include="include\host\host.hpp" />
     <ClInclude Include="include\host\host_context.hpp" />
+    <ClInclude Include="include\host\host_worker_thread.hpp" />
     <ClInclude Include="include\image\codec\tga.hpp" />
     <ClInclude Include="include\memory\memory_context.hpp" />
     <ClInclude Include="include\memory\memory_policies.hpp" />
     <ClInclude Include="include\memory\memory_token.hpp" />
     <ClInclude Include="include\memory\memory_view.hpp" />
+    <ClInclude Include="include\modules\application\application_thread.hpp" />
     <ClInclude Include="include\platform\filesystem\file.hpp" />
     <ClInclude Include="include\platform\filesystem\internal\file_utils.hpp" />
     <ClInclude Include="include\platform\filesystem\log.hpp" />
@@ -367,6 +372,7 @@
     <ClInclude Include="include\threading\CCountingSemaphore.hpp" />
     <ClInclude Include="include\threading\CParkingGate.hpp" />
     <ClInclude Include="include\threading\CThreadControlState.hpp" />
+    <ClInclude Include="include\threading\CThreadPackage.hpp" />
     <ClInclude Include="include\threading\CWaitPredicate.hpp" />
     <ClInclude Include="include\threading\messages\byte_view_payloads.hpp" />
     <ClInclude Include="include\threading\messages\CPodThreadMsg.hpp" />

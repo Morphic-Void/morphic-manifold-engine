@@ -21,6 +21,7 @@
 
 #include "CParkingGate.hpp"
 #include "CThreadControlState.hpp"
+#include "CThreadPackage.hpp"
 #include "CWaitPredicate.hpp"
 #include "CCountingSemaphore.hpp"
 #include "messages/messages.hpp"
