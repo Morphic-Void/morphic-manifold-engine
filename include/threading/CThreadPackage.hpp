@@ -104,7 +104,7 @@ private:
 };
 
 //==============================================================================
-//  CThreadContext inline implementation
+//  CThreadContext inline out of class function bodies
 //==============================================================================
 
 inline void CThreadContext::mark_waiting() noexcept
@@ -158,7 +158,7 @@ inline bool CThreadContext::pass_ownership(CErasedOwner& obj) noexcept
 }
 
 //==============================================================================
-//  CThreadPackage inline implementation
+//  CThreadPackage inline out of class function bodies
 //==============================================================================
 
 inline bool CThreadPackage::read(CPodThreadMsg& msg) noexcept

@@ -161,8 +161,7 @@ std::uint32_t CApplicationThread::main() noexcept
                         break;
                     }
 
-                    SApplicationTgaSaveState* const save_state =
-                        async_states.redefine<SApplicationTgaSaveState>(async_slot);
+                    SApplicationTgaSaveState* const save_state = async_states.redefine<SApplicationTgaSaveState>(async_slot);
                     save_state->source = tga_load_result.asset;
 
                     TgaSaveRequest tga_save_request;
@@ -212,8 +211,7 @@ std::uint32_t CApplicationThread::main() noexcept
                 }
                 default:
                 {
-                    MV_DETAIL("Application: Unrecognised message type {}",
-                        inbound_msg.query_payload_type_id());
+                    MV_DETAIL("Application: Unrecognised message type {}", inbound_msg.query_payload_type_id());
 
                     UnrecognisedMsg unrecognised;
                     unrecognised.msg_id = inbound_msg.query_payload_type_id();
