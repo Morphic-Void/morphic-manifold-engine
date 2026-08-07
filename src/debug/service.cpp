@@ -17,6 +17,7 @@
 #include <limits>
 
 #include "platform/system/debugger.hpp"
+#include "platform/threading/thread_naming.hpp"
 #include "platform/threading/wait_word.hpp"
 
 namespace debug_system
@@ -774,6 +775,13 @@ std::uint32_t CDebugServiceState::writer_thread_entry(void* const user_data) noe
 
 std::uint32_t CDebugServiceState::writer_thread_main() noexcept
 {
+    (void)system_context::set_ambient_thread_id(thread_ids::debug_service);
+    const char* const thread_name = system_id_registry::lookup_thread_name(thread_ids::debug_service);
+    if (thread_name != nullptr)
+    {
+        (void)platform::threading::set_current_thread_name(thread_name);
+    }
+
     if (!open_event_log())
     {
         m_writer_state.value.store(static_cast<std::uint32_t>(EServiceThreadState::failed), std::memory_order_release);

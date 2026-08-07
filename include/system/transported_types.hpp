@@ -14,7 +14,9 @@
 #define TRANSPORTED_TYPES_HPP_INCLUDED
 
 #include <cstddef>      //  std::size_t
+#include <cstdint>      //  std::int32_t
 
+#include "assets/asset_repository.hpp"
 #include "containers/ByteBuffers.hpp"
 #include "containers/StringBuffers.hpp"
 #include "image/codec/tga.hpp"
@@ -23,20 +25,29 @@
 struct UnrecognisedMsg { type_ids::id_type msg_id; };
 
 struct FileLoadRequest { const char* file; };
-struct FileSaveRequest { const char* file; CByteConstView* view; };
+struct FileSaveRequest { const char* file; CByteConstView view; };
 struct TgaLoadRequest { const char* file; bool vflip; };
-struct TgaSaveRequest { const char* file; CByteRectConstView* view; image::codec::tga::EncodeOptions* options; };
-struct TgaEncodeRequest { CByteRectConstView* view; image::codec::tga::EncodeOptions* options; };
-struct TgaDecodeRequest { CByteConstView* view; bool vflip; };
+struct TgaSaveRequest
+{
+    const char* file;
+    CAssetId source;
+    image::codec::tga::EncodeOptions options;
+};
+struct TgaEncodeRequest
+{
+    CByteRectConstView view;
+    image::codec::tga::EncodeOptions options;
+};
+struct TgaDecodeRequest { CByteConstView view; bool vflip; };
 
 struct FileLoadResult { CByteConstView* view; };
 struct FileSaveResult { bool success; };
-struct TgaLoadResult { CByteRectConstView* view; image::codec::tga::decoded_image_desc desc; };
+struct TgaLoadResult { CAssetId asset; image::codec::tga::decoded_image_desc desc; bool success; };
 struct TgaSaveResult { bool success; };
 
-struct OwningFileLoadResult { std::size_t async_slot; CByteBuffer buffer; };
-struct OwningTgaEncodeResult { std::size_t async_slot; CByteBuffer buffer; };
-struct OwningTgaDecodeResult { std::size_t async_slot; CByteRectBuffer buffer; image::codec::tga::decoded_image_desc desc; };
+struct OwningFileLoadResult { std::int32_t async_slot; CByteBuffer buffer; };
+struct OwningTgaEncodeResult { std::int32_t async_slot; CByteBuffer buffer; };
+struct OwningTgaDecodeResult { std::int32_t async_slot; CByteRectBuffer buffer; image::codec::tga::decoded_image_desc desc; };
 
 MV_REGISTER_SYSTEM_TYPE(CByteBuffer, type_ids::byte_buffer);
 MV_REGISTER_SYSTEM_TYPE(CByteRectBuffer, type_ids::byte_rect_buffer);

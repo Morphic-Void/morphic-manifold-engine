@@ -23,6 +23,7 @@
 #include "platform/platform_defines.hpp"
 #include "memory/memory_policies.hpp"
 #include "memory/memory_context.hpp"
+#include "platform/threading/thread_naming.hpp"
 #include "system/system_context.hpp"
 #include "system/system_ids.hpp"
 
@@ -72,6 +73,11 @@ void host_context_install() noexcept
 {
     (void)system_context::set_ambient_module_id(module_ids::executable);
     (void)system_context::set_ambient_thread_id(thread_ids::host);
+    const char* const thread_name = system_id_registry::lookup_thread_name(thread_ids::host);
+    if (thread_name != nullptr)
+    {
+        (void)platform::threading::set_current_thread_name(thread_name);
+    }
     (void)memory::set_module_memory_context(&s_host_memory_context);
 }
 

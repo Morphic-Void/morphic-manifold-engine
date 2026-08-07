@@ -22,6 +22,7 @@
 #include <thread>       //  std::this_thread::yield
 #include <utility>      //  std::move
 
+#include "assets/asset_repository.hpp"
 #include "host/host.hpp"
 #include "containers/containers.hpp"
 #include "image/codec/tga.hpp"
@@ -34,7 +35,9 @@
 #include "system/erased_owner.hpp"
 #include "system/erased_pod.hpp"
 #include "system/erased_owner_transport.hpp"
+#include "system/async_state.hpp"
 #include "system/system_ids.hpp"
+#include "system/system_context.hpp"
 #include "system/TStaticLookup.hpp"
 #include "system/transported_types.hpp"
 #include "threading/threading.hpp"
@@ -42,10 +45,46 @@
 #include "debug/macros.hpp"
 #include "debug/service.hpp"
 
+struct SApplicationTgaLoadState { std::uint32_t reserved; };
+struct SApplicationTgaSaveState { CAssetId source; };
+
+struct SHostTgaFileLoadState
+{
+    std::int32_t application_slot;
+    const char* file;
+    bool vflip;
+};
+
+struct SHostTgaDecodeState
+{
+    std::int32_t application_slot;
+    CAssetId loaded_file;
+};
+
+struct SHostTgaEncodeState
+{
+    std::int32_t application_slot;
+    CAssetId source;
+    const char* file;
+    image::codec::tga::EncodeOptions options;
+};
+
+struct SHostTgaFileSaveState
+{
+    std::int32_t application_slot;
+    CAssetId encoded_file;
+};
+
+MV_REGISTER_SYSTEM_TYPE(SApplicationTgaLoadState, type_ids::application_tga_load_state);
+MV_REGISTER_SYSTEM_TYPE(SApplicationTgaSaveState, type_ids::application_tga_save_state);
+MV_REGISTER_SYSTEM_TYPE(SHostTgaFileLoadState, type_ids::host_tga_file_load_state);
+MV_REGISTER_SYSTEM_TYPE(SHostTgaDecodeState, type_ids::host_tga_decode_state);
+MV_REGISTER_SYSTEM_TYPE(SHostTgaEncodeState, type_ids::host_tga_encode_state);
+MV_REGISTER_SYSTEM_TYPE(SHostTgaFileSaveState, type_ids::host_tga_file_save_state);
+
 struct ThreadConfig
 {
-    system_ids::id_type system_id{};
-    const char* name{ nullptr };
+    thread_ids::id_type thread_id{};
     platform::threading::EThreadPriority priority{ platform::threading::EThreadPriority::Normal };
     platform::threading::FThreadEntry entry_point{ nullptr };
 };
@@ -88,7 +127,6 @@ public:
     bool read(threading::CPodThreadMsg& msg) noexcept { return m_resources.host_to_worker_msgs.read(msg); }
     bool post(const threading::CPodThreadMsg& msg) noexcept { return m_resources.worker_to_host_msgs.post(msg); }
     bool pass_ownership(CErasedOwner& obj) noexcept { return m_resources.worker_owned_to_host_owned.post(std::move(obj)); }
-    const char* get_name() const noexcept { return m_resources.config.name; }
 
 private:
     CThreadResources& m_resources;
@@ -97,8 +135,16 @@ private:
 inline void CThreadContext::startup() noexcept
 {
     m_resources.control_state.mark_startup();
-    const system_ids::id_type system_id = m_resources.config.system_id;   //  This needs to be stored in TLS for the real implementation
-    (void)platform::threading::set_current_thread_name(m_resources.config.name);
+
+    const thread_ids::id_type thread_id = m_resources.config.thread_id;
+    (void)system_context::set_ambient_thread_id(thread_id);
+
+    const char* const thread_name = system_id_registry::lookup_thread_name(thread_id);
+    MV_ASSERT(thread_name != nullptr);
+    if (thread_name != nullptr)
+    {
+        (void)platform::threading::set_current_thread_name(thread_name);
+    }
     (void)platform::threading::set_current_thread_priority(m_resources.config.priority);
 }
 
@@ -263,10 +309,10 @@ std::uint32_t CHostWorkerThread::entry_point(void* user_data) noexcept
 
 std::uint32_t CHostWorkerThread::main() noexcept
 {
-    MV_INFO("Worker starting");
-
     //  Standard thread startup
     m_context.startup();
+
+    MV_INFO("Worker starting");
 
     std::uint32_t epoch = 0u;
     while (!m_context.exit_requested())
@@ -301,7 +347,7 @@ std::uint32_t CHostWorkerThread::main() noexcept
                     FileSaveRequest request;
                     (void)inbound_msg.copy_payload_to(request);
                     FileSaveResult result;
-                    result.success = platform::filesystem::saveFile(request.file, *request.view);
+                    result.success = platform::filesystem::saveFile(request.file, request.view);
                     threading::CPodThreadMsg outbound_msg;
                     outbound_msg.set_async_slot(inbound_msg.query_async_slot());
                     outbound_msg.assign_payload(result);
@@ -318,7 +364,7 @@ std::uint32_t CHostWorkerThread::main() noexcept
                     if (OwningTgaEncodeResult* const result = outbound_msg.payload<OwningTgaEncodeResult>())
                     {
                         result->async_slot = inbound_msg.query_async_slot();
-                        result->buffer = image::codec::tga::encode(*request.view, *request.options);
+                        result->buffer = image::codec::tga::encode(request.view, request.options);
                         (void)m_context.pass_ownership(outbound_msg);
                     }
                     break;
@@ -333,7 +379,7 @@ std::uint32_t CHostWorkerThread::main() noexcept
                     if (OwningTgaDecodeResult* const result = outbound_msg.payload<OwningTgaDecodeResult>())
                     {
                         result->async_slot = inbound_msg.query_async_slot();
-                        result->buffer = image::codec::tga::decode(*request.view, result->desc, request.vflip);
+                        result->buffer = image::codec::tga::decode(request.view, result->desc, request.vflip);
                         (void)m_context.pass_ownership(outbound_msg);
                     }
                     break;
@@ -412,10 +458,10 @@ std::uint32_t CApplicationThread::entry_point(void* user_data) noexcept
 
 std::uint32_t CApplicationThread::main() noexcept
 {
-    MV_INFO("Application: Starting");
-
     //  Standard thread startup
     m_context.startup();
+
+    MV_INFO("Application: Starting");
 
     platform::system::CPerfCounter perf_counter;
     platform::system::CPerfCountConversion perf_count_converter;
@@ -423,43 +469,48 @@ std::uint32_t CApplicationThread::main() noexcept
     perf_count_converter.init();
     std::uint64_t ticks_per_second = perf_count_converter.query_ticks_per_second();
 
-    struct AsyncTgaLoad
+    CASyncStates async_states;
+    if (!async_states.initialise(1u))
     {
-        bool complete = false;
-        bool success = false;
-        CByteRectConstView view;
-        image::codec::tga::decoded_image_desc desc = image::codec::tga::decoded_image_desc::RGBA;
-    };
-
-    struct AsyncTgaSave
-    {
-        bool complete = false;
-        bool success = false;
-    };
-
-    AsyncTgaLoad tga_load;
-    AsyncTgaSave tga_save;
-
-    {   //  kick off the test
-        TgaLoadRequest tga_load_request;
-        tga_load_request.file = "d:/test_input.tga";
-        tga_load_request.vflip = false;
-        threading::CPodThreadMsg outbound_msg;
-        outbound_msg.set_async_slot(0);
-        outbound_msg.assign_payload(tga_load_request);
-        (void)m_context.post(outbound_msg);
+        m_context.mark_failed(1u);
+        return 1u;
     }
 
-    enum class ETgaTestStates : std::uint32_t { no_state = 0u, waiting_for_tga_load, waiting_for_tga_save, done };
-    ETgaTestStates tga_state = ETgaTestStates::waiting_for_tga_load;
+    const std::int32_t tga_slot = async_states.acquire<SApplicationTgaLoadState>();
+    if (tga_slot < 0)
+    {
+        async_states.deallocate();
+        m_context.mark_failed(1u);
+        return 1u;
+    }
 
-    image::codec::tga::EncodeOptions tga_encode_options;
+    TgaLoadRequest tga_load_request;
+    tga_load_request.file = "test_files/test_input.tga";
+    tga_load_request.vflip = false;
+    threading::CPodThreadMsg initial_msg;
+    initial_msg.set_async_slot(tga_slot);
+    initial_msg.assign_payload(tga_load_request);
+    if (!m_context.post(initial_msg))
+    {
+        (void)async_states.release(tga_slot);
+        async_states.deallocate();
+        m_context.mark_failed(1u);
+        return 1u;
+    }
 
     m_context.mark_running();
 
     MV_INFO("Application: Running");
 
-    while (!m_context.exit_requested())
+    bool test_complete = false;
+    bool test_failed = false;
+    const auto fail_test = [this, &test_complete, &test_failed](const std::uint32_t code) noexcept
+    {
+        m_context.mark_failed(code);
+        test_complete = true;
+        test_failed = true;
+    };
+    while (!m_context.exit_requested() && !test_complete)
     {
         std::uint64_t tick_delta = perf_counter.query_delta();
         if (tick_delta >= ticks_per_second)
@@ -470,9 +521,7 @@ std::uint32_t CApplicationThread::main() noexcept
             MV_TRACE("Application: Heartbeat");
         }
 
-        bool state_updated = false;
-
-        while (!m_context.exit_requested())
+        while (!m_context.exit_requested() && !test_complete)
         {   //  drain incoming messages
 
             threading::CPodThreadMsg inbound_msg;
@@ -491,11 +540,42 @@ std::uint32_t CApplicationThread::main() noexcept
 
                     TgaLoadResult tga_load_result;
                     (void)inbound_msg.copy_payload_to(tga_load_result);
-                    tga_load.view = *tga_load_result.view;
-                    tga_load.desc = tga_load_result.desc;
-                    tga_load.success = !tga_load_result.view->is_empty();
-                    tga_load.complete = true;
-                    state_updated = true;
+                    const std::int32_t async_slot = inbound_msg.query_async_slot();
+                    if (async_states.payload<SApplicationTgaLoadState>(async_slot) == nullptr)
+                    {
+                        fail_test(2u);
+                        break;
+                    }
+                    if (!tga_load_result.success || !tga_load_result.asset)
+                    {
+                        (void)async_states.release(async_slot);
+                        fail_test(2u);
+                        break;
+                    }
+
+                    SApplicationTgaSaveState* const save_state =
+                        async_states.redefine<SApplicationTgaSaveState>(async_slot);
+                    save_state->source = tga_load_result.asset;
+
+                    TgaSaveRequest tga_save_request;
+                    tga_save_request.file = "test_files/test_output.tga";
+                    tga_save_request.source = save_state->source;
+                    tga_save_request.options.src =
+                        (tga_load_result.desc == image::codec::tga::decoded_image_desc::Gray) ?
+                        image::codec::tga::image_encode_src::Gray :
+                        image::codec::tga::image_encode_src::AutoTrue32;
+                    tga_save_request.options.allow_clut = true;
+                    tga_save_request.options.allow_rle = true;
+                    tga_save_request.options.vflip = false;
+
+                    threading::CPodThreadMsg outbound_msg;
+                    outbound_msg.set_async_slot(async_slot);
+                    outbound_msg.assign_payload(tga_save_request);
+                    if (!m_context.post(outbound_msg))
+                    {
+                        (void)async_states.release(async_slot);
+                        fail_test(3u);
+                    }
                     break;
                 }
                 case (k_type_id_v<TgaSaveResult>):
@@ -504,9 +584,22 @@ std::uint32_t CApplicationThread::main() noexcept
 
                     TgaSaveResult tga_save_result;
                     (void)inbound_msg.copy_payload_to(tga_save_result);
-                    tga_save.success = tga_save_result.success;
-                    tga_save.complete = true;
-                    state_updated = true;
+                    const std::int32_t async_slot = inbound_msg.query_async_slot();
+                    if (async_states.payload<SApplicationTgaSaveState>(async_slot) == nullptr)
+                    {
+                        fail_test(4u);
+                        break;
+                    }
+
+                    (void)async_states.release(async_slot);
+                    if (!tga_save_result.success)
+                    {
+                        fail_test(4u);
+                    }
+                    else
+                    {
+                        test_complete = true;
+                    }
                     break;
                 }
                 default:
@@ -524,56 +617,17 @@ std::uint32_t CApplicationThread::main() noexcept
                 }
             }
         }
-
-        if (state_updated)
-        {
-            if (tga_state == ETgaTestStates::waiting_for_tga_load)
-            {
-                if (tga_load.complete)
-                {
-                    if (!tga_load.success)
-                    {
-                        m_context.mark_failed(1u);
-                        break;
-                    }
-
-                    tga_encode_options.src = (tga_load.desc == image::codec::tga::decoded_image_desc::Gray) ?
-                        image::codec::tga::image_encode_src::Gray :
-                        image::codec::tga::image_encode_src::AutoTrue32;
-
-                    TgaSaveRequest tga_save_request;
-                    tga_save_request.file = "d:/test_output.tga";
-                    tga_save_request.view = &tga_load.view;
-                    tga_save_request.options = &tga_encode_options;
-
-                    threading::CPodThreadMsg outbound_msg;
-                    outbound_msg.set_async_slot(0);
-                    outbound_msg.assign_payload(tga_save_request);
-                    (void)m_context.post(outbound_msg);
-
-                    tga_state = ETgaTestStates::waiting_for_tga_save;
-                }
-            }
-            else if (tga_state == ETgaTestStates::waiting_for_tga_save)
-            {
-                if (tga_save.complete)
-                {
-                    if (!tga_save.success)
-                    {
-                        m_context.mark_failed(2u);
-                        break;
-                    }
-
-                    tga_state = ETgaTestStates::done;
-                    break;
-                }
-                break;  //  test force exit
-            }
-        }
     }
-    m_context.mark_exited();
-
-    MV_INFO("Application: Exited");
+    async_states.deallocate();
+    if (!test_failed)
+    {
+        m_context.mark_exited();
+        MV_INFO("Application: Exited");
+    }
+    else
+    {
+        MV_WARNING("Application: TGA flow failed");
+    }
 
     return 0u;
 }
@@ -610,18 +664,22 @@ int host()
     }
 
     static const ThreadConfig thread_configs[3]{
-        {system_ids::bg_file_io, "bg_file_io", platform::threading::EThreadPriority::Background, CHostWorkerThread::get_entry_point()},
-        {system_ids::bg_conditioning, "bg_conditioning", platform::threading::EThreadPriority::Background, CHostWorkerThread::get_entry_point()},
-        {system_ids::application, "application", platform::threading::EThreadPriority::Normal, CApplicationThread::get_entry_point()} };
+        {thread_ids::bg_file_io, platform::threading::EThreadPriority::Background, CHostWorkerThread::get_entry_point()},
+        {thread_ids::bg_conditioning, platform::threading::EThreadPriority::Background, CHostWorkerThread::get_entry_point()},
+        {thread_ids::application, platform::threading::EThreadPriority::Normal, CApplicationThread::get_entry_point()} };
 
     enum class EWorkerThreadID : std::uint8_t { bg_file_io = 0u, bg_conditioning, application };
 
-    int32_t thread_slots[3]{};
+    int32_t thread_slots[3]{ -1, -1, -1 };
 
     TUnorderedCollection<CThreadPackage> thread_packages;
+    CAssetRepository assets;
+    CASyncStates async_states;
 
     bool initialised = true;
     if (initialised) initialised = thread_packages.initialise();
+    if (initialised) initialised = assets.initialise();
+    if (initialised) initialised = async_states.initialise();
     if (initialised)
     {
         for (std::int32_t thread_index = 0; thread_index <= 2; ++thread_index)
@@ -642,30 +700,6 @@ int host()
         }
     }
 
-    struct AsyncTgaSave
-    {
-        const char* file = nullptr;
-        CByteBuffer buffer;
-        CByteConstView view;
-        CByteRectBuffer rect_buffer;
-        CByteRectConstView rect_view;
-        image::codec::tga::EncodeOptions options{};
-    };
-
-    struct AsyncTgaLoad
-    {
-        const char* file = nullptr;
-        CByteBuffer buffer;
-        CByteConstView view;
-        CByteRectBuffer rect_buffer;
-        CByteRectConstView rect_view;
-        bool vflip = false;
-        image::codec::tga::decoded_image_desc desc = image::codec::tga::decoded_image_desc::RGBA;
-    };
-
-    AsyncTgaLoad async_tga_load;
-    AsyncTgaSave async_tga_save;
-
     if (initialised)
     {
         platform::system::CPerfCounter perf_counter;
@@ -675,7 +709,32 @@ int host()
         std::uint64_t ticks_per_second = perf_count_converter.query_ticks_per_second();
 
         CThreadPackage& application_package = *thread_packages.get_object(thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::application)]);
+        const auto post_tga_load_result = [&application_package](
+            const std::int32_t application_slot, const CAssetId asset,
+            const image::codec::tga::decoded_image_desc desc, const bool success) noexcept
+        {
+            TgaLoadResult result;
+            result.asset = asset;
+            result.desc = desc;
+            result.success = success;
+            threading::CPodThreadMsg outbound_msg;
+            outbound_msg.set_async_slot(application_slot);
+            outbound_msg.assign_payload(result);
+            return application_package.post(outbound_msg);
+        };
+        const auto post_tga_save_result = [&application_package](
+            const std::int32_t application_slot, const bool success) noexcept
+        {
+            TgaSaveResult result;
+            result.success = success;
+            threading::CPodThreadMsg outbound_msg;
+            outbound_msg.set_async_slot(application_slot);
+            outbound_msg.assign_payload(result);
+            return application_package.post(outbound_msg);
+        };
+
         while ((application_package.query_state() != threading::EThreadRunState::Exited) &&
+            (application_package.query_state() != threading::EThreadRunState::Failed) &&
             ((debug_service == nullptr) ||
                 (debug_service->read_shutdown_request() ==
                     debug_system::EShutdownReason::none)))
@@ -700,18 +759,22 @@ int host()
                     {
                         case (k_type_id_v<FileSaveResult>):
                         {
-                            MV_DETAIL("Host: Recieved a file save result");
-
                             FileSaveResult result;
                             (void)inbound_msg.copy_payload_to(result);
-                            const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::application)];
-                            CThreadPackage& outbound_package = *thread_packages.get_object(outbound_slot);
-                            TgaSaveResult forward;
-                            forward.success = result.success;
-                            threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.set_async_slot(0);
-                            outbound_msg.assign_payload(forward);
-                            (void)outbound_package.post(outbound_msg);
+                            MV_DETAIL("Host: Recieved a file save result success={}",
+                                result.success ? 1u : 0u);
+                            const std::int32_t async_slot = inbound_msg.query_async_slot();
+                            const SHostTgaFileSaveState* const state =
+                                async_states.payload<SHostTgaFileSaveState>(async_slot);
+                            if (state == nullptr)
+                            {
+                                MV_CRITICAL_EVENT("Host: File save result has invalid async slot {}", async_slot);
+                                break;
+                            }
+
+                            const std::int32_t application_slot = state->application_slot;
+                            (void)post_tga_save_result(application_slot, result.success);
+                            (void)async_states.release(async_slot);
                             break;
                         }
                         case (k_type_id_v<TgaLoadRequest>):
@@ -720,16 +783,36 @@ int host()
 
                             TgaLoadRequest tga_load_request;
                             (void)inbound_msg.copy_payload_to(tga_load_request);
-                            async_tga_load.file = tga_load_request.file;
-                            async_tga_load.vflip = tga_load_request.vflip;
+                            const std::int32_t application_slot = inbound_msg.query_async_slot();
+                            const std::int32_t async_slot = async_states.acquire<SHostTgaFileLoadState>();
+                            SHostTgaFileLoadState* const state =
+                                async_states.payload<SHostTgaFileLoadState>(async_slot);
+                            if (state == nullptr)
+                            {
+                                MV_CRITICAL_EVENT("Host: Failed to acquire TGA load state");
+                                (void)post_tga_load_result(
+                                    application_slot, CAssetId{},
+                                    image::codec::tga::decoded_image_desc::RGBA, false);
+                                break;
+                            }
+                            state->application_slot = application_slot;
+                            state->file = tga_load_request.file;
+                            state->vflip = tga_load_request.vflip;
+
                             const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::bg_file_io)];
                             CThreadPackage& outbound_package = *thread_packages.get_object(outbound_slot);
                             FileLoadRequest file_load_request;
-                            file_load_request.file = async_tga_load.file;
+                            file_load_request.file = state->file;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.set_async_slot(0);
+                            outbound_msg.set_async_slot(async_slot);
                             outbound_msg.assign_payload(file_load_request);
-                            (void)outbound_package.post(outbound_msg);
+                            if (!outbound_package.post(outbound_msg))
+                            {
+                                (void)async_states.release(async_slot);
+                                (void)post_tga_load_result(
+                                    application_slot, CAssetId{},
+                                    image::codec::tga::decoded_image_desc::RGBA, false);
+                            }
                             break;
                         }
                         case (k_type_id_v<TgaSaveRequest>):
@@ -738,18 +821,44 @@ int host()
 
                             TgaSaveRequest tga_save_request;
                             (void)inbound_msg.copy_payload_to(tga_save_request);
-                            async_tga_save.file = tga_save_request.file;
-                            async_tga_save.rect_view = *tga_save_request.view;
-                            async_tga_save.options = *tga_save_request.options;
+                            const CAssetRecord* const source_record = assets.resolve(tga_save_request.source);
+                            const OwningTgaDecodeResult* const source =
+                                (source_record != nullptr) ? source_record->payload<OwningTgaDecodeResult>() : nullptr;
+                            if ((source == nullptr) || !source->buffer.is_ready())
+                            {
+                                MV_CRITICAL_EVENT("Host: TGA save request has invalid source asset");
+                                (void)post_tga_save_result(inbound_msg.query_async_slot(), false);
+                                break;
+                            }
+
+                            const std::int32_t application_slot = inbound_msg.query_async_slot();
+                            const std::int32_t async_slot = async_states.acquire<SHostTgaEncodeState>();
+                            SHostTgaEncodeState* const state = async_states.payload<SHostTgaEncodeState>(async_slot);
+                            if (state == nullptr)
+                            {
+                                MV_CRITICAL_EVENT("Host: Failed to acquire TGA encode state");
+                                (void)post_tga_save_result(application_slot, false);
+                                break;
+                            }
+                            state->application_slot = application_slot;
+                            state->source = tga_save_request.source;
+                            state->file = tga_save_request.file;
+                            state->options = tga_save_request.options;
+
+                            const CByteRectConstView source_view = source->buffer.const_view();
                             const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::bg_conditioning)];
                             CThreadPackage& outbound_package = *thread_packages.get_object(outbound_slot);
                             TgaEncodeRequest tga_encode_request;
-                            tga_encode_request.view = &async_tga_save.rect_view;
-                            tga_encode_request.options = &async_tga_save.options;
+                            tga_encode_request.view = source_view;
+                            tga_encode_request.options = state->options;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.set_async_slot(0);
+                            outbound_msg.set_async_slot(async_slot);
                             outbound_msg.assign_payload(tga_encode_request);
-                            (void)outbound_package.post(outbound_msg);
+                            if (!outbound_package.post(outbound_msg))
+                            {
+                                (void)async_states.release(async_slot);
+                                (void)post_tga_save_result(application_slot, false);
+                            }
                             break;
                         }
                         case (k_type_id_v<UnrecognisedMsg>):
@@ -777,58 +886,151 @@ int host()
                     switch (inbound_msg_owning.query_type_id())
                     {
                         case (k_type_id_v<OwningFileLoadResult>):
-                        {   //  for this test we know that this is in response to our own attempt to load the tga file
+                        {
                             MV_DETAIL("Host: Took ownership of a loaded file buffer");
 
-                            OwningFileLoadResult& result = *inbound_msg_owning.payload<OwningFileLoadResult>();
-                            async_tga_load.buffer = std::move(result.buffer);
-                            async_tga_load.view = async_tga_load.buffer.const_view();
+                            OwningFileLoadResult* const result =
+                                inbound_msg_owning.payload<OwningFileLoadResult>();
+                            const std::int32_t async_slot = result->async_slot;
+                            const SHostTgaFileLoadState* const load_state =
+                                async_states.payload<SHostTgaFileLoadState>(async_slot);
+                            if (load_state == nullptr)
+                            {
+                                MV_CRITICAL_EVENT("Host: File load result has invalid async slot {}", async_slot);
+                                break;
+                            }
+
+                            const std::int32_t application_slot = load_state->application_slot;
+                            const bool vflip = load_state->vflip;
+                            if (!result->buffer.is_ready())
+                            {
+                                (void)post_tga_load_result(
+                                    application_slot, CAssetId{},
+                                    image::codec::tga::decoded_image_desc::RGBA, false);
+                                (void)async_states.release(async_slot);
+                                break;
+                            }
+
+                            const CAssetId loaded_file = assets.insert(std::move(inbound_msg_owning));
+                            const CAssetRecord* const loaded_record = assets.resolve(loaded_file);
+                            const OwningFileLoadResult* const loaded =
+                                (loaded_record != nullptr) ? loaded_record->payload<OwningFileLoadResult>() : nullptr;
+                            if (loaded == nullptr)
+                            {
+                                (void)post_tga_load_result(
+                                    application_slot, CAssetId{},
+                                    image::codec::tga::decoded_image_desc::RGBA, false);
+                                (void)async_states.release(async_slot);
+                                break;
+                            }
+
+                            SHostTgaDecodeState* const decode_state =
+                                async_states.redefine<SHostTgaDecodeState>(async_slot);
+                            decode_state->application_slot = application_slot;
+                            decode_state->loaded_file = loaded_file;
+
+                            const CByteConstView loaded_view = loaded->buffer.const_view();
                             const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::bg_conditioning)];
                             CThreadPackage& outbound_package = *thread_packages.get_object(outbound_slot);
                             TgaDecodeRequest tga_decode_request;
-                            tga_decode_request.view = &async_tga_load.view;
-                            tga_decode_request.vflip = async_tga_load.vflip;
+                            tga_decode_request.view = loaded_view;
+                            tga_decode_request.vflip = vflip;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.set_async_slot(0);
+                            outbound_msg.set_async_slot(async_slot);
                             outbound_msg.assign_payload(tga_decode_request);
-                            (void)outbound_package.post(outbound_msg);
+                            if (!outbound_package.post(outbound_msg))
+                            {
+                                (void)post_tga_load_result(
+                                    application_slot, CAssetId{},
+                                    image::codec::tga::decoded_image_desc::RGBA, false);
+                                (void)async_states.release(async_slot);
+                            }
                             break;
                         }
                         case (k_type_id_v<OwningTgaEncodeResult>):
-                        {   //  for this test we know that this is in response to our own attempt to encode the tga file
+                        {
                             MV_DETAIL("Host: Took ownership of an encoded TGA file buffer");
 
-                            OwningTgaEncodeResult& result = *inbound_msg_owning.payload<OwningTgaEncodeResult>();
-                            async_tga_save.buffer = std::move(result.buffer);
-                            async_tga_save.view = async_tga_save.buffer.const_view();
+                            OwningTgaEncodeResult* const result =
+                                inbound_msg_owning.payload<OwningTgaEncodeResult>();
+                            const std::int32_t async_slot = result->async_slot;
+                            const SHostTgaEncodeState* const encode_state =
+                                async_states.payload<SHostTgaEncodeState>(async_slot);
+                            if (encode_state == nullptr)
+                            {
+                                MV_CRITICAL_EVENT("Host: TGA encode result has invalid async slot {}", async_slot);
+                                break;
+                            }
+
+                            const std::int32_t application_slot = encode_state->application_slot;
+                            const char* const file = encode_state->file;
+                            if (!result->buffer.is_ready())
+                            {
+                                (void)post_tga_save_result(application_slot, false);
+                                (void)async_states.release(async_slot);
+                                break;
+                            }
+
+                            const CAssetId encoded_file = assets.insert(std::move(inbound_msg_owning));
+                            const CAssetRecord* const encoded_record = assets.resolve(encoded_file);
+                            const OwningTgaEncodeResult* const encoded =
+                                (encoded_record != nullptr) ? encoded_record->payload<OwningTgaEncodeResult>() : nullptr;
+                            if (encoded == nullptr)
+                            {
+                                (void)post_tga_save_result(application_slot, false);
+                                (void)async_states.release(async_slot);
+                                break;
+                            }
+
+                            SHostTgaFileSaveState* const save_state =
+                                async_states.redefine<SHostTgaFileSaveState>(async_slot);
+                            save_state->application_slot = application_slot;
+                            save_state->encoded_file = encoded_file;
+
+                            const CByteConstView encoded_view = encoded->buffer.const_view();
                             const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::bg_file_io)];
                             CThreadPackage& outbound_package = *thread_packages.get_object(outbound_slot);
                             FileSaveRequest file_save_request;
-                            file_save_request.file = async_tga_save.file;
-                            file_save_request.view = &async_tga_save.view;
+                            file_save_request.file = file;
+                            file_save_request.view = encoded_view;
                             threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.set_async_slot(0);
+                            outbound_msg.set_async_slot(async_slot);
                             outbound_msg.assign_payload(file_save_request);
-                            (void)outbound_package.post(outbound_msg);
+                            if (!outbound_package.post(outbound_msg))
+                            {
+                                (void)post_tga_save_result(application_slot, false);
+                                (void)async_states.release(async_slot);
+                            }
                             break;
                         }
                         case (k_type_id_v<OwningTgaDecodeResult>):
-                        {   //  for this test we know that this is in response to our own attempt to decode the tga file
+                        {
                             MV_DETAIL("Host: Took ownership of a decoded TGA image buffer");
 
-                            OwningTgaDecodeResult& result = *inbound_msg_owning.payload<OwningTgaDecodeResult>();
-                            async_tga_load.rect_buffer = std::move(result.buffer);
-                            async_tga_load.rect_view = async_tga_load.rect_buffer.const_view();
-                            async_tga_load.desc = result.desc;
-                            const std::int32_t outbound_slot = thread_slots[static_cast<std::uint8_t>(EWorkerThreadID::application)];
-                            CThreadPackage& outbound_package = *thread_packages.get_object(outbound_slot);
-                            TgaLoadResult tga_load_result;
-                            tga_load_result.view = &async_tga_load.rect_view;
-                            tga_load_result.desc = async_tga_load.desc;
-                            threading::CPodThreadMsg outbound_msg;
-                            outbound_msg.set_async_slot(0);
-                            outbound_msg.assign_payload(tga_load_result);
-                            (void)outbound_package.post(outbound_msg);
+                            OwningTgaDecodeResult* const result =
+                                inbound_msg_owning.payload<OwningTgaDecodeResult>();
+                            const std::int32_t async_slot = result->async_slot;
+                            const SHostTgaDecodeState* const decode_state =
+                                async_states.payload<SHostTgaDecodeState>(async_slot);
+                            if (decode_state == nullptr)
+                            {
+                                MV_CRITICAL_EVENT("Host: TGA decode result has invalid async slot {}", async_slot);
+                                break;
+                            }
+
+                            const std::int32_t application_slot = decode_state->application_slot;
+                            const image::codec::tga::decoded_image_desc desc = result->desc;
+                            if (!result->buffer.is_ready())
+                            {
+                                (void)post_tga_load_result(application_slot, CAssetId{}, desc, false);
+                                (void)async_states.release(async_slot);
+                                break;
+                            }
+
+                            const CAssetId decoded_image = assets.insert(std::move(inbound_msg_owning));
+                            const bool stored = assets.resolve(decoded_image) != nullptr;
+                            (void)post_tga_load_result(application_slot, decoded_image, desc, stored);
+                            (void)async_states.release(async_slot);
                             break;
                         }
                         default:
@@ -851,6 +1053,9 @@ int host()
             (void)worker_package.shutdown();
         }
     }
+
+    async_states.deallocate();
+    assets.deallocate();
 
     if (debug_service_started)
     {
