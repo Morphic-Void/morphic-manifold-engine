@@ -3,6 +3,7 @@
 //  - MV_SYSTEM_THREAD(name)
 
 MV_SYSTEM_THREAD(host)
+MV_SYSTEM_THREAD(debug_service)
 MV_SYSTEM_THREAD(application)
 MV_SYSTEM_THREAD(rendering)
 MV_SYSTEM_THREAD(rhi)
