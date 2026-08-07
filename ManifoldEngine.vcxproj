@@ -227,8 +227,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-      <ClCompile Include="src\debug\event_arguments.cpp" />
-      <ClCompile Include="src\debug\service.cpp" />
+    <ClCompile Include="src\debug\event_arguments.cpp" />
+    <ClCompile Include="src\debug\service.cpp" />
     <ClCompile Include="src\host\host.cpp" />
     <ClCompile Include="src\host\host_context.cpp" />
     <ClCompile Include="src\host\host_worker_thread.cpp" />
@@ -304,9 +304,9 @@
     <ClInclude Include="include\containers\TPodUnorderedSlots.hpp" />
     <ClInclude Include="include\containers\TPodVector.hpp" />
     <ClInclude Include="include\containers\TUnorderedCollection.hpp" />
-      <ClInclude Include="include\debug\macros.hpp" />
-      <ClInclude Include="include\debug\event_arguments.hpp" />
-      <ClInclude Include="include\debug\service.hpp" />
+    <ClInclude Include="include\debug\macros.hpp" />
+    <ClInclude Include="include\debug\event_arguments.hpp" />
+    <ClInclude Include="include\debug\service.hpp" />
     <ClInclude Include="include\host\host.hpp" />
     <ClInclude Include="include\host\host_context.hpp" />
     <ClInclude Include="include\host\host_worker_thread.hpp" />
@@ -412,6 +412,7 @@
     <None Include="docs\project\future_work_notes.md" />
     <None Include="docs\system\erased_owner.md" />
     <None Include="docs\origins.md" />
+    <None Include="docs\threading\job_framework_milestone.md" />
     <None Include="docs\threading\transports\TMpmcTransport.md" />
     <None Include="docs\threading\transports\TOwningTransport.md" />
     <None Include="docs\threading\transports\TQueueTransport.md" />

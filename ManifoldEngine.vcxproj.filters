@@ -729,6 +729,9 @@
     <None Include="docs\threading\transports\TMpmcTransport.md">
       <Filter>docs\threading\transports</Filter>
     </None>
+    <None Include="docs\threading\job_framework_milestone.md">
+      <Filter>docs\threading</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE.txt" />
