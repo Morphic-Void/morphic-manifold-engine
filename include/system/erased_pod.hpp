@@ -12,13 +12,15 @@
 //
 //  Inline POD erased storage.
 //
-//  Provides fixed-capacity, at least 16-byte-aligned erased storage for POD
-//  payloads identified by project type ids. Payloads may be value-initialised
+//  Provides fixed-capacity, at least 16-byte-aligned erased storage for
+//  trivially copyable, standard-layout payloads identified by project type
+//  ids. Payloads may be value-initialised
 //  in place and accessed directly without copying.
 //
 //  This is a value mechanism only. Redefinition begins the lifetime of a
-//  trivial payload in place; it does not allocate or transfer ownership. The
-//  tag belongs to the carrier and is preserved when the payload is redefined.
+//  safely destructible payload in place; it does not allocate or transfer
+//  ownership. The tag belongs to the carrier and is preserved when the payload
+//  is redefined.
 //
 //  The shared type-to-id binding is provided by
 //  system/system_type_registration.hpp.
@@ -32,7 +34,7 @@
 #include <cstdint>      //  std::uint32_t, std::uint64_t
 #include <cstring>      //  std::memset
 #include <new>          //  placement new, std::launder
-#include <type_traits>  //  std::is_standard_layout_v, std::is_trivial_v
+#include <type_traits>  //  payload compatibility traits
 
 #include "system/system_type_registration.hpp"
 
@@ -127,8 +129,10 @@ template<std::size_t PayloadSize, std::size_t PayloadAlign>
 template<typename T>
 constexpr bool TErasedPod<PayloadSize, PayloadAlign>::is_compatible_with() noexcept
 {
-    return std::is_trivial_v<T>
+    return std::is_trivially_copyable_v<T>
         && std::is_standard_layout_v<T>
+        && std::is_trivially_destructible_v<T>
+        && std::is_nothrow_default_constructible_v<T>
         && (sizeof(T) <= PayloadSize)
         && (alignof(T) <= k_payload_align);
 }
@@ -177,8 +181,10 @@ template<typename T>
 constexpr void TErasedPod<PayloadSize, PayloadAlign>::validate_payload_type() noexcept
 {
     static_assert(type_ids::is_valid_id(k_type_id_v<T>), "TErasedPod requires a valid, non-zero payload type id.");
-    static_assert(std::is_trivial_v<T>, "TErasedPod requires trivial payloads.");
+    static_assert(std::is_trivially_copyable_v<T>, "TErasedPod requires trivially copyable payloads.");
     static_assert(std::is_standard_layout_v<T>, "TErasedPod requires standard-layout payloads.");
+    static_assert(std::is_trivially_destructible_v<T>, "TErasedPod requires trivially destructible payloads.");
+    static_assert(std::is_nothrow_default_constructible_v<T>, "TErasedPod requires nothrow default-constructible payloads.");
     static_assert((sizeof(T) <= PayloadSize), "TErasedPod payload storage is too small.");
     static_assert((alignof(T) <= k_payload_align), "TErasedPod payload storage is under-aligned.");
 }

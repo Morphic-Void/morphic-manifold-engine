@@ -41,7 +41,7 @@
 #include <cstddef>      //  std::size_t
 #include <cstdint>      //  std::uint64_t, std::uintptr_t
 #include <cstring>      //  std::memcpy, std::memset
-#include <type_traits>  //  std::is_standard_layout_v, std::is_trivial_v, std::is_trivially_copyable_v
+#include <type_traits>  //  std::is_standard_layout_v, std::is_trivially_copyable_v
 
 #include "system/system_type_registration.hpp"
 
@@ -97,7 +97,7 @@ public:
     template<typename T>
     static constexpr bool is_payload_compatible_with() noexcept
     {
-        return std::is_trivial_v<T>
+        return std::is_trivially_copyable_v<T>
             && std::is_standard_layout_v<T>
             && (sizeof(T) <= k_payload_size)
             && (alignof(T) <= k_payload_align);
@@ -140,7 +140,7 @@ private:
         static_assert(type_ids::is_valid_id(k_type_id_v<T>),
             "CPodThreadMsg requires a valid, non-zero payload type id.");
         static_assert(is_payload_compatible_with<T>(),
-            "CPodThreadMsg requires a POD payload that fits its fixed 48-byte, 16-byte-aligned storage.");
+            "CPodThreadMsg requires a trivially copyable, standard-layout payload that fits its fixed 48-byte, 16-byte-aligned storage.");
     }
 
     SStorage m_storage;
