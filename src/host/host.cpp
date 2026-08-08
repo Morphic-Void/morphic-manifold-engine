@@ -106,7 +106,7 @@ bool CHost::start_threads() noexcept
 
     for (std::size_t thread_index = 0u; thread_index < k_thread_count; ++thread_index)
     {
-        const std::int32_t thread_slot = m_thread_packages.emplace(thread_configs[thread_index]);
+        const std::int32_t thread_slot = m_thread_packages.emplace(thread_configs[thread_index], m_perf_count_conversion);
         if (thread_slot < 0)
         {
             return false;
@@ -123,7 +123,8 @@ bool CHost::start_threads() noexcept
 
 bool CHost::initialise_runtime() noexcept
 {
-    return m_thread_packages.initialise() &&
+    return m_perf_count_conversion.init() &&
+        m_thread_packages.initialise() &&
         m_assets.initialise() &&
         m_async_states.initialise() &&
         start_threads();
@@ -161,10 +162,8 @@ void CHost::run() noexcept
     debug_system::CDebugServiceState* const debug_service = m_debug_service;
 
     platform::system::CPerfCounter perf_counter;
-    platform::system::CPerfCountConversion perf_count_converter;
     perf_counter.update();
-    perf_count_converter.init();
-    std::uint64_t ticks_per_second = perf_count_converter.query_ticks_per_second();
+    const std::uint64_t ticks_per_second = m_perf_count_conversion.query_ticks_per_second();
 
     threading::CThreadPackage* const application = thread_package(EWorkerThreadID::application);
     MV_CRITICAL_ASSERT(application != nullptr);

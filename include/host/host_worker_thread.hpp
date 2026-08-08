@@ -2,10 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   host_worker_thread.hpp
-//  Author: Ritchie Brannan
-//  Drafting and refactoring assistance: OpenAI tools
-//  Date:   7 Aug 26
+//  File:    host_worker_thread.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    7 Aug 26
 //
 //  Entry point for a host-owned worker thread.
 

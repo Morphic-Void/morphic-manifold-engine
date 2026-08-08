@@ -23,6 +23,7 @@
 
 #include "platform/threading/thread_lifetime.hpp"
 #include "platform/threading/thread_priority.hpp"
+#include "platform/system/performance_counter.hpp"
 #include "system/system_ids.hpp"
 #include "threading/CParkingGate.hpp"
 #include "threading/CThreadControlState.hpp"
@@ -42,8 +43,18 @@ struct ThreadConfig
 class CThreadResources
 {
 public:
-    explicit CThreadResources(const ThreadConfig& thread_config) noexcept : config{ thread_config } {}
+    CThreadResources(
+        const ThreadConfig& thread_config,
+        const platform::system::CPerfCountConversion& perf_count_conversion) noexcept
+        : config{ thread_config }
+        , perf_count_conversion{ perf_count_conversion }
+    {
+    }
     ~CThreadResources() noexcept = default;
+
+    //  Immutable configuration shared by the package and thread context.
+    ThreadConfig config;
+    const platform::system::CPerfCountConversion perf_count_conversion;
 
     //  Common resources available to the thread package and context.
     bool created{ false };
@@ -54,7 +65,6 @@ public:
     transports::CErasedPodMsgTransport worker_to_host_msgs;
     transports::CErasedOwnerMsgTransport worker_to_host_owned_msgs;
     CThreadControlState control_state;
-    ThreadConfig config;
 };
 
 class CThreadContext
@@ -72,6 +82,7 @@ public:
     void advance_heartbeat() noexcept;
 
     [[nodiscard]] bool exit_requested() const noexcept;
+    [[nodiscard]] const platform::system::CPerfCountConversion& perf_count_conversion() const noexcept;
     std::uint32_t wait_for_new_epoch(std::uint32_t epoch) noexcept;
 
     bool read(CErasedPodMsg& msg) noexcept;
@@ -85,7 +96,12 @@ private:
 class CThreadPackage
 {
 public:
-    explicit CThreadPackage(const ThreadConfig& thread_config) noexcept : m_resources{ thread_config } {}
+    CThreadPackage(
+        const ThreadConfig& thread_config,
+        const platform::system::CPerfCountConversion& perf_count_conversion) noexcept
+        : m_resources{ thread_config, perf_count_conversion }
+    {
+    }
     ~CThreadPackage() noexcept = default;
 
     bool startup() noexcept;
@@ -137,6 +153,12 @@ inline void CThreadContext::advance_heartbeat() noexcept
 inline bool CThreadContext::exit_requested() const noexcept
 {
     return m_resources.control_state.exit_requested();
+}
+
+inline const platform::system::CPerfCountConversion&
+CThreadContext::perf_count_conversion() const noexcept
+{
+    return m_resources.perf_count_conversion;
 }
 
 inline bool CThreadContext::read(CErasedPodMsg& msg) noexcept

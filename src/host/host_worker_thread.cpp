@@ -2,10 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   host_worker_thread.cpp
-//  Author: Ritchie Brannan
-//  Drafting and refactoring assistance: OpenAI tools
-//  Date:   7 Aug 26
+//  File:    host_worker_thread.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    7 Aug 26
 //
 //  Host-owned file and image conditioning worker thread.
 
@@ -39,6 +38,9 @@ private:
     ~CHostWorkerThread() noexcept = default;
 
     std::uint32_t main() noexcept;
+    void startup() noexcept;
+    void operate() noexcept;
+    void shutdown() noexcept;
 
     threading::CThreadContext m_context;
 };
@@ -58,10 +60,21 @@ std::uint32_t CHostWorkerThread::entry_point(void* user_data) noexcept
 
 std::uint32_t CHostWorkerThread::main() noexcept
 {
+    startup();
+    operate();
+    shutdown();
+    return 0u;
+}
+
+void CHostWorkerThread::startup() noexcept
+{
     m_context.startup();
-
     MV_INFO("Worker starting");
+    m_context.mark_running();
+}
 
+void CHostWorkerThread::operate() noexcept
+{
     std::uint32_t epoch = 0u;
     while (!m_context.exit_requested())
     {
@@ -160,11 +173,13 @@ std::uint32_t CHostWorkerThread::main() noexcept
             epoch = m_context.wait_for_new_epoch(epoch);
         }
     }
+}
+
+void CHostWorkerThread::shutdown() noexcept
+{
+    m_context.mark_exiting();
     m_context.mark_exited();
-
     MV_INFO("Worker exited");
-
-    return 0u;
 }
 
 platform::threading::FThreadEntry host_worker_thread_entry_point() noexcept

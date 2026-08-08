@@ -2,10 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   application_thread.hpp
-//  Author: Ritchie Brannan
-//  Drafting and refactoring assistance: OpenAI tools
-//  Date:   7 Aug 26
+//  File:    application_thread.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    7 Aug 26
 //
 //  Entry point for the application thread.
 

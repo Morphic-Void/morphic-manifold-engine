@@ -24,6 +24,7 @@
 #include "containers/TInstance.hpp"
 #include "containers/TUnorderedCollection.hpp"
 #include "debug/service.hpp"
+#include "platform/system/performance_counter.hpp"
 #include "system/async_state.hpp"
 #include "threading/CThreadPackage.hpp"
 
@@ -71,6 +72,7 @@ private:
     TUnorderedCollection<threading::CThreadPackage> m_thread_packages;
     CAssetRepository m_assets;
     CASyncStates m_async_states;
+    platform::system::CPerfCountConversion m_perf_count_conversion;
     std::int32_t m_thread_slots[k_thread_count]{ -1, -1, -1 };
 };
 
