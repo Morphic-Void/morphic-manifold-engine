@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   CErasedMessageTransports.hpp
+//  File:    CErasedMessageTransports.hpp
 //  Authors: Ritchie Brannan / OpenAI Codex
-//  Date:   8 Aug 26
+//  Date:    8 Aug 26
 //
 //  Concrete transports for erased POD and owning thread messages.
 

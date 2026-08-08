@@ -2,25 +2,79 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   host.hpp
-//  Author: Ritchie Brannan
-//  Date:   15 May 26
+//  File:    host.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    15 May 26
 //
 //  Requirements:
 //  - Requires C++17 or later.
 //  - No exceptions.
 //
-//  The main host service thread for the engine.
+//  The main host runtime and process-facing entry point.
 
 #pragma once
 
 #ifndef HOST_HPP_INCLUDED
 #define HOST_HPP_INCLUDED
 
+#include <cstddef>      //  std::size_t
+#include <cstdint>      //  std::int32_t, std::uint8_t
+
+#include "assets/asset_repository.hpp"
+#include "containers/TInstance.hpp"
+#include "containers/TUnorderedCollection.hpp"
+#include "debug/service.hpp"
+#include "system/async_state.hpp"
+#include "threading/CThreadPackage.hpp"
+
 namespace host
 {
 
-int host();
+class CHost final
+{
+public:
+    CHost() noexcept = default;
+    CHost(const CHost&) = delete;
+    CHost& operator=(const CHost&) = delete;
+    CHost(CHost&&) = delete;
+    CHost& operator=(CHost&&) = delete;
+    ~CHost() noexcept;
+
+    [[nodiscard]] int execute() noexcept;
+
+private:
+    enum class EWorkerThreadID : std::uint8_t
+    {
+        bg_file_io = 0u,
+        bg_conditioning,
+        application,
+        count
+    };
+
+    static constexpr std::size_t k_thread_count = static_cast<std::size_t>(EWorkerThreadID::count);
+
+    void initialise_debug_service() noexcept;
+    [[nodiscard]] bool initialise_runtime() noexcept;
+    [[nodiscard]] bool start_threads() noexcept;
+    void run() noexcept;
+    void shutdown() noexcept;
+    void shutdown_threads() noexcept;
+    void shutdown_debug_service() noexcept;
+
+    [[nodiscard]] threading::CThreadPackage* thread_package(EWorkerThreadID id) noexcept;
+
+    TInstance<debug_system::CDebugServiceState> m_debug_service_owner;
+    debug_system::CDebugServiceState* m_debug_service{ nullptr };
+    bool m_debug_service_installed{ false };
+    bool m_debug_service_started{ false };
+
+    TUnorderedCollection<threading::CThreadPackage> m_thread_packages;
+    CAssetRepository m_assets;
+    CASyncStates m_async_states;
+    std::int32_t m_thread_slots[k_thread_count]{ -1, -1, -1 };
+};
+
+int host() noexcept;
 
 }   //  namespace host
 

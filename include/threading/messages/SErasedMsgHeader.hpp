@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   SErasedMsgHeader.hpp
+//  File:    SErasedMsgHeader.hpp
 //  Authors: Ritchie Brannan / OpenAI Codex
-//  Date:   8 Aug 26
+//  Date:    8 Aug 26
 //
 //  Shared coordination header for erased thread messages.
 
