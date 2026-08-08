@@ -56,7 +56,7 @@ bool CThreadPackage::startup() noexcept
     {
         if (m_resources.worker_to_host_msgs.initialise_growable(0u))
         {
-            if (m_resources.worker_owned_to_host_owned.initialise(0u))
+            if (m_resources.worker_to_host_owned_msgs.initialise(0u))
             {
                 if (m_resources.wait_predicate.acquire_control())
                 {
@@ -78,7 +78,7 @@ bool CThreadPackage::startup() noexcept
                     m_resources.control_state.mark_empty();
                     m_resources.wait_predicate.release_control();
                 }
-                m_resources.worker_owned_to_host_owned.deallocate();
+                m_resources.worker_to_host_owned_msgs.deallocate();
             }
             m_resources.worker_to_host_msgs.deallocate();
         }
@@ -100,7 +100,7 @@ bool CThreadPackage::shutdown() noexcept
         m_resources.created = m_resources.thread.join_and_close();
         if (!m_resources.created)
         {
-            m_resources.worker_owned_to_host_owned.deallocate();
+            m_resources.worker_to_host_owned_msgs.deallocate();
             m_resources.worker_to_host_msgs.deallocate();
             m_resources.host_to_worker_msgs.deallocate();
         }

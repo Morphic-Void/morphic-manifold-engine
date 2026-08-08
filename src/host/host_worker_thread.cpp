@@ -10,6 +10,7 @@
 //  Host-owned file and image conditioning worker thread.
 
 #include <cstdint>      //  std::uint32_t
+#include <utility>      //  std::move
 
 #include "host/host_worker_thread.hpp"
 
@@ -65,12 +66,12 @@ std::uint32_t CHostWorkerThread::main() noexcept
     while (!m_context.exit_requested())
     {
         m_context.advance_heartbeat();
-        threading::CPodThreadMsg inbound_msg;
+        threading::CErasedPodMsg inbound_msg;
         if (m_context.read(inbound_msg))
         {
             MV_TRACE("Worker message received");
 
-            switch (inbound_msg.query_payload_type_id())
+            switch (inbound_msg.query_message_type_id())
             {
                 case (k_type_id_v<FileLoadRequest>):
                 {
@@ -78,13 +79,16 @@ std::uint32_t CHostWorkerThread::main() noexcept
 
                     FileLoadRequest request;
                     (void)inbound_msg.copy_payload_to(request);
-                    CErasedOwner outbound_msg = CErasedOwner::create<OwningFileLoadResult>();
-                    if (OwningFileLoadResult* const result = outbound_msg.payload<OwningFileLoadResult>())
+                    CErasedOwner content = CErasedOwner::create<LoadedFile>();
+                    if (LoadedFile* const result = content.payload<LoadedFile>())
                     {
-                        result->async_slot = inbound_msg.query_async_slot();
                         result->buffer = platform::filesystem::loadFile(request.file);
-                        (void)m_context.pass_ownership(outbound_msg);
                     }
+                    threading::CErasedOwnerMsg outbound_msg;
+                    outbound_msg.set_message_type<FileLoadResult>();
+                    outbound_msg.set_async_slot(inbound_msg.query_async_slot());
+                    outbound_msg.set_owner(std::move(content));
+                    (void)m_context.post(std::move(outbound_msg));
                     break;
                 }
                 case (k_type_id_v<FileSaveRequest>):
@@ -95,7 +99,7 @@ std::uint32_t CHostWorkerThread::main() noexcept
                     (void)inbound_msg.copy_payload_to(request);
                     FileSaveResult result;
                     result.success = platform::filesystem::saveFile(request.file, request.view);
-                    threading::CPodThreadMsg outbound_msg;
+                    threading::CErasedPodMsg outbound_msg;
                     outbound_msg.set_async_slot(inbound_msg.query_async_slot());
                     outbound_msg.assign_payload(result);
                     (void)m_context.post(outbound_msg);
@@ -107,13 +111,16 @@ std::uint32_t CHostWorkerThread::main() noexcept
 
                     TgaEncodeRequest request;
                     (void)inbound_msg.copy_payload_to(request);
-                    CErasedOwner outbound_msg = CErasedOwner::create<OwningTgaEncodeResult>();
-                    if (OwningTgaEncodeResult* const result = outbound_msg.payload<OwningTgaEncodeResult>())
+                    CErasedOwner content = CErasedOwner::create<EncodedTga>();
+                    if (EncodedTga* const result = content.payload<EncodedTga>())
                     {
-                        result->async_slot = inbound_msg.query_async_slot();
                         result->buffer = image::codec::tga::encode(request.view, request.options);
-                        (void)m_context.pass_ownership(outbound_msg);
                     }
+                    threading::CErasedOwnerMsg outbound_msg;
+                    outbound_msg.set_message_type<TgaEncodeResult>();
+                    outbound_msg.set_async_slot(inbound_msg.query_async_slot());
+                    outbound_msg.set_owner(std::move(content));
+                    (void)m_context.post(std::move(outbound_msg));
                     break;
                 }
                 case (k_type_id_v<TgaDecodeRequest>):
@@ -122,22 +129,25 @@ std::uint32_t CHostWorkerThread::main() noexcept
 
                     TgaDecodeRequest request;
                     (void)inbound_msg.copy_payload_to(request);
-                    CErasedOwner outbound_msg = CErasedOwner::create<OwningTgaDecodeResult>();
-                    if (OwningTgaDecodeResult* const result = outbound_msg.payload<OwningTgaDecodeResult>())
+                    CErasedOwner content = CErasedOwner::create<DecodedTga>();
+                    if (DecodedTga* const result = content.payload<DecodedTga>())
                     {
-                        result->async_slot = inbound_msg.query_async_slot();
                         result->buffer = image::codec::tga::decode(request.view, result->desc, request.vflip);
-                        (void)m_context.pass_ownership(outbound_msg);
                     }
+                    threading::CErasedOwnerMsg outbound_msg;
+                    outbound_msg.set_message_type<TgaDecodeResult>();
+                    outbound_msg.set_async_slot(inbound_msg.query_async_slot());
+                    outbound_msg.set_owner(std::move(content));
+                    (void)m_context.post(std::move(outbound_msg));
                     break;
                 }
                 default:
                 {
-                    MV_DETAIL("Worker unrecognised message type {}", inbound_msg.query_payload_type_id());
+                    MV_DETAIL("Worker unrecognised message type {}", inbound_msg.query_message_type_id());
 
                     UnrecognisedMsg unrecognised;
-                    unrecognised.msg_id = inbound_msg.query_payload_type_id();
-                    threading::CPodThreadMsg outbound_msg;
+                    unrecognised.msg_id = inbound_msg.query_message_type_id();
+                    threading::CErasedPodMsg outbound_msg;
                     outbound_msg.set_async_slot(inbound_msg.query_async_slot());
                     outbound_msg.assign_payload(unrecognised);
                     (void)m_context.post(outbound_msg);

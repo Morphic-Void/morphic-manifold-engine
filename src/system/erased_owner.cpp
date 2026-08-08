@@ -49,16 +49,16 @@ void CErasedOwner::destroy() noexcept
         {
             switch (m_type_id)
             {
-                case k_type_id_v<OwningFileLoadResult>:
-                    static_cast<OwningFileLoadResult*>(payload)->~OwningFileLoadResult();
+                case k_type_id_v<LoadedFile>:
+                    static_cast<LoadedFile*>(payload)->~LoadedFile();
                     break;
 
-                case k_type_id_v<OwningTgaEncodeResult>:
-                    static_cast<OwningTgaEncodeResult*>(payload)->~OwningTgaEncodeResult();
+                case k_type_id_v<EncodedTga>:
+                    static_cast<EncodedTga*>(payload)->~EncodedTga();
                     break;
 
-                case k_type_id_v<OwningTgaDecodeResult>:
-                    static_cast<OwningTgaDecodeResult*>(payload)->~OwningTgaDecodeResult();
+                case k_type_id_v<DecodedTga>:
+                    static_cast<DecodedTga*>(payload)->~DecodedTga();
                     break;
 
                 default:
@@ -156,19 +156,19 @@ bool CErasedOwner::memory_source_context(memory::CMemoryContext*& source) const 
     memory::CMemoryContext* payload_source = nullptr;
     switch (m_type_id)
     {
-        case k_type_id_v<OwningFileLoadResult>:
+        case k_type_id_v<LoadedFile>:
             payload_source =
-                static_cast<const OwningFileLoadResult*>(m_storage.data())->buffer.memory_source_context();
+                static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_source_context();
             break;
 
-        case k_type_id_v<OwningTgaEncodeResult>:
+        case k_type_id_v<EncodedTga>:
             payload_source =
-                static_cast<const OwningTgaEncodeResult*>(m_storage.data())->buffer.memory_source_context();
+                static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_source_context();
             break;
 
-        case k_type_id_v<OwningTgaDecodeResult>:
+        case k_type_id_v<DecodedTga>:
             payload_source =
-                static_cast<const OwningTgaDecodeResult*>(m_storage.data())->buffer.memory_source_context();
+                static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_source_context();
             break;
 
         default:
@@ -196,14 +196,14 @@ std::uint32_t CErasedOwner::payload_memory_allocation_count() const noexcept
 {
     switch (m_type_id)
     {
-        case k_type_id_v<OwningFileLoadResult>:
-            return static_cast<const OwningFileLoadResult*>(m_storage.data())->buffer.memory_allocation_count();
+        case k_type_id_v<LoadedFile>:
+            return static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_allocation_count();
 
-        case k_type_id_v<OwningTgaEncodeResult>:
-            return static_cast<const OwningTgaEncodeResult*>(m_storage.data())->buffer.memory_allocation_count();
+        case k_type_id_v<EncodedTga>:
+            return static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_allocation_count();
 
-        case k_type_id_v<OwningTgaDecodeResult>:
-            return static_cast<const OwningTgaDecodeResult*>(m_storage.data())->buffer.memory_allocation_count();
+        case k_type_id_v<DecodedTga>:
+            return static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_allocation_count();
 
         default:
             MV_CRITICAL_ASSERT(false);
@@ -215,14 +215,14 @@ std::uint64_t CErasedOwner::payload_memory_allocation_size() const noexcept
 {
     switch (m_type_id)
     {
-        case k_type_id_v<OwningFileLoadResult>:
-            return static_cast<const OwningFileLoadResult*>(m_storage.data())->buffer.memory_allocation_size();
+        case k_type_id_v<LoadedFile>:
+            return static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_allocation_size();
 
-        case k_type_id_v<OwningTgaEncodeResult>:
-            return static_cast<const OwningTgaEncodeResult*>(m_storage.data())->buffer.memory_allocation_size();
+        case k_type_id_v<EncodedTga>:
+            return static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_allocation_size();
 
-        case k_type_id_v<OwningTgaDecodeResult>:
-            return static_cast<const OwningTgaDecodeResult*>(m_storage.data())->buffer.memory_allocation_size();
+        case k_type_id_v<DecodedTga>:
+            return static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_allocation_size();
 
         default:
             MV_CRITICAL_ASSERT(false);
@@ -234,14 +234,14 @@ bool CErasedOwner::payload_can_reattribute_to(memory::CMemoryContext* const targ
 {
     switch (m_type_id)
     {
-        case k_type_id_v<OwningFileLoadResult>:
-            return static_cast<const OwningFileLoadResult*>(m_storage.data())->buffer.can_reattribute_to(target);
+        case k_type_id_v<LoadedFile>:
+            return static_cast<const LoadedFile*>(m_storage.data())->buffer.can_reattribute_to(target);
 
-        case k_type_id_v<OwningTgaEncodeResult>:
-            return static_cast<const OwningTgaEncodeResult*>(m_storage.data())->buffer.can_reattribute_to(target);
+        case k_type_id_v<EncodedTga>:
+            return static_cast<const EncodedTga*>(m_storage.data())->buffer.can_reattribute_to(target);
 
-        case k_type_id_v<OwningTgaDecodeResult>:
-            return static_cast<const OwningTgaDecodeResult*>(m_storage.data())->buffer.can_reattribute_to(target);
+        case k_type_id_v<DecodedTga>:
+            return static_cast<const DecodedTga*>(m_storage.data())->buffer.can_reattribute_to(target);
 
         default:
             MV_CRITICAL_ASSERT(false);
@@ -255,18 +255,18 @@ void CErasedOwner::unsafe_replace_payload_memory_context_without_accounting(
 {
     switch (m_type_id)
     {
-        case k_type_id_v<OwningFileLoadResult>:
-            static_cast<OwningFileLoadResult*>(m_storage.data())->
+        case k_type_id_v<LoadedFile>:
+            static_cast<LoadedFile*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
 
-        case k_type_id_v<OwningTgaEncodeResult>:
-            static_cast<OwningTgaEncodeResult*>(m_storage.data())->
+        case k_type_id_v<EncodedTga>:
+            static_cast<EncodedTga*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
 
-        case k_type_id_v<OwningTgaDecodeResult>:
-            static_cast<OwningTgaDecodeResult*>(m_storage.data())->
+        case k_type_id_v<DecodedTga>:
+            static_cast<DecodedTga*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
 

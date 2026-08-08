@@ -91,6 +91,9 @@
     <Filter Include="src\threading">
       <UniqueIdentifier>{7d987152-6b93-4b7f-a705-e5e93914b562}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\threading\messages">
+      <UniqueIdentifier>{c90a3b8f-27ab-44ba-b270-143ead032f0c}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\image">
       <UniqueIdentifier>{92eab3c4-d162-4293-b08a-761241bf0548}</UniqueIdentifier>
     </Filter>
@@ -444,13 +447,22 @@
     <ClInclude Include="include\threading\transports\transports.hpp">
       <Filter>include\threading\transports</Filter>
     </ClInclude>
-    <ClInclude Include="include\threading\messages\CPodThreadMsg.hpp">
+    <ClInclude Include="include\threading\messages\CErasedMessageTransports.hpp">
+      <Filter>include\threading\messages</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\messages\CErasedOwnerMsg.hpp">
+      <Filter>include\threading\messages</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\messages\CErasedPodMsg.hpp">
       <Filter>include\threading\messages</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\messages\byte_view_payloads.hpp">
       <Filter>include\threading\messages</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\messages\messages.hpp">
+      <Filter>include\threading\messages</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\messages\SErasedMsgHeader.hpp">
       <Filter>include\threading\messages</Filter>
     </ClInclude>
     <ClInclude Include="include\system\system_context.hpp">
@@ -628,6 +640,9 @@
     </ClCompile>
     <ClCompile Include="src\threading\CThreadPackage.cpp">
       <Filter>src\threading</Filter>
+    </ClCompile>
+    <ClCompile Include="src\threading\messages\CErasedOwnerMsgTransport.cpp">
+      <Filter>src\threading\messages</Filter>
     </ClCompile>
     <ClCompile Include="src\system\erased_owner.cpp">
       <Filter>src\system</Filter>

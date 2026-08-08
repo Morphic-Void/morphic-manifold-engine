@@ -12,7 +12,7 @@
 #include "system/erased_pod.hpp"
 #include "system/transported_types.hpp"
 #include "tests/ErasedPod_test_suite.hpp"
-#include "threading/messages/CPodThreadMsg.hpp"
+#include "threading/messages/CErasedPodMsg.hpp"
 
 namespace
 {
@@ -171,28 +171,28 @@ void test_erased_pod_header_and_extended_alignment(TTestContext& ctx)
 
 void test_thread_message_copy_boundary(TTestContext& ctx)
 {
-    using threading::CPodThreadMsg;
+    using threading::CErasedPodMsg;
 
-    static_assert(std::is_trivially_copyable_v<CPodThreadMsg>);
-    static_assert(std::is_standard_layout_v<CPodThreadMsg>);
-    static_assert(CPodThreadMsg::is_payload_compatible_with<FileSaveResult>());
-    static_assert(CPodThreadMsg::is_payload_compatible_with<SAlignedPod>());
-    static_assert(CPodThreadMsg::is_payload_compatible_with<CCanonicalValue>());
-    static_assert(CPodThreadMsg::is_payload_compatible_with<FileSaveRequest>());
-    static_assert(CPodThreadMsg::is_payload_compatible_with<TgaSaveRequest>());
-    static_assert(CPodThreadMsg::is_payload_compatible_with<TgaEncodeRequest>());
-    static_assert(CPodThreadMsg::is_payload_compatible_with<TgaDecodeRequest>());
-    static_assert(!CPodThreadMsg::is_payload_compatible_with<CNonTriviallyCopyable>());
-    static_assert(!CPodThreadMsg::is_payload_compatible_with<SOverAlignedPod>());
-    static_assert(!CPodThreadMsg::is_payload_compatible_with<SOversizedPod>());
-    static_assert(sizeof(CPodThreadMsg) == 64u);
-    static_assert(alignof(CPodThreadMsg) == 16u);
+    static_assert(std::is_trivially_copyable_v<CErasedPodMsg>);
+    static_assert(std::is_standard_layout_v<CErasedPodMsg>);
+    static_assert(CErasedPodMsg::is_payload_compatible_with<FileSaveResult>());
+    static_assert(CErasedPodMsg::is_payload_compatible_with<SAlignedPod>());
+    static_assert(CErasedPodMsg::is_payload_compatible_with<CCanonicalValue>());
+    static_assert(CErasedPodMsg::is_payload_compatible_with<FileSaveRequest>());
+    static_assert(CErasedPodMsg::is_payload_compatible_with<TgaSaveRequest>());
+    static_assert(CErasedPodMsg::is_payload_compatible_with<TgaEncodeRequest>());
+    static_assert(CErasedPodMsg::is_payload_compatible_with<TgaDecodeRequest>());
+    static_assert(!CErasedPodMsg::is_payload_compatible_with<CNonTriviallyCopyable>());
+    static_assert(!CErasedPodMsg::is_payload_compatible_with<SOverAlignedPod>());
+    static_assert(!CErasedPodMsg::is_payload_compatible_with<SOversizedPod>());
+    static_assert(sizeof(CErasedPodMsg) == 64u);
+    static_assert(alignof(CErasedPodMsg) == 16u);
 
-    CPodThreadMsg message;
-    const unsigned char zero_message[sizeof(CPodThreadMsg)]{};
+    CErasedPodMsg message;
+    const unsigned char zero_message[sizeof(CErasedPodMsg)]{};
     TEST_EXPECT(ctx, std::memcmp(&message, zero_message, sizeof(message)) == 0);
-    TEST_EXPECT(ctx, !message.has_payload());
-    TEST_EXPECT(ctx, message.query_payload_type_id() == type_ids::undefined);
+    TEST_EXPECT(ctx, !message.has_message_type());
+    TEST_EXPECT(ctx, message.query_message_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, message.query_async_slot() == 0);
 
     message.set_async_slot(41);
@@ -202,10 +202,10 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
     message.assign_payload(source);
     source.success = false;
 
-    TEST_EXPECT(ctx, message.has_payload());
+    TEST_EXPECT(ctx, message.has_message_type());
     TEST_EXPECT(ctx, message.query_async_slot() == 41);
     TEST_EXPECT(ctx, message.is_payload_a<FileSaveResult>());
-    TEST_EXPECT(ctx, message.query_payload_type_id() == k_type_id_v<FileSaveResult>);
+    TEST_EXPECT(ctx, message.query_message_type_id() == k_type_id_v<FileSaveResult>);
 
     FileSaveResult copied{ false };
     TEST_EXPECT(ctx, message.copy_payload_to(copied));
@@ -222,7 +222,7 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
 
 void test_thread_message_clears_previous_representation(TTestContext& ctx)
 {
-    threading::CPodThreadMsg reused;
+    threading::CErasedPodMsg reused;
     const TgaSaveRequest larger{
         nullptr, CAssetId{},
         { image::codec::tga::image_encode_src::AutoTrue32, true, true, false } };
@@ -231,7 +231,7 @@ void test_thread_message_clears_previous_representation(TTestContext& ctx)
     const UnrecognisedMsg small{ type_ids::file_save_result };
     reused.assign_payload(small);
 
-    threading::CPodThreadMsg fresh;
+    threading::CErasedPodMsg fresh;
     fresh.assign_payload(small);
 
     TEST_EXPECT(ctx, std::memcmp(&reused, &fresh, sizeof(reused)) == 0);

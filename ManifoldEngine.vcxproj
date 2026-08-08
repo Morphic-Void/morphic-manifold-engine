@@ -281,6 +281,7 @@
     <ClCompile Include="src\threading\CCountingSemaphore.cpp" />
     <ClCompile Include="src\threading\CParkingGate.cpp" />
     <ClCompile Include="src\threading\CThreadPackage.cpp" />
+    <ClCompile Include="src\threading\messages\CErasedOwnerMsgTransport.cpp" />
     <ClCompile Include="src\threading\CWaitPredicate.cpp" />
     <ClCompile Include="src\types\fp16data_t.cpp" />
   </ItemGroup>
@@ -375,8 +376,11 @@
     <ClInclude Include="include\threading\CThreadPackage.hpp" />
     <ClInclude Include="include\threading\CWaitPredicate.hpp" />
     <ClInclude Include="include\threading\messages\byte_view_payloads.hpp" />
-    <ClInclude Include="include\threading\messages\CPodThreadMsg.hpp" />
+    <ClInclude Include="include\threading\messages\CErasedMessageTransports.hpp" />
+    <ClInclude Include="include\threading\messages\CErasedOwnerMsg.hpp" />
+    <ClInclude Include="include\threading\messages\CErasedPodMsg.hpp" />
     <ClInclude Include="include\threading\messages\messages.hpp" />
+    <ClInclude Include="include\threading\messages\SErasedMsgHeader.hpp" />
     <ClInclude Include="include\threading\threading.hpp" />
     <ClInclude Include="include\threading\transports\TBulkTransport.hpp" />
     <ClInclude Include="include\threading\transports\TMpmcTransport.hpp" />

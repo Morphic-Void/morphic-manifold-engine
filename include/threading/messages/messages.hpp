@@ -19,7 +19,10 @@
 #ifndef MESSAGES_HPP_INCLUDED
 #define MESSAGES_HPP_INCLUDED
 
-#include "CPodThreadMsg.hpp"
+#include "CErasedMessageTransports.hpp"
+#include "CErasedOwnerMsg.hpp"
+#include "CErasedPodMsg.hpp"
+#include "SErasedMsgHeader.hpp"
 #include "byte_view_payloads.hpp"
 
 #endif  //  #ifndef MESSAGES_HPP_INCLUDED

@@ -14,7 +14,6 @@
 #define TRANSPORTED_TYPES_HPP_INCLUDED
 
 #include <cstddef>      //  std::size_t
-#include <cstdint>      //  std::int32_t
 
 #include "assets/asset_repository.hpp"
 #include "containers/ByteBuffers.hpp"
@@ -40,14 +39,16 @@ struct TgaEncodeRequest
 };
 struct TgaDecodeRequest { CByteConstView view; bool vflip; };
 
-struct FileLoadResult { CByteConstView* view; };
+struct FileLoadResult {};
 struct FileSaveResult { bool success; };
 struct TgaLoadResult { CAssetId asset; image::codec::tga::decoded_image_desc desc; bool success; };
 struct TgaSaveResult { bool success; };
+struct TgaEncodeResult {};
+struct TgaDecodeResult {};
 
-struct OwningFileLoadResult { std::int32_t async_slot; CByteBuffer buffer; };
-struct OwningTgaEncodeResult { std::int32_t async_slot; CByteBuffer buffer; };
-struct OwningTgaDecodeResult { std::int32_t async_slot; CByteRectBuffer buffer; image::codec::tga::decoded_image_desc desc; };
+struct LoadedFile { CByteBuffer buffer; };
+struct EncodedTga { CByteBuffer buffer; };
+struct DecodedTga { CByteRectBuffer buffer; image::codec::tga::decoded_image_desc desc; };
 
 MV_REGISTER_SYSTEM_TYPE(CByteBuffer, type_ids::byte_buffer);
 MV_REGISTER_SYSTEM_TYPE(CByteRectBuffer, type_ids::byte_rect_buffer);
@@ -68,14 +69,16 @@ MV_REGISTER_SYSTEM_TYPE(FileLoadResult, type_ids::file_load_result);
 MV_REGISTER_SYSTEM_TYPE(FileSaveResult, type_ids::file_save_result);
 MV_REGISTER_SYSTEM_TYPE(TgaLoadResult, type_ids::tga_load_result);
 MV_REGISTER_SYSTEM_TYPE(TgaSaveResult, type_ids::tga_save_result);
+MV_REGISTER_SYSTEM_TYPE(TgaEncodeResult, type_ids::tga_encode_result);
+MV_REGISTER_SYSTEM_TYPE(TgaDecodeResult, type_ids::tga_decode_result);
 
-MV_REGISTER_SYSTEM_TYPE(OwningFileLoadResult, type_ids::owning_file_load_result);
-MV_REGISTER_ERASED_OWNER_PAYLOAD(OwningFileLoadResult);
+MV_REGISTER_SYSTEM_TYPE(LoadedFile, type_ids::loaded_file);
+MV_REGISTER_ERASED_OWNER_PAYLOAD(LoadedFile);
 
-MV_REGISTER_SYSTEM_TYPE(OwningTgaEncodeResult, type_ids::owning_tga_encode_result);
-MV_REGISTER_ERASED_OWNER_PAYLOAD(OwningTgaEncodeResult);
+MV_REGISTER_SYSTEM_TYPE(EncodedTga, type_ids::encoded_tga);
+MV_REGISTER_ERASED_OWNER_PAYLOAD(EncodedTga);
 
-MV_REGISTER_SYSTEM_TYPE(OwningTgaDecodeResult, type_ids::owning_tga_decode_result);
-MV_REGISTER_ERASED_OWNER_PAYLOAD(OwningTgaDecodeResult);
+MV_REGISTER_SYSTEM_TYPE(DecodedTga, type_ids::decoded_tga);
+MV_REGISTER_ERASED_OWNER_PAYLOAD(DecodedTga);
 
 #endif  //  #ifndef TRANSPORTED_TYPES_HPP_INCLUDED

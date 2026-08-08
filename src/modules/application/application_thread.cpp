@@ -96,7 +96,7 @@ std::uint32_t CApplicationThread::main() noexcept
     TgaLoadRequest tga_load_request;
     tga_load_request.file = "test_files/test_input.tga";
     tga_load_request.vflip = false;
-    threading::CPodThreadMsg initial_msg;
+    threading::CErasedPodMsg initial_msg;
     initial_msg.set_async_slot(tga_slot);
     initial_msg.assign_payload(tga_load_request);
     if (!m_context.post(initial_msg))
@@ -132,7 +132,7 @@ std::uint32_t CApplicationThread::main() noexcept
 
         while (!m_context.exit_requested() && !test_complete)
         {
-            threading::CPodThreadMsg inbound_msg;
+            threading::CErasedPodMsg inbound_msg;
             if (!m_context.read(inbound_msg))
             {
                 break;
@@ -140,7 +140,7 @@ std::uint32_t CApplicationThread::main() noexcept
 
             MV_TRACE("Application: Message received");
 
-            switch (inbound_msg.query_payload_type_id())
+            switch (inbound_msg.query_message_type_id())
             {
                 case (k_type_id_v<TgaLoadResult>):
                 {
@@ -175,7 +175,7 @@ std::uint32_t CApplicationThread::main() noexcept
                     tga_save_request.options.allow_rle = true;
                     tga_save_request.options.vflip = false;
 
-                    threading::CPodThreadMsg outbound_msg;
+                    threading::CErasedPodMsg outbound_msg;
                     outbound_msg.set_async_slot(async_slot);
                     outbound_msg.assign_payload(tga_save_request);
                     if (!m_context.post(outbound_msg))
@@ -211,11 +211,11 @@ std::uint32_t CApplicationThread::main() noexcept
                 }
                 default:
                 {
-                    MV_DETAIL("Application: Unrecognised message type {}", inbound_msg.query_payload_type_id());
+                    MV_DETAIL("Application: Unrecognised message type {}", inbound_msg.query_message_type_id());
 
                     UnrecognisedMsg unrecognised;
-                    unrecognised.msg_id = inbound_msg.query_payload_type_id();
-                    threading::CPodThreadMsg outbound_msg;
+                    unrecognised.msg_id = inbound_msg.query_message_type_id();
+                    threading::CErasedPodMsg outbound_msg;
                     outbound_msg.set_async_slot(inbound_msg.query_async_slot());
                     outbound_msg.assign_payload(unrecognised);
                     (void)m_context.post(outbound_msg);

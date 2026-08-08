@@ -153,7 +153,7 @@ int host()
             result.asset = asset;
             result.desc = desc;
             result.success = success;
-            threading::CPodThreadMsg outbound_msg;
+            threading::CErasedPodMsg outbound_msg;
             outbound_msg.set_async_slot(application_slot);
             outbound_msg.assign_payload(result);
             return application_package.post(outbound_msg);
@@ -163,7 +163,7 @@ int host()
         {
             TgaSaveResult result;
             result.success = success;
-            threading::CPodThreadMsg outbound_msg;
+            threading::CErasedPodMsg outbound_msg;
             outbound_msg.set_async_slot(application_slot);
             outbound_msg.assign_payload(result);
             return application_package.post(outbound_msg);
@@ -186,12 +186,12 @@ int host()
             for (int32_t inbound_slot = thread_packages.first_live(); inbound_slot >= 0; inbound_slot = thread_packages.next_live(inbound_slot))
             {
                 threading::CThreadPackage& inbound_package = *thread_packages.get_object(inbound_slot);
-                threading::CPodThreadMsg inbound_msg;
+                threading::CErasedPodMsg inbound_msg;
                 while (inbound_package.read(inbound_msg))
                 {
                     MV_TRACE("Host: Recieved a message");
 
-                    switch (inbound_msg.query_payload_type_id())
+                    switch (inbound_msg.query_message_type_id())
                     {
                         case (k_type_id_v<FileSaveResult>):
                         {
@@ -239,7 +239,7 @@ int host()
                             threading::CThreadPackage& outbound_package = *thread_packages.get_object(outbound_slot);
                             FileLoadRequest file_load_request;
                             file_load_request.file = state->file;
-                            threading::CPodThreadMsg outbound_msg;
+                            threading::CErasedPodMsg outbound_msg;
                             outbound_msg.set_async_slot(async_slot);
                             outbound_msg.assign_payload(file_load_request);
                             if (!outbound_package.post(outbound_msg))
@@ -258,8 +258,8 @@ int host()
                             TgaSaveRequest tga_save_request;
                             (void)inbound_msg.copy_payload_to(tga_save_request);
                             const CAssetRecord* const source_record = assets.resolve(tga_save_request.source);
-                            const OwningTgaDecodeResult* const source =
-                                (source_record != nullptr) ? source_record->payload<OwningTgaDecodeResult>() : nullptr;
+                            const DecodedTga* const source =
+                                (source_record != nullptr) ? source_record->payload<DecodedTga>() : nullptr;
                             if ((source == nullptr) || !source->buffer.is_ready())
                             {
                                 MV_CRITICAL_EVENT("Host: TGA save request has invalid source asset");
@@ -287,7 +287,7 @@ int host()
                             TgaEncodeRequest tga_encode_request;
                             tga_encode_request.view = source_view;
                             tga_encode_request.options = state->options;
-                            threading::CPodThreadMsg outbound_msg;
+                            threading::CErasedPodMsg outbound_msg;
                             outbound_msg.set_async_slot(async_slot);
                             outbound_msg.assign_payload(tga_encode_request);
                             if (!outbound_package.post(outbound_msg))
@@ -309,25 +309,25 @@ int host()
                         default:
                         {
                             MV_DETAIL("Host: Recieved an unrecognised message type {}",
-                                inbound_msg.query_payload_type_id());
+                                inbound_msg.query_message_type_id());
                             break;
                         }
                     }
                 }
-                CErasedOwner inbound_msg_owning;
-                while (inbound_package.take_ownership(inbound_msg_owning))
+                threading::CErasedOwnerMsg inbound_owned_msg;
+                while (inbound_package.read(inbound_owned_msg))
                 {
-                    MV_TRACE("Host: Recieved object ownership");
+                    MV_TRACE("Host: Recieved an owning message");
 
-                    switch (inbound_msg_owning.query_type_id())
+                    const std::int32_t async_slot = inbound_owned_msg.query_async_slot();
+                    CErasedOwner content = inbound_owned_msg.take_owner();
+                    switch (inbound_owned_msg.query_message_type_id())
                     {
-                        case (k_type_id_v<OwningFileLoadResult>):
+                        case (k_type_id_v<FileLoadResult>):
                         {
                             MV_DETAIL("Host: Took ownership of a loaded file buffer");
 
-                            OwningFileLoadResult* const result =
-                                inbound_msg_owning.payload<OwningFileLoadResult>();
-                            const std::int32_t async_slot = result->async_slot;
+                            LoadedFile* const result = content.payload<LoadedFile>();
                             const SHostTgaFileLoadState* const load_state =
                                 async_states.payload<SHostTgaFileLoadState>(async_slot);
                             if (load_state == nullptr)
@@ -338,7 +338,7 @@ int host()
 
                             const std::int32_t application_slot = load_state->application_slot;
                             const bool vflip = load_state->vflip;
-                            if (!result->buffer.is_ready())
+                            if ((result == nullptr) || !result->buffer.is_ready())
                             {
                                 (void)post_tga_load_result(
                                     application_slot, CAssetId{},
@@ -347,10 +347,10 @@ int host()
                                 break;
                             }
 
-                            const CAssetId loaded_file = assets.insert(std::move(inbound_msg_owning));
+                            const CAssetId loaded_file = assets.insert(std::move(content));
                             const CAssetRecord* const loaded_record = assets.resolve(loaded_file);
-                            const OwningFileLoadResult* const loaded =
-                                (loaded_record != nullptr) ? loaded_record->payload<OwningFileLoadResult>() : nullptr;
+                            const LoadedFile* const loaded =
+                                (loaded_record != nullptr) ? loaded_record->payload<LoadedFile>() : nullptr;
                             if (loaded == nullptr)
                             {
                                 (void)post_tga_load_result(
@@ -371,7 +371,7 @@ int host()
                             TgaDecodeRequest tga_decode_request;
                             tga_decode_request.view = loaded_view;
                             tga_decode_request.vflip = vflip;
-                            threading::CPodThreadMsg outbound_msg;
+                            threading::CErasedPodMsg outbound_msg;
                             outbound_msg.set_async_slot(async_slot);
                             outbound_msg.assign_payload(tga_decode_request);
                             if (!outbound_package.post(outbound_msg))
@@ -383,13 +383,11 @@ int host()
                             }
                             break;
                         }
-                        case (k_type_id_v<OwningTgaEncodeResult>):
+                        case (k_type_id_v<TgaEncodeResult>):
                         {
                             MV_DETAIL("Host: Took ownership of an encoded TGA file buffer");
 
-                            OwningTgaEncodeResult* const result =
-                                inbound_msg_owning.payload<OwningTgaEncodeResult>();
-                            const std::int32_t async_slot = result->async_slot;
+                            EncodedTga* const result = content.payload<EncodedTga>();
                             const SHostTgaEncodeState* const encode_state =
                                 async_states.payload<SHostTgaEncodeState>(async_slot);
                             if (encode_state == nullptr)
@@ -400,17 +398,17 @@ int host()
 
                             const std::int32_t application_slot = encode_state->application_slot;
                             const char* const file = encode_state->file;
-                            if (!result->buffer.is_ready())
+                            if ((result == nullptr) || !result->buffer.is_ready())
                             {
                                 (void)post_tga_save_result(application_slot, false);
                                 (void)async_states.release(async_slot);
                                 break;
                             }
 
-                            const CAssetId encoded_file = assets.insert(std::move(inbound_msg_owning));
+                            const CAssetId encoded_file = assets.insert(std::move(content));
                             const CAssetRecord* const encoded_record = assets.resolve(encoded_file);
-                            const OwningTgaEncodeResult* const encoded =
-                                (encoded_record != nullptr) ? encoded_record->payload<OwningTgaEncodeResult>() : nullptr;
+                            const EncodedTga* const encoded =
+                                (encoded_record != nullptr) ? encoded_record->payload<EncodedTga>() : nullptr;
                             if (encoded == nullptr)
                             {
                                 (void)post_tga_save_result(application_slot, false);
@@ -429,7 +427,7 @@ int host()
                             FileSaveRequest file_save_request;
                             file_save_request.file = file;
                             file_save_request.view = encoded_view;
-                            threading::CPodThreadMsg outbound_msg;
+                            threading::CErasedPodMsg outbound_msg;
                             outbound_msg.set_async_slot(async_slot);
                             outbound_msg.assign_payload(file_save_request);
                             if (!outbound_package.post(outbound_msg))
@@ -439,13 +437,11 @@ int host()
                             }
                             break;
                         }
-                        case (k_type_id_v<OwningTgaDecodeResult>):
+                        case (k_type_id_v<TgaDecodeResult>):
                         {
                             MV_DETAIL("Host: Took ownership of a decoded TGA image buffer");
 
-                            OwningTgaDecodeResult* const result =
-                                inbound_msg_owning.payload<OwningTgaDecodeResult>();
-                            const std::int32_t async_slot = result->async_slot;
+                            DecodedTga* const result = content.payload<DecodedTga>();
                             const SHostTgaDecodeState* const decode_state =
                                 async_states.payload<SHostTgaDecodeState>(async_slot);
                             if (decode_state == nullptr)
@@ -455,15 +451,16 @@ int host()
                             }
 
                             const std::int32_t application_slot = decode_state->application_slot;
-                            const image::codec::tga::decoded_image_desc desc = result->desc;
-                            if (!result->buffer.is_ready())
+                            const image::codec::tga::decoded_image_desc desc =
+                                (result != nullptr) ? result->desc : image::codec::tga::decoded_image_desc::RGBA;
+                            if ((result == nullptr) || !result->buffer.is_ready())
                             {
                                 (void)post_tga_load_result(application_slot, CAssetId{}, desc, false);
                                 (void)async_states.release(async_slot);
                                 break;
                             }
 
-                            const CAssetId decoded_image = assets.insert(std::move(inbound_msg_owning));
+                            const CAssetId decoded_image = assets.insert(std::move(content));
                             const bool stored = assets.resolve(decoded_image) != nullptr;
                             (void)post_tga_load_result(application_slot, decoded_image, desc, stored);
                             (void)async_states.release(async_slot);
@@ -471,7 +468,8 @@ int host()
                         }
                         default:
                         {
-                            MV_CRITICAL_EVENT("Host: Took ownership of an unknown object {}", inbound_msg_owning.query_type_id());
+                            MV_CRITICAL_EVENT("Host: Recieved an unknown owning message type {}",
+                                inbound_owned_msg.query_message_type_id());
                             break;
                         }
                     }

@@ -23,14 +23,11 @@
 
 #include "platform/threading/thread_lifetime.hpp"
 #include "platform/threading/thread_priority.hpp"
-#include "system/erased_owner.hpp"
-#include "system/erased_owner_transport.hpp"
 #include "system/system_ids.hpp"
 #include "threading/CParkingGate.hpp"
 #include "threading/CThreadControlState.hpp"
 #include "threading/CWaitPredicate.hpp"
-#include "threading/messages/CPodThreadMsg.hpp"
-#include "threading/transports/TQueueTransport.hpp"
+#include "threading/messages/CErasedMessageTransports.hpp"
 
 namespace threading
 {
@@ -53,9 +50,9 @@ public:
     platform::threading::CThread thread;
     CParkingTicket parking_ticket;
     CWaitPredicate wait_predicate;
-    transports::TQueue<CPodThreadMsg> host_to_worker_msgs;
-    transports::TQueue<CPodThreadMsg> worker_to_host_msgs;
-    transports::CErasedOwnerTransport worker_owned_to_host_owned;
+    transports::CErasedPodMsgTransport host_to_worker_msgs;
+    transports::CErasedPodMsgTransport worker_to_host_msgs;
+    transports::CErasedOwnerMsgTransport worker_to_host_owned_msgs;
     CThreadControlState control_state;
     ThreadConfig config;
 };
@@ -77,9 +74,9 @@ public:
     [[nodiscard]] bool exit_requested() const noexcept;
     std::uint32_t wait_for_new_epoch(std::uint32_t epoch) noexcept;
 
-    bool read(CPodThreadMsg& msg) noexcept;
-    bool post(const CPodThreadMsg& msg) noexcept;
-    bool pass_ownership(CErasedOwner& obj) noexcept;
+    bool read(CErasedPodMsg& msg) noexcept;
+    bool post(const CErasedPodMsg& msg) noexcept;
+    bool post(CErasedOwnerMsg&& msg) noexcept;
 
 private:
     CThreadResources& m_resources;
@@ -93,9 +90,9 @@ public:
 
     bool startup() noexcept;
     bool shutdown() noexcept;
-    bool read(CPodThreadMsg& msg) noexcept;
-    bool post(const CPodThreadMsg& msg) noexcept;
-    bool take_ownership(CErasedOwner& obj) noexcept;
+    bool read(CErasedPodMsg& msg) noexcept;
+    bool post(const CErasedPodMsg& msg) noexcept;
+    bool read(CErasedOwnerMsg& msg) noexcept;
 
     [[nodiscard]] EThreadRunState query_state() const noexcept;
 
@@ -142,31 +139,31 @@ inline bool CThreadContext::exit_requested() const noexcept
     return m_resources.control_state.exit_requested();
 }
 
-inline bool CThreadContext::read(CPodThreadMsg& msg) noexcept
+inline bool CThreadContext::read(CErasedPodMsg& msg) noexcept
 {
     return m_resources.host_to_worker_msgs.read(msg);
 }
 
-inline bool CThreadContext::post(const CPodThreadMsg& msg) noexcept
+inline bool CThreadContext::post(const CErasedPodMsg& msg) noexcept
 {
     return m_resources.worker_to_host_msgs.post(msg);
 }
 
-inline bool CThreadContext::pass_ownership(CErasedOwner& obj) noexcept
+inline bool CThreadContext::post(CErasedOwnerMsg&& msg) noexcept
 {
-    return m_resources.worker_owned_to_host_owned.post(std::move(obj));
+    return m_resources.worker_to_host_owned_msgs.post(std::move(msg));
 }
 
 //==============================================================================
 //  CThreadPackage inline out of class function bodies
 //==============================================================================
 
-inline bool CThreadPackage::read(CPodThreadMsg& msg) noexcept
+inline bool CThreadPackage::read(CErasedPodMsg& msg) noexcept
 {
     return m_resources.worker_to_host_msgs.read(msg);
 }
 
-inline bool CThreadPackage::post(const CPodThreadMsg& msg) noexcept
+inline bool CThreadPackage::post(const CErasedPodMsg& msg) noexcept
 {
     const bool success = m_resources.host_to_worker_msgs.post(msg);
     if (success)
@@ -176,9 +173,9 @@ inline bool CThreadPackage::post(const CPodThreadMsg& msg) noexcept
     return success;
 }
 
-inline bool CThreadPackage::take_ownership(CErasedOwner& obj) noexcept
+inline bool CThreadPackage::read(CErasedOwnerMsg& msg) noexcept
 {
-    return m_resources.worker_owned_to_host_owned.read(obj);
+    return m_resources.worker_to_host_owned_msgs.read(msg);
 }
 
 inline EThreadRunState CThreadPackage::query_state() const noexcept
