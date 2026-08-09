@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    SErasedMsgHeader.hpp
-//  Authors: Ritchie Brannan / OpenAI Codex
+//  Authors: Ritchie Brannan / OpenAI tools
 //  Date:    8 Aug 26
 //
 //  Shared coordination header for erased thread messages.

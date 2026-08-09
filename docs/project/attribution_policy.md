@@ -67,18 +67,20 @@ Typical header:
 Ordinary AI assistance does not require additional per-file annotation in this
 category.
 
-### 2. Human-directed collaborative
+### 2. Co-authored
 
-Use this where the substantive result emerged through significant iteration
-between Ritchie Brannan and AI tools, with both human direction and AI
-contribution materially shaping the outcome.
+Use this where the resulting file was materially shaped by both Ritchie
+Brannan and AI tools, and where the AI contribution went beyond drafting or
+routine implementation support.
+
+This category is appropriate when AI reasoning, feedback, simplification, or
+iterative design contribution materially improved robustness, clarified the
+structure, or reshaped the resulting code or document to the point that it no
+longer feels honest to describe the outcome as the product of one party alone.
 
 Typical header:
 
-- `Author: Ritchie Brannan with OpenAI tools`
-
-This category should be used selectively where a simple single-author label
-would materially misrepresent the file.
+- `Authors: Ritchie Brannan / OpenAI tools`
 
 ### 3. AI-primary under human review
 
@@ -110,7 +112,7 @@ priorities, design direction, or engineering judgment, even if AI tools helped
 aggregate notes, improve structure, or polish wording.
 
 Technical background, audits, milestone summaries, and subsystem reference
-documents may fall into either the collaborative or AI-primary categories when
+documents may fall into either the co-authored or AI-primary categories when
 AI tools contributed a substantial share of the concrete explanatory content.
 
 ## Why this policy exists

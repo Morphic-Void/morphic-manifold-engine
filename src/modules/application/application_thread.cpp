@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    application_thread.cpp
-//  Authors: Ritchie Brannan / OpenAI Codex
+//  Authors: Ritchie Brannan / OpenAI tools
 //  Date:    7 Aug 26
 //
 //  Application thread and the current TGA flow test.

@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    application_thread.hpp
-//  Authors: Ritchie Brannan / OpenAI Codex
+//  Authors: Ritchie Brannan / OpenAI tools
 //  Date:    7 Aug 26
 //
 //  Entry point for the application thread.

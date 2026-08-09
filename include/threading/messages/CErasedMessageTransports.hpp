@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    CErasedMessageTransports.hpp
-//  Authors: Ritchie Brannan / OpenAI Codex
+//  Authors: Ritchie Brannan / OpenAI tools
 //  Date:    8 Aug 26
 //
 //  Concrete transports for erased POD and owning thread messages.

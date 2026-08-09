@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    CErasedOwnerMsg.hpp
-//  Authors: Ritchie Brannan / OpenAI Codex
+//  Authors: Ritchie Brannan / OpenAI tools
 //  Date:    8 Aug 26
 //
 //  Move-only erased message carrying independently typed owned content.

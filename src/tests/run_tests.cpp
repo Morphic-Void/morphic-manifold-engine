@@ -94,7 +94,7 @@ bool should_print_usage(int argc, char** argv)
 void print_usage()
 {
     std::cout <<
-        "Usage: ManifoldEngine [options]\n"
+        "Usage: MorphicEngine [options]\n"
         "\n"
         "Options:\n"
         "  -?, /?, -h, --help, -help, /help\n"
