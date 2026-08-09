@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36811.4
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MorphicEngine", "ManifoldEngine.vcxproj", "{EFB8A2F1-CDEC-4E22-933E-590558D7F314}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MorphicEngine", "MorphicEngine.vcxproj", "{EFB8A2F1-CDEC-4E22-933E-590558D7F314}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SuiteUTF", "external\SuiteUTF\SuiteUTF.vcxproj", "{0BF5D948-138E-45A7-915F-AA8C3D6DBA08}"
 EndProject
