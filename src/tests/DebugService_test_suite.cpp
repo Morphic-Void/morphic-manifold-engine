@@ -71,6 +71,12 @@ void compile_public_macro_interface(const bool execute)
     MV_ERROR("error");
     MV_CRITICAL_EVENT("critical event");
     MV_FATAL_EVENT("fatal event");
+    constexpr char maximum_transport_format[] =
+        "1234567890123456789012345678901234567890123456789012345678901234"
+        "567890123456789012345678901234567890123456789012345678901234567";
+    static_assert(sizeof(maximum_transport_format) ==
+        debug_system::k_event_format_capacity);
+    MV_INFO(maximum_transport_format);
     MV_PANIC("panic");
 }
 
@@ -96,9 +102,7 @@ debug_system::EEventArgumentType argument_type(
     const debug_system::SEventArguments& arguments,
     const std::size_t index)
 {
-    return static_cast<debug_system::EEventArgumentType>(
-        (arguments.type_tags >> static_cast<std::uint32_t>(index * 4u)) &
-        0x0fu);
+    return arguments.parameter_types[index];
 }
 
 debug_system::EEventFormatResult format_event(
@@ -132,6 +136,11 @@ void test_argument_encoding(TTestContext& ctx)
     static_assert(
         sizeof(debug_system::SEvent) ==
         debug_system::k_event_transport_element_size);
+    static_assert(alignof(debug_system::SEvent) == 64u);
+    static_assert(offsetof(debug_system::SEvent, filename) == 32u);
+    static_assert(offsetof(debug_system::SEvent, expression) == 64u);
+    static_assert(offsetof(debug_system::SEvent, format) == 256u);
+    static_assert(offsetof(debug_system::SEvent, parameters) == 384u);
     static_assert(debug_system::is_valid_event_metadata(
         debug_system::EEventLevel::info,
         debug_system::EEventType::event));
@@ -153,6 +162,8 @@ void test_argument_encoding(TTestContext& ctx)
     static_assert(
         std::is_trivially_copyable_v<debug_system::SEventArguments>);
     static_assert(
+        std::is_trivially_copyable_v<debug_system::SEventParameterValue>);
+    static_assert(
         std::is_trivially_copyable_v<debug_system::CInlineText16>);
     static_assert(debug_system::is_supported_event_argument_v<bool>);
     static_assert(debug_system::is_supported_event_argument_v<std::int32_t>);
@@ -169,10 +180,10 @@ void test_argument_encoding(TTestContext& ctx)
 
     const debug_system::SEventArguments empty =
         debug_system::encode_event_arguments();
-    TEST_EXPECT(ctx, empty.type_tags == 0u);
     TEST_EXPECT(ctx, empty.parameter_count == 0u);
-    TEST_EXPECT(ctx, empty.payload_size == 0u);
-    TEST_EXPECT(ctx, empty.reserved == 0u);
+    TEST_EXPECT(ctx,
+        argument_type(empty, 0u) ==
+        debug_system::EEventArgumentType::unused);
 
     const debug_system::SEventArguments encoded =
         debug_system::encode_event_arguments(
@@ -186,7 +197,6 @@ void test_argument_encoding(TTestContext& ctx)
             2.5);
 
     TEST_EXPECT(ctx, encoded.parameter_count == 8u);
-    TEST_EXPECT(ctx, encoded.payload_size == 36u);
     TEST_EXPECT(ctx,
         argument_type(encoded, 0u) ==
         debug_system::EEventArgumentType::false_value);
@@ -211,6 +221,10 @@ void test_argument_encoding(TTestContext& ctx)
     TEST_EXPECT(ctx,
         argument_type(encoded, 7u) ==
         debug_system::EEventArgumentType::float64);
+    TEST_EXPECT(ctx, encoded.parameters[0u].bytes[0u] == std::byte{});
+    TEST_EXPECT(ctx, encoded.parameters[1u].bytes[0u] == std::byte{});
+    TEST_EXPECT(ctx, encoded.parameters[2u].bytes[4u] == std::byte{});
+    TEST_EXPECT(ctx, encoded.parameters[7u].bytes[8u] == std::byte{});
 
     const debug_system::SEventArguments full_payload =
         debug_system::encode_event_arguments(
@@ -223,13 +237,14 @@ void test_argument_encoding(TTestContext& ctx)
             std::uint64_t{ 6u },
             std::uint64_t{ 7u });
     TEST_EXPECT(ctx, full_payload.parameter_count == 8u);
-    TEST_EXPECT(ctx, full_payload.payload_size == 64u);
+    TEST_EXPECT(ctx,
+        argument_type(full_payload, 7u) ==
+        debug_system::EEventArgumentType::uint64);
 
     const debug_system::SEventArguments inline_text =
         debug_system::encode_event_arguments(
             debug_system::CInlineText16{ "fifteen-chars!!" });
     TEST_EXPECT(ctx, inline_text.parameter_count == 1u);
-    TEST_EXPECT(ctx, inline_text.payload_size == 16u);
     TEST_EXPECT(ctx,
         argument_type(inline_text, 0u) ==
         debug_system::EEventArgumentType::inline_text);
@@ -237,7 +252,6 @@ void test_argument_encoding(TTestContext& ctx)
     const debug_system::SEventArguments type_id =
         debug_system::encode_event_arguments(type_ids::file_load_request);
     TEST_EXPECT(ctx, type_id.parameter_count == 1u);
-    TEST_EXPECT(ctx, type_id.payload_size == 4u);
     TEST_EXPECT(ctx,
         argument_type(type_id, 0u) ==
         debug_system::EEventArgumentType::type_id);
@@ -397,7 +411,7 @@ void test_argument_formatting(TTestContext& ctx)
 
     debug_system::SEventArguments malformed =
         debug_system::encode_event_arguments(std::uint32_t{ 1u });
-    malformed.payload_size = 3u;
+    malformed.parameters[0u].bytes[4u] = std::byte{ 1u };
     TEST_EXPECT(ctx,
         format_event(
             output,
@@ -408,10 +422,9 @@ void test_argument_formatting(TTestContext& ctx)
         debug_system::EEventFormatResult::invalid_descriptor);
 
     debug_system::SEventArguments reserved_type{};
-    reserved_type.type_tags = static_cast<std::uint32_t>(
-        debug_system::EEventArgumentType::reserved11);
+    reserved_type.parameter_types[0u] =
+        debug_system::EEventArgumentType::reserved_local_id_text;
     reserved_type.parameter_count = 1u;
-    reserved_type.payload_size = 0u;
     TEST_EXPECT(ctx,
         format_event(
             output,
@@ -420,6 +433,62 @@ void test_argument_formatting(TTestContext& ctx)
             reserved_type,
             output_size) ==
         debug_system::EEventFormatResult::invalid_descriptor);
+
+    reserved_type.parameter_types[0u] =
+        debug_system::EEventArgumentType::reserved_local_id_failure;
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "{}",
+            reserved_type,
+            output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+
+    debug_system::SEventArguments corrupt_unused{};
+    corrupt_unused.parameter_types[7u] = debug_system::EEventArgumentType::uint32;
+    TEST_EXPECT(ctx,
+        format_event(output, sizeof(output), "text", corrupt_unused, output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+    corrupt_unused = {};
+    corrupt_unused.parameters[7u].bytes[0u] = std::byte{ 1u };
+    TEST_EXPECT(ctx,
+        format_event(output, sizeof(output), "text", corrupt_unused, output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+
+    debug_system::SEventArguments invalid_count{};
+    invalid_count.parameter_count = 9u;
+    TEST_EXPECT(ctx,
+        format_event(output, sizeof(output), "text", invalid_count, output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+
+    debug_system::SEventArguments unknown_type{};
+    unknown_type.parameter_count = 1u;
+    unknown_type.parameter_types[0u] =
+        static_cast<debug_system::EEventArgumentType>(0xffu);
+    TEST_EXPECT(ctx,
+        format_event(output, sizeof(output), "{}", unknown_type, output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+
+    debug_system::SEventArguments unterminated_text{};
+    unterminated_text.parameter_count = 1u;
+    unterminated_text.parameter_types[0u] =
+        debug_system::EEventArgumentType::inline_text;
+    std::memset(unterminated_text.parameters[0u].bytes, 'q',
+        debug_system::k_event_argument_slot_size);
+    TEST_EXPECT(ctx,
+        format_event(output, sizeof(output), "{}", unterminated_text, output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+
+    char boundary_format[64]{};
+    std::memset(boundary_format, 'a', sizeof(boundary_format) - 1u);
+    TEST_EXPECT(ctx,
+        debug_system::format_event_text(
+            output, sizeof(output), boundary_format,
+            sizeof(boundary_format) - 1u,
+            debug_system::encode_event_arguments(), output_size) ==
+        debug_system::EEventFormatResult::success);
+    TEST_EXPECT(ctx, output_size == 63u);
 }
 
 void test_system_id_name_registry(TTestContext& ctx)
@@ -620,6 +689,7 @@ void test_provisioning_and_shared_words(TTestContext& ctx)
             breakpoint_override,
             true,
             debug_system::EShutdownReason::critical_incident,
+            nullptr,
             0u,
             nullptr,
             0u)));
@@ -634,6 +704,7 @@ void test_provisioning_and_shared_words(TTestContext& ctx)
             breakpoint_override,
             true,
             debug_system::EShutdownReason::fatal_incident,
+            nullptr,
             0u,
             nullptr,
             0u)));
@@ -720,7 +791,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             unregistered_type_id,
             type_ids::id_type{ 0x00000002u })));
 
-    char oversized[debug_system::k_event_text_capacity + 32u];
+    char oversized[debug_system::k_event_format_capacity + 32u];
     std::memset(oversized, 'x', sizeof(oversized) - 1u);
     oversized[sizeof(oversized) - 1u] = 0;
     TEST_EXPECT(ctx, debug_system::submit_text(oversized));
@@ -801,12 +872,8 @@ void test_writer_and_direct_paths(TTestContext& ctx)
         static_cast<unsigned long long>(invalid_system.raw_value()));
     TEST_EXPECT(ctx, invalid_marker_size > 0);
 
-    const std::size_t source_file_size =
-        sizeof(source_file) - 1u;
-    const char* const source_suffix =
-        source_file +
-        (source_file_size -
-            (debug_system::k_source_file_capacity - 1u));
+    constexpr const char* source_suffix =
+        "DebugService_test_suite.cpp";
     char source_marker[160]{};
     const int source_marker_size = std::snprintf(
         source_marker,
@@ -878,7 +945,7 @@ void test_lazy_log_opening(TTestContext& ctx)
     TEST_EXPECT(ctx, debug_system::install_service(service));
     TEST_EXPECT(ctx, service->start());
 
-    char oversized[debug_system::k_event_text_capacity + 32u];
+    char oversized[debug_system::k_event_format_capacity + 32u];
     std::memset(oversized, 'y', sizeof(oversized) - 1u);
     oversized[sizeof(oversized) - 1u] = 0;
     TEST_EXPECT(ctx, debug_system::submit_text(oversized));
@@ -886,6 +953,187 @@ void test_lazy_log_opening(TTestContext& ctx)
     TEST_EXPECT(ctx, service->stop());
     TEST_EXPECT(ctx, debug_system::uninstall_service(service));
     TEST_EXPECT(ctx, file_contains(direct_path, "[0000000001] "));
+}
+
+void test_filename_and_capacity_boundaries(TTestContext& ctx)
+{
+    constexpr const char* event_path = "debug_service_filename_test.log";
+    constexpr const char* direct_path = "debug_service_filename_test_direct.log";
+    constexpr char filename31[] =
+        "root\\mixed/path/1234567890123456789012345678901";
+    constexpr char filename32[] =
+        "root/mixed\\path/12345678901234567890123456789012";
+    constexpr char utf8_filename[] =
+        "root/path/AAAAA\xe2\x82\xac" "123456789012345678901234567";
+
+    TInstance<debug_system::CDebugServiceState> owner =
+        TInstance<debug_system::CDebugServiceState>::create();
+    TEST_EXPECT(ctx, owner.is_ready());
+    debug_system::CDebugServiceState* const service = owner.operator->();
+    TEST_EXPECT(ctx, service->configure_log_paths(event_path, direct_path));
+    TEST_EXPECT(ctx, service->open_logs());
+    TEST_EXPECT(ctx, service->start());
+
+    debug_system::EBreakpointOverride breakpoint_override =
+        debug_system::EBreakpointOverride::disabled;
+    TEST_EXPECT(ctx,
+        (service->process_event<
+            debug_system::EEventLevel::error,
+            debug_system::EEventType::event>(
+            debug_system::SEventUsagePoint{
+                filename31, sizeof(filename31) - 1u, 701u },
+            breakpoint_override, true, debug_system::EShutdownReason::none,
+            nullptr, 0u, "filename-31", sizeof("filename-31") - 1u)));
+    TEST_EXPECT(ctx,
+        (service->process_event<
+            debug_system::EEventLevel::error,
+            debug_system::EEventType::event>(
+            debug_system::SEventUsagePoint{
+                filename32, sizeof(filename32) - 1u, 702u },
+            breakpoint_override, true, debug_system::EShutdownReason::none,
+            nullptr, 0u, "filename-32", sizeof("filename-32") - 1u)));
+    TEST_EXPECT(ctx,
+        (service->process_event<
+            debug_system::EEventLevel::error,
+            debug_system::EEventType::event>(
+            debug_system::SEventUsagePoint{
+                utf8_filename, sizeof(utf8_filename) - 1u, 703u },
+            breakpoint_override, true, debug_system::EShutdownReason::none,
+            nullptr, 0u, "filename-utf8", sizeof("filename-utf8") - 1u)));
+    constexpr char plain_filename[] = "plain.cpp";
+    TEST_EXPECT(ctx,
+        (service->process_event<
+            debug_system::EEventLevel::error,
+            debug_system::EEventType::event>(
+            debug_system::SEventUsagePoint{
+                plain_filename, sizeof(plain_filename) - 1u, 704u },
+            breakpoint_override, true, debug_system::EShutdownReason::none,
+            nullptr, 0u, "filename-plain", sizeof("filename-plain") - 1u)));
+    constexpr char trailing_separator[] = "root/path/";
+    TEST_EXPECT(ctx,
+        (service->process_event<
+            debug_system::EEventLevel::error,
+            debug_system::EEventType::event>(
+            debug_system::SEventUsagePoint{
+                trailing_separator, sizeof(trailing_separator) - 1u, 705u },
+            breakpoint_override, true, debug_system::EShutdownReason::none,
+            nullptr, 0u, "trailing-separator", sizeof("trailing-separator") - 1u)));
+
+    char maximum_expression[debug_system::k_event_expression_capacity]{};
+    std::memset(maximum_expression, 'e', sizeof(maximum_expression) - 1u);
+    TEST_EXPECT(ctx,
+        (service->process_event<
+            debug_system::EEventLevel::assert,
+            debug_system::EEventType::condition>(
+            debug_system::SEventUsagePoint{
+                plain_filename, sizeof(plain_filename) - 1u, 706u },
+            breakpoint_override, false, debug_system::EShutdownReason::none,
+            maximum_expression, sizeof(maximum_expression) - 1u, "", 0u)));
+
+    char oversized_expression[debug_system::k_event_expression_capacity + 1u]{};
+    std::memset(oversized_expression, 'x', sizeof(oversized_expression) - 1u);
+    TEST_EXPECT(ctx,
+        !(service->process_event<
+            debug_system::EEventLevel::assert,
+            debug_system::EEventType::condition>(
+            debug_system::SEventUsagePoint{
+                plain_filename, sizeof(plain_filename) - 1u, 707u },
+            breakpoint_override, false, debug_system::EShutdownReason::none,
+            oversized_expression, sizeof(oversized_expression) - 1u, "", 0u)));
+
+    char maximum_format[debug_system::k_event_format_capacity]{};
+    std::memset(maximum_format, 'q', sizeof(maximum_format) - 1u);
+    TEST_EXPECT(ctx,
+        (service->submit_event<
+            debug_system::EEventLevel::info,
+            debug_system::EEventType::event>(
+            debug_system::SEventUsagePoint{
+                plain_filename, sizeof(plain_filename) - 1u, 708u },
+            maximum_format, sizeof(maximum_format) - 1u)));
+
+    char oversized_format[debug_system::k_event_format_capacity + 1u]{};
+    std::memset(oversized_format, 'z', sizeof(oversized_format) - 1u);
+    TEST_EXPECT(ctx,
+        !(service->submit_event<
+            debug_system::EEventLevel::info,
+            debug_system::EEventType::event>(
+            debug_system::SEventUsagePoint{
+                filename31, sizeof(filename31) - 1u, 709u },
+            oversized_format, sizeof(oversized_format) - 1u)));
+
+    TEST_EXPECT(ctx,
+        (service->process_event<
+            debug_system::EEventLevel::assert,
+            debug_system::EEventType::condition>(
+            debug_system::SEventUsagePoint{
+                plain_filename, sizeof(plain_filename) - 1u, 710u },
+            breakpoint_override, false, debug_system::EShutdownReason::none,
+            "Assertion failed: split | ",
+            sizeof("Assertion failed: split | ") - 1u,
+            "value {}", sizeof("value {}") - 1u, std::uint32_t{ 42u })));
+
+    TEST_EXPECT(ctx, service->stop());
+    TEST_EXPECT(ctx,
+        file_contains(event_path,
+            "[1234567890123456789012345678901:701] filename-31"));
+    TEST_EXPECT(ctx,
+        file_contains(event_path,
+            "[...5678901234567890123456789012:702] filename-32"));
+    TEST_EXPECT(ctx,
+        file_contains(event_path,
+            "[...123456789012345678901234567:703] filename-utf8"));
+    TEST_EXPECT(ctx,
+        file_contains(event_path, "[plain.cpp:704] filename-plain"));
+    TEST_EXPECT(ctx,
+        file_contains(event_path, "[error:event] trailing-separator"));
+    TEST_EXPECT(ctx,
+        file_contains(event_path, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"));
+    TEST_EXPECT(ctx,
+        file_contains(event_path, "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"));
+    TEST_EXPECT(ctx,
+        file_contains(event_path,
+            "[plain.cpp:710] Assertion failed: split | value 42"));
+}
+
+void test_queued_and_direct_equivalence(TTestContext& ctx)
+{
+    constexpr const char* event_path = "debug_service_equivalence_test.log";
+    constexpr const char* direct_path = "debug_service_equivalence_test_direct.log";
+    constexpr char source_file[] = "src/tests/DebugService_test_suite.cpp";
+    const debug_system::SEventUsagePoint usage_point{
+        source_file, sizeof(source_file) - 1u, 777u };
+
+    TInstance<debug_system::CDebugServiceState> owner =
+        TInstance<debug_system::CDebugServiceState>::create();
+    TEST_EXPECT(ctx, owner.is_ready());
+    debug_system::CDebugServiceState* const service = owner.operator->();
+    TEST_EXPECT(ctx, service->configure_log_paths(event_path, direct_path));
+    TEST_EXPECT(ctx, service->open_logs());
+
+    for (std::uint32_t index = 0u;
+        index < debug_system::CEventTransport::k_capacity; ++index)
+    {
+        TEST_EXPECT(ctx,
+            (service->submit_event<
+                debug_system::EEventLevel::info,
+                debug_system::EEventType::event>(
+                usage_point, "equivalence {}",
+                sizeof("equivalence {}") - 1u, std::uint32_t{ 42u })));
+    }
+
+    TEST_EXPECT(ctx,
+        (service->submit_event<
+            debug_system::EEventLevel::info,
+            debug_system::EEventType::event>(
+            usage_point, "equivalence {}",
+            sizeof("equivalence {}") - 1u, std::uint32_t{ 42u })));
+    TEST_EXPECT(ctx, service->start());
+    TEST_EXPECT(ctx, service->stop());
+
+    constexpr const char* reconstructed =
+        "[info:event] [DebugService_test_suite.cpp:777] equivalence 42";
+    TEST_EXPECT(ctx, file_contains(event_path, reconstructed));
+    TEST_EXPECT(ctx, file_contains(direct_path, reconstructed));
 }
 
 }   //  namespace debug_service_tests
@@ -901,6 +1149,8 @@ int run_debug_service_tests()
     debug_service_tests::test_provisioning_and_shared_words(ctx);
     debug_service_tests::test_writer_and_direct_paths(ctx);
     debug_service_tests::test_lazy_log_opening(ctx);
+    debug_service_tests::test_filename_and_capacity_boundaries(ctx);
+    debug_service_tests::test_queued_and_direct_equivalence(ctx);
 
     std::cout << "DebugService: " << ctx.passed << " passed, "
         << ctx.failed << " failed\n";

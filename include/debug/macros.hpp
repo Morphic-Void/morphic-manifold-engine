@@ -28,7 +28,7 @@
     #error MV_COMPILED_INFORMATION_LEVEL must be between 0 (none) and 3 (trace).
 #endif
 
-#define MV_INTERNAL_PROCESS_CONDITION(level, condition_expression, breakpoint_default, shutdown_reason, literal_prefix_size, ...) \
+#define MV_INTERNAL_PROCESS_CONDITION(level, condition_expression, breakpoint_default, shutdown_reason, expression_text, ...) \
     do \
     { \
         if (!(condition_expression)) \
@@ -36,7 +36,7 @@
             static debug_system::EBreakpointOverride s_breakpoint_override = debug_system::EBreakpointOverride::inherit; \
             (void)debug_system::process_condition_event<level, debug_system::EEventType::condition>( \
                 __FILE__, __LINE__, s_breakpoint_override, breakpoint_default, shutdown_reason, \
-                literal_prefix_size, __VA_ARGS__); \
+                expression_text, __VA_ARGS__); \
         } \
     } while (0)
 
@@ -62,13 +62,11 @@
     #define MV_ASSERT(condition) \
         MV_INTERNAL_PROCESS_CONDITION(debug_system::EEventLevel::assert, condition, true, \
             debug_system::EShutdownReason::none, \
-            static_cast<std::uint16_t>(sizeof("Assertion failed: " #condition) - 1u), \
-            "Assertion failed: " #condition)
+            "Assertion failed: " #condition, "")
     #define MV_ASSERT_MSG(condition, ...) \
         MV_INTERNAL_PROCESS_CONDITION(debug_system::EEventLevel::assert, condition, true, \
             debug_system::EShutdownReason::none, \
-            static_cast<std::uint16_t>(sizeof("Assertion failed: " #condition " | ") - 1u), \
-            "Assertion failed: " #condition " | " __VA_ARGS__)
+            "Assertion failed: " #condition " | ", __VA_ARGS__)
 #else
     #define MV_ASSERT(condition) do { } while (0)
     #define MV_ASSERT_MSG(condition, ...) do { } while (0)
@@ -78,13 +76,11 @@
     #define MV_DEBUG_ASSERT(condition) \
         MV_INTERNAL_PROCESS_CONDITION(debug_system::EEventLevel::assert, condition, true, \
             debug_system::EShutdownReason::none, \
-            static_cast<std::uint16_t>(sizeof("Debug assertion failed: " #condition) - 1u), \
-            "Debug assertion failed: " #condition)
+            "Debug assertion failed: " #condition, "")
     #define MV_DEBUG_ASSERT_MSG(condition, ...) \
         MV_INTERNAL_PROCESS_CONDITION(debug_system::EEventLevel::assert, condition, true, \
             debug_system::EShutdownReason::none, \
-            static_cast<std::uint16_t>(sizeof("Debug assertion failed: " #condition " | ") - 1u), \
-            "Debug assertion failed: " #condition " | " __VA_ARGS__)
+            "Debug assertion failed: " #condition " | ", __VA_ARGS__)
     #define MV_DEBUG_ONLY(expression) do { (void)(expression); } while (0)
 #else
     #define MV_DEBUG_ASSERT(condition) do { } while (0)
@@ -95,26 +91,22 @@
 #define MV_CRITICAL_ASSERT(condition) \
     MV_INTERNAL_PROCESS_CONDITION(debug_system::EEventLevel::critical, condition, true, \
         debug_system::EShutdownReason::critical_incident, \
-        static_cast<std::uint16_t>(sizeof("Critical assertion failed: " #condition) - 1u), \
-        "Critical assertion failed: " #condition)
+        "Critical assertion failed: " #condition, "")
 
 #define MV_CRITICAL_ASSERT_MSG(condition, ...) \
     MV_INTERNAL_PROCESS_CONDITION(debug_system::EEventLevel::critical, condition, true, \
         debug_system::EShutdownReason::critical_incident, \
-        static_cast<std::uint16_t>(sizeof("Critical assertion failed: " #condition " | ") - 1u), \
-        "Critical assertion failed: " #condition " | " __VA_ARGS__)
+        "Critical assertion failed: " #condition " | ", __VA_ARGS__)
 
 #define MV_FATAL_ASSERT(condition) \
     MV_INTERNAL_PROCESS_CONDITION(debug_system::EEventLevel::fatal, condition, true, \
         debug_system::EShutdownReason::fatal_incident, \
-        static_cast<std::uint16_t>(sizeof("Fatal assertion failed: " #condition) - 1u), \
-        "Fatal assertion failed: " #condition)
+        "Fatal assertion failed: " #condition, "")
 
 #define MV_FATAL_ASSERT_MSG(condition, ...) \
     MV_INTERNAL_PROCESS_CONDITION(debug_system::EEventLevel::fatal, condition, true, \
         debug_system::EShutdownReason::fatal_incident, \
-        static_cast<std::uint16_t>(sizeof("Fatal assertion failed: " #condition " | ") - 1u), \
-        "Fatal assertion failed: " #condition " | " __VA_ARGS__)
+        "Fatal assertion failed: " #condition " | ", __VA_ARGS__)
 
 #if MV_COMPILED_INFORMATION_LEVEL >= 1
     #define MV_INFO(...) MV_INTERNAL_INFORMATION_EVENT(debug_system::EEventLevel::info, __VA_ARGS__)
@@ -163,4 +155,3 @@
     } while (0)
 
 #endif  //  #ifndef DEBUG_MACROS_HPP_INCLUDED
-

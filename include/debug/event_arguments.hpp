@@ -26,7 +26,7 @@ namespace debug_system
 {
 
 constexpr std::size_t k_event_argument_count = 8u;
-constexpr std::size_t k_event_argument_payload_capacity = 64u;
+constexpr std::size_t k_event_argument_slot_size = 16u;
 constexpr std::size_t k_inline_text_capacity = 16u;
 
 enum class EEventArgumentType : std::uint8_t
@@ -42,8 +42,8 @@ enum class EEventArgumentType : std::uint8_t
     float64 = 8u,
     inline_text = 9u,
     type_id = 10u,
-    reserved11 = 11u,
-    reserved12 = 12u,
+    reserved_local_id_text = 11u,
+    reserved_local_id_failure = 12u,
     reserved13 = 13u,
     reserved14 = 14u,
     reserved15 = 15u
@@ -85,16 +85,26 @@ private:
     char m_text[k_inline_text_capacity]{};
 };
 
-struct SEventArguments
+struct alignas(16) SEventParameterValue
 {
-    std::uint32_t type_tags = 0u;
-    std::uint8_t parameter_count = 0u;
-    std::uint8_t payload_size = 0u;
-    std::uint16_t reserved = 0u;
-    std::byte payload[k_event_argument_payload_capacity]{};
+    std::byte bytes[k_event_argument_slot_size]{};
 };
 
-static_assert((sizeof(SEventArguments) == 72u), "SEventArguments must retain its fixed transport representation.");
+struct alignas(16) SEventArguments
+{
+    std::uint8_t parameter_count = 0u;
+    EEventArgumentType parameter_types[k_event_argument_count]{};
+    alignas(16) SEventParameterValue parameters[k_event_argument_count]{};
+};
+
+static_assert((sizeof(SEventParameterValue) == 16u), "A debug event parameter must occupy exactly 16 bytes.");
+static_assert((alignof(SEventParameterValue) == 16u), "Every debug event parameter must be explicitly 16-byte aligned.");
+static_assert(std::is_standard_layout_v<SEventParameterValue>, "A debug event parameter must retain standard layout.");
+static_assert(std::is_trivially_copyable_v<SEventParameterValue>, "A debug event parameter must remain trivially copyable.");
+static_assert((sizeof(SEventArguments) == 144u), "The direct-path argument helper must retain its fixed representation.");
+static_assert((alignof(SEventArguments) == 16u), "The direct-path argument helper must be explicitly 16-byte aligned.");
+static_assert(std::is_standard_layout_v<SEventArguments>, "The direct-path argument helper must retain standard layout.");
+static_assert(std::is_trivially_copyable_v<SEventArguments>, "The direct-path argument helper must remain trivially copyable.");
 
 namespace event_argument_detail
 {
@@ -107,7 +117,7 @@ struct TArgumentTraits
 {
     static constexpr bool k_supported = false;
     static constexpr EEventArgumentType k_type = EEventArgumentType::unused;
-    static constexpr std::size_t k_payload_size = 0u;
+    static constexpr std::size_t k_value_size = 0u;
 };
 
 #define MV_DEFINE_EVENT_ARGUMENT_TRAITS(cpp_type, argument_type) \
@@ -116,7 +126,7 @@ struct TArgumentTraits
     { \
         static constexpr bool k_supported = true; \
         static constexpr EEventArgumentType k_type = argument_type; \
-        static constexpr std::size_t k_payload_size = sizeof(cpp_type); \
+        static constexpr std::size_t k_value_size = sizeof(cpp_type); \
     }
 
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(std::int32_t, EEventArgumentType::int32);
@@ -135,17 +145,17 @@ struct TArgumentTraits<bool>
 {
     static constexpr bool k_supported = true;
     static constexpr EEventArgumentType k_type = EEventArgumentType::unused;
-    static constexpr std::size_t k_payload_size = 0u;
+    static constexpr std::size_t k_value_size = 0u;
 };
 
 template<typename T>
 inline constexpr bool k_supported = TArgumentTraits<CArgumentType<T>>::k_supported;
 
-template<typename... Args>
-inline constexpr std::size_t k_payload_size = (0u + ... + TArgumentTraits<CArgumentType<Args>>::k_payload_size);
-
 template<typename T>
-void encode_argument(SEventArguments& destination, T&& argument, const std::size_t parameter_index, std::size_t& payload_offset) noexcept
+void encode_argument(
+    EEventArgumentType (&parameter_types)[k_event_argument_count],
+    SEventParameterValue (&parameters)[k_event_argument_count],
+    T&& argument, const std::size_t parameter_index) noexcept
 {
     using CValue = CArgumentType<T>;
 
@@ -157,21 +167,19 @@ void encode_argument(SEventArguments& destination, T&& argument, const std::size
             : EEventArgumentType::false_value;
     }
 
-    destination.type_tags |= static_cast<std::uint32_t>(type) << static_cast<std::uint32_t>(parameter_index * 4u);
+    parameter_types[parameter_index] = type;
 
-    if constexpr (TArgumentTraits<CValue>::k_payload_size != 0u)
+    if constexpr (TArgumentTraits<CValue>::k_value_size != 0u)
     {
         if constexpr (std::is_same_v<CValue, CInlineText16>)
         {
-            std::memcpy((destination.payload + payload_offset), argument.data(), k_inline_text_capacity);
+            std::memcpy(parameters[parameter_index].bytes, argument.data(), k_inline_text_capacity);
         }
         else
         {
             const CValue value = std::forward<T>(argument);
-            std::memcpy((destination.payload + payload_offset), &value, sizeof(value));
+            std::memcpy(parameters[parameter_index].bytes, &value, sizeof(value));
         }
-
-        payload_offset += TArgumentTraits<CValue>::k_payload_size;
     }
 }
 
@@ -181,22 +189,39 @@ template<typename T>
 inline constexpr bool is_supported_event_argument_v = event_argument_detail::k_supported<T>;
 
 template<typename... Args>
-void encode_event_arguments_into(SEventArguments& result, Args&&... arguments) noexcept
+void encode_event_arguments_into(
+    std::uint8_t& parameter_count,
+    EEventArgumentType (&parameter_types)[k_event_argument_count],
+    SEventParameterValue (&parameters)[k_event_argument_count],
+    Args&&... arguments) noexcept
 {
     static_assert((sizeof...(Args) <= k_event_argument_count),
         "A debug event accepts at most eight dynamic arguments.");
     static_assert((event_argument_detail::k_supported<Args> && ...),
         "A debug event argument has an unsupported type.");
-    static_assert((event_argument_detail::k_payload_size<Args...> <= k_event_argument_payload_capacity),
-        "The encoded debug event arguments exceed 64 bytes.");
-
-    result = {};
-    result.parameter_count = static_cast<std::uint8_t>(sizeof...(Args));
-    result.payload_size = static_cast<std::uint8_t>(event_argument_detail::k_payload_size<Args...>);
+    static_assert(((event_argument_detail::TArgumentTraits<
+        event_argument_detail::CArgumentType<Args>>::k_value_size <=
+        k_event_argument_slot_size) && ...),
+        "A debug event argument exceeds its fixed 16-byte slot.");
+    parameter_count = static_cast<std::uint8_t>(sizeof...(Args));
+    for (std::size_t index = 0u; index < k_event_argument_count; ++index)
+    {
+        parameter_types[index] = EEventArgumentType::unused;
+        parameters[index] = {};
+    }
 
     std::size_t parameter_index = 0u;
-    std::size_t payload_offset = 0u;
-    (event_argument_detail::encode_argument(result, std::forward<Args>(arguments), parameter_index++, payload_offset), ...);
+    (event_argument_detail::encode_argument(
+        parameter_types, parameters, std::forward<Args>(arguments), parameter_index++), ...);
+}
+
+template<typename... Args>
+void encode_event_arguments_into(SEventArguments& result, Args&&... arguments) noexcept
+{
+    result = {};
+    encode_event_arguments_into(
+        result.parameter_count, result.parameter_types, result.parameters,
+        std::forward<Args>(arguments)...);
 }
 
 template<typename... Args>
@@ -210,7 +235,21 @@ template<typename... Args>
 [[nodiscard]] EEventFormatResult format_event_text(
     char* const destination, const std::size_t destination_capacity,
     const char* const format, const std::size_t format_size,
-    const SEventArguments& arguments, std::size_t& out_size) noexcept;
+    const std::uint8_t parameter_count,
+    const EEventArgumentType (&parameter_types)[k_event_argument_count],
+    const SEventParameterValue (&parameters)[k_event_argument_count],
+    std::size_t& out_size) noexcept;
+
+[[nodiscard]] inline EEventFormatResult format_event_text(
+    char* const destination, const std::size_t destination_capacity,
+    const char* const format, const std::size_t format_size,
+    const SEventArguments& arguments, std::size_t& out_size) noexcept
+{
+    return format_event_text(
+        destination, destination_capacity, format, format_size,
+        arguments.parameter_count, arguments.parameter_types,
+        arguments.parameters, out_size);
+}
 
 }   //  namespace debug_system
 

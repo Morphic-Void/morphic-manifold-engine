@@ -305,8 +305,9 @@ The transport-facing contract is:
 
 The initial supported set covers fixed-width signed and unsigned integers,
 `bool`, `float`, `double`, `type_ids::id_type`, and an owning 16-byte inline
-text value. The technical limit is eight arguments and 64 payload bytes.
-Boolean truth is carried by its type tag and uses no payload bytes.
+text value. The technical limit is eight arguments, each with a byte-wide type
+and a fixed, explicitly aligned 16-byte value slot. Boolean truth is carried by
+its type and its value slot remains zero.
 
 The initial format grammar provides sequential `{}` substitutions, `{{` or
 `}}` escaped braces, and hexadecimal integer insertions written as `#{}`,
@@ -319,8 +320,11 @@ two's-complement bit pattern is preserved. Other transported argument types
 must reject a hexadecimal insertion explicitly rather than silently falling
 back.
 
-Without generated static data, the bounded format literal is copied into the
-event and interpreted by the writer. A possible future generated-data mode may
+Without generated static data, an assertion expression of at most 191 bytes
+and a format literal of at most 127 bytes are copied into separate event
+fields. The expression is emitted literally and only the format is interpreted
+by the writer. Longer typed literals fail compilation; rich or dynamically
+constructed formatting belongs on `MV_REPORT`. A possible future generated-data mode may
 replace that copy with a static descriptor identity, selected by one
 solution-wide build policy. The public call site and argument encoding do not
 depend on that optimisation.
@@ -553,10 +557,10 @@ Call sites follow these constraints:
 - condition expressions are available for static extraction;
 - dynamic format strings are not supported by the public macros;
 - source line is captured directly as a fixed-width value in normal events;
-- a bounded human-readable suffix of the compiler-provided source file path is
-  copied into the event;
-- long source labels are deterministically truncated from the left so the
-  filename and nearest path components are retained;
+- the filename plus extension is extracted from the compiler-provided source
+  path using either platform separator and copied into the event;
+- a filename longer than 31 bytes is deterministically represented by a
+  leading ellipsis and UTF-8-boundary-safe suffix;
 - no source-file pointer or disambiguating source hash enters normal transport;
 - dynamic arguments are evaluated at most once;
 - conditional message arguments are evaluated only when their incident is

@@ -80,7 +80,7 @@ bool CDebugServiceState::write_named_record(platform::filesystem::Log& log,
     const SEventSource& source = incident.source;
     if ((level == nullptr) || (type == nullptr) ||
         (text == nullptr) || (text_size == 0u) ||
-        (source.file_size >= k_source_file_capacity) ||
+        (source.filename_size >= k_source_file_capacity) ||
         (text_size > static_cast<std::size_t>(std::numeric_limits<int>::max())))
     {
         return false;
@@ -92,11 +92,11 @@ bool CDebugServiceState::write_named_record(platform::filesystem::Log& log,
 
     if (have_system_name)
     {
-        if (source.file_size != 0u)
+        if (source.filename_size != 0u)
         {
             return log.write("[%010u] [%.*s] [%s:%s] [%.*s:%u] %.*s\n", incident.incident_id,
                 static_cast<int>(system_name_size), system_name,
-                level, type, static_cast<int>(source.file_size), source.file, source.line, static_cast<int>(text_size), text) >= 0;
+                level, type, static_cast<int>(source.filename_size), source.filename, source.line, static_cast<int>(text_size), text) >= 0;
         }
 
         return log.write("[%010u] [%.*s] [%s:%s] %.*s\n", incident.incident_id,
@@ -104,11 +104,11 @@ bool CDebugServiceState::write_named_record(platform::filesystem::Log& log,
     }
     else
     {
-        if (source.file_size != 0u)
+        if (source.filename_size != 0u)
         {
             return log.write("[%010u] [%s-system:%016llx] [%s:%s] [%.*s:%u] %.*s\n", incident.incident_id,
                 (system_ids::is_valid_id(source.system_id) ? "unregistered" : "invalid"), static_cast<unsigned long long>(source.system_id.raw_value()),
-                level, type, static_cast<int>(source.file_size), source.file, source.line, static_cast<int>(text_size), text) >= 0;
+                level, type, static_cast<int>(source.filename_size), source.filename, source.line, static_cast<int>(text_size), text) >= 0;
         }
 
         return log.write("[%010u] [%s-system:%016llx] [%s:%s] %.*s\n", incident.incident_id,
@@ -134,12 +134,38 @@ bool CDebugServiceState::capture_source(SEventSource& destination, const system_
         return true;
     }
 
-    const std::size_t copied_size = (usage_point.file_size < k_source_file_capacity) ? usage_point.file_size : (k_source_file_capacity - 1u);
-    const char* const copied_source = usage_point.file + (usage_point.file_size - copied_size);
+    std::size_t basename_begin = 0u;
+    for (std::size_t index = 0u; index < usage_point.file_size; ++index)
+    {
+        if ((usage_point.file[index] == '/') || (usage_point.file[index] == '\\'))
+        {
+            basename_begin = index + 1u;
+        }
+    }
 
-    std::memcpy(destination.file, copied_source, copied_size);
-    destination.file[copied_size] = 0;
-    destination.file_size = static_cast<std::uint32_t>(copied_size);
+    const std::size_t basename_size = usage_point.file_size - basename_begin;
+    if (basename_size < k_source_file_capacity)
+    {
+        std::memcpy(destination.filename, usage_point.file + basename_begin, basename_size);
+        destination.filename[basename_size] = 0;
+        destination.filename_size = static_cast<std::uint8_t>(basename_size);
+        return true;
+    }
+
+    constexpr std::size_t ellipsis_size = 3u;
+    constexpr std::size_t suffix_capacity = k_source_file_capacity - ellipsis_size - 1u;
+    std::size_t suffix_begin = usage_point.file_size - suffix_capacity;
+    while ((suffix_begin < usage_point.file_size) &&
+        ((static_cast<unsigned char>(usage_point.file[suffix_begin]) & 0xc0u) == 0x80u))
+    {
+        ++suffix_begin;
+    }
+
+    const std::size_t suffix_size = usage_point.file_size - suffix_begin;
+    std::memcpy(destination.filename, "...", ellipsis_size);
+    std::memcpy(destination.filename + ellipsis_size, usage_point.file + suffix_begin, suffix_size);
+    destination.filename_size = static_cast<std::uint8_t>(ellipsis_size + suffix_size);
+    destination.filename[destination.filename_size] = 0;
     return true;
 }
 
@@ -157,53 +183,48 @@ bool CDebugServiceState::capture_incident(SIncidentContext& destination, const S
 
 EEventFormatResult CDebugServiceState::format_event_content(
     char* const destination, const std::size_t destination_capacity,
+    const char* const expression, const std::size_t expression_size,
     const char* const format, const std::size_t format_size,
-    const std::uint16_t literal_prefix_size, const SEventArguments& arguments,
+    const std::uint8_t parameter_count,
+    const EEventArgumentType (&parameter_types)[k_event_argument_count],
+    const SEventParameterValue (&parameters)[k_event_argument_count],
     std::size_t& output_size) noexcept
 {
     output_size = 0u;
     if ((destination == nullptr) || (destination_capacity == 0u) ||
-        (format == nullptr) || (format_size == 0u) || (literal_prefix_size > format_size))
+        ((expression_size != 0u) && (expression == nullptr)) ||
+        ((format_size != 0u) && (format == nullptr)) ||
+        ((expression_size == 0u) && (format_size == 0u)))
     {
         return EEventFormatResult::malformed_format;
     }
 
-    if (destination_capacity <= literal_prefix_size)
+    if (destination_capacity <= expression_size)
     {
         return EEventFormatResult::output_too_small;
     }
 
-    for (std::size_t index = 0u; index < literal_prefix_size; ++index)
+    for (std::size_t index = 0u; index < expression_size; ++index)
     {
-        if (format[index] == 0)
+        if (expression[index] == 0)
         {
             return EEventFormatResult::malformed_format;
         }
     }
 
-    std::memcpy(destination, format, literal_prefix_size);
-
-    if (literal_prefix_size == format_size)
+    if (expression_size != 0u)
     {
-        if ((arguments.type_tags != 0u) || (arguments.parameter_count != 0u) ||
-            (arguments.payload_size != 0u) || (arguments.reserved != 0u))
-        {
-            return EEventFormatResult::argument_mismatch;
-        }
-
-        destination[literal_prefix_size] = 0;
-        output_size = literal_prefix_size;
-        return EEventFormatResult::success;
+        std::memcpy(destination, expression, expression_size);
     }
 
     std::size_t formatted_size = 0u;
     const EEventFormatResult result = format_event_text(
-        destination + literal_prefix_size, destination_capacity - literal_prefix_size,
-        format + literal_prefix_size, format_size - literal_prefix_size,
-        arguments, formatted_size);
+        destination + expression_size, destination_capacity - expression_size,
+        (format != nullptr) ? format : "", format_size,
+        parameter_count, parameter_types, parameters, formatted_size);
     if (result == EEventFormatResult::success)
     {
-        output_size = literal_prefix_size + formatted_size;
+        output_size = expression_size + formatted_size;
     }
     return result;
 }
@@ -385,7 +406,7 @@ bool CDebugServiceState::submit_text(const char* const text) noexcept
     }
 
     const std::size_t text_size = std::strlen(text);
-    if (text_size >= k_event_text_capacity)
+    if (text_size >= k_event_format_capacity)
     {
         return write_direct_record(EEventLevel::info, EEventType::event, incident, text, text_size);
     }
@@ -397,15 +418,18 @@ bool CDebugServiceState::submit_text(const char* const text) noexcept
         return write_direct_record(EEventLevel::info, EEventType::event, incident, text, text_size);
     }
 
+    *reserved_event = {};
+    reserved_event->system_id = incident.source.system_id;
     reserved_event->incident_id = incident.incident_id;
-    reserved_event->content_size = static_cast<std::uint32_t>(text_size);
+    reserved_event->source_line = incident.source.line;
     reserved_event->content_type = EEventContentType::text;
     reserved_event->level = EEventLevel::info;
     reserved_event->type = EEventType::event;
-    reserved_event->literal_prefix_size = 0u;
-    reserved_event->source = incident.source;
-    std::memcpy(reserved_event->content, text, text_size + 1u);
-    reserved_event->arguments = {};
+    reserved_event->filename_size = incident.source.filename_size;
+    reserved_event->format_size = static_cast<std::uint8_t>(text_size);
+    std::memcpy(reserved_event->filename, incident.source.filename,
+        static_cast<std::size_t>(incident.source.filename_size) + 1u);
+    std::memcpy(reserved_event->format, text, text_size + 1u);
 
     const bool published = reserved_event.publish();
     signal_writer();
@@ -678,8 +702,9 @@ bool CDebugServiceState::write_direct_record(
 
 bool CDebugServiceState::write_direct_event(
     const EEventLevel level, const EEventType type, const SIncidentContext& incident,
+    const char* const expression, const std::size_t expression_size,
     const char* const format, const std::size_t format_size,
-    const std::uint16_t literal_prefix_size, const SEventArguments& arguments) noexcept
+    const SEventArguments& arguments) noexcept
 {
     if (!m_direct_lock.is_valid())
     {
@@ -693,8 +718,10 @@ bool CDebugServiceState::write_direct_event(
     {
         std::size_t text_size = 0u;
         const EEventFormatResult result = format_event_content(
-            m_direct_format_buffer, k_format_buffer_capacity, format, format_size,
-            literal_prefix_size, arguments, text_size);
+            m_direct_format_buffer, k_format_buffer_capacity,
+            expression, expression_size, format, format_size,
+            arguments.parameter_count,
+            arguments.parameter_types, arguments.parameters, text_size);
 
         if (result == EEventFormatResult::success)
         {
@@ -713,31 +740,73 @@ bool CDebugServiceState::write_direct_event(
 
 bool CDebugServiceState::write_event(const SEvent& event) noexcept
 {
-    const SIncidentContext incident{ event.incident_id, event.source };
+    SIncidentContext incident{};
+    incident.incident_id = event.incident_id;
+    incident.source.system_id = event.system_id;
+    incident.source.line = event.source_line;
 
-    if (!is_valid_event_metadata(event.level, event.type) || (event.literal_prefix_size > event.content_size))
+    const bool valid_filename =
+        (event.filename_size < k_source_file_capacity) &&
+        (event.filename[event.filename_size] == 0) &&
+        (std::memchr(event.filename, 0, event.filename_size) == nullptr);
+    if (valid_filename)
+    {
+        incident.source.filename_size = event.filename_size;
+        std::memcpy(incident.source.filename, event.filename,
+            static_cast<std::size_t>(event.filename_size) + 1u);
+    }
+
+    if (!valid_filename || (event.reserved != 0u) ||
+        !is_valid_event_metadata(event.level, event.type))
     {
         return write_direct_record(EEventLevel::error, EEventType::event, incident, k_invalid_event, k_invalid_event_size);
     }
 
-    if ((event.content_size == 0u) || (event.content_size >= k_event_text_capacity))
+    const bool valid_expression =
+        (event.expression_size < k_event_expression_capacity) &&
+        (event.expression[event.expression_size] == 0) &&
+        (std::memchr(event.expression, 0, event.expression_size) == nullptr);
+    const bool valid_format =
+        (event.format_size < k_event_format_capacity) &&
+        (event.format[event.format_size] == 0) &&
+        (std::memchr(event.format, 0, event.format_size) == nullptr);
+    if (!valid_expression || !valid_format ||
+        ((event.expression_size == 0u) && (event.format_size == 0u)))
     {
         return write_direct_record(event.level, event.type, incident, k_invalid_event, k_invalid_event_size);
     }
 
     if (event.content_type == EEventContentType::text)
     {
-        if (event.literal_prefix_size != 0u)
+        bool arguments_are_empty = event.parameter_count == 0u;
+        for (std::size_t parameter_index = 0u;
+            arguments_are_empty && (parameter_index < k_event_argument_count);
+            ++parameter_index)
+        {
+            arguments_are_empty =
+                event.parameter_types[parameter_index] == EEventArgumentType::unused;
+            for (std::size_t byte_index = 0u;
+                arguments_are_empty && (byte_index < k_event_argument_slot_size);
+                ++byte_index)
+            {
+                arguments_are_empty =
+                    event.parameters[parameter_index].bytes[byte_index] == std::byte{};
+            }
+        }
+
+        if ((event.expression_size != 0u) || !arguments_are_empty)
         {
             return write_direct_record(event.level, event.type, incident, k_invalid_event, k_invalid_event_size);
         }
 
-        if (write_record(m_event_log, event.level, event.type, incident, event.content, event.content_size))
+        if (write_record(m_event_log, event.level, event.type, incident,
+            event.format, event.format_size))
         {
             return true;
         }
 
-        return write_direct_record(event.level, event.type, incident, event.content, event.content_size);
+        return write_direct_record(event.level, event.type, incident,
+            event.format, event.format_size);
     }
 
     if (event.content_type != EEventContentType::format)
@@ -747,8 +816,10 @@ bool CDebugServiceState::write_event(const SEvent& event) noexcept
 
     std::size_t text_size = 0u;
     const EEventFormatResult result = format_event_content(
-        m_event_format_buffer, k_format_buffer_capacity, event.content, event.content_size,
-        event.literal_prefix_size, event.arguments, text_size);
+        m_event_format_buffer, k_format_buffer_capacity,
+        event.expression, event.expression_size, event.format, event.format_size,
+        event.parameter_count,
+        event.parameter_types, event.parameters, text_size);
     if (result != EEventFormatResult::success)
     {
         return write_direct_record(event.level, event.type, incident, k_invalid_event, k_invalid_event_size);

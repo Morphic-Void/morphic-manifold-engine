@@ -27,12 +27,7 @@ struct SOutput
     std::size_t size;
 };
 
-[[nodiscard]] EEventArgumentType get_type(const SEventArguments& arguments, const std::size_t index) noexcept
-{
-    return static_cast<EEventArgumentType>((arguments.type_tags >> static_cast<std::uint32_t>(index * 4u)) & 0x0fu);
-}
-
-[[nodiscard]] std::size_t payload_size(const EEventArgumentType type) noexcept
+[[nodiscard]] std::size_t value_size(const EEventArgumentType type) noexcept
 {
     switch (type)
     {
@@ -63,7 +58,7 @@ struct SOutput
         }
         default:
         {
-            return k_event_argument_payload_capacity + 1u;
+            return k_event_argument_slot_size + 1u;
         }
     }
 }
@@ -82,10 +77,12 @@ struct SOutput
 }
 
 template<typename T>
-[[nodiscard]] T read_value(const SEventArguments& arguments, const std::size_t payload_offset) noexcept
+[[nodiscard]] T read_value(
+    const SEventParameterValue (&parameters)[k_event_argument_count],
+    const std::size_t parameter_index) noexcept
 {
     T value{};
-    std::memcpy(&value, (arguments.payload + payload_offset), sizeof(value));
+    std::memcpy(&value, parameters[parameter_index].bytes, sizeof(value));
     return value;
 }
 
@@ -126,9 +123,9 @@ template<typename T>
 
 [[nodiscard]] EEventFormatResult append_hex_argument(
     SOutput& output,
-    const SEventArguments& arguments,
+    const SEventParameterValue (&parameters)[k_event_argument_count],
     const EEventArgumentType type,
-    const std::size_t payload_offset,
+    const std::size_t parameter_index,
     const char insertion_specifier) noexcept
 {
     switch (type)
@@ -138,7 +135,7 @@ template<typename T>
         {
             return append_integer_hex(
                 output,
-                read_value<std::uint32_t>(arguments, payload_offset),
+                read_value<std::uint32_t>(parameters, parameter_index),
                 insertion_specifier);
         }
         case EEventArgumentType::int64:
@@ -146,7 +143,7 @@ template<typename T>
         {
             return append_integer_hex(
                 output,
-                read_value<std::uint64_t>(arguments, payload_offset),
+                read_value<std::uint64_t>(parameters, parameter_index),
                 insertion_specifier);
         }
         case EEventArgumentType::false_value:
@@ -190,9 +187,9 @@ template<typename T>
 
 [[nodiscard]] EEventFormatResult append_argument(
     SOutput& output,
-    const SEventArguments& arguments,
+    const SEventParameterValue (&parameters)[k_event_argument_count],
     const EEventArgumentType type,
-    const std::size_t payload_offset) noexcept
+    const std::size_t parameter_index) noexcept
 {
     char text[64]{};
     int size = 0;
@@ -209,37 +206,37 @@ template<typename T>
         }
         case EEventArgumentType::int32:
         {
-            size = std::snprintf(text, sizeof(text), "%d", read_value<std::int32_t>(arguments, payload_offset));
+            size = std::snprintf(text, sizeof(text), "%d", read_value<std::int32_t>(parameters, parameter_index));
             break;
         }
         case EEventArgumentType::uint32:
         {
-            size = std::snprintf(text, sizeof(text), "%u", read_value<std::uint32_t>(arguments, payload_offset));
+            size = std::snprintf(text, sizeof(text), "%u", read_value<std::uint32_t>(parameters, parameter_index));
             break;
         }
         case EEventArgumentType::int64:
         {
-            size = std::snprintf(text, sizeof(text), "%lld", static_cast<long long>(read_value<std::int64_t>(arguments, payload_offset)));
+            size = std::snprintf(text, sizeof(text), "%lld", static_cast<long long>(read_value<std::int64_t>(parameters, parameter_index)));
             break;
         }
         case EEventArgumentType::uint64:
         {
-            size = std::snprintf(text, sizeof(text), "%llu", static_cast<unsigned long long>(read_value<std::uint64_t>(arguments, payload_offset)));
+            size = std::snprintf(text, sizeof(text), "%llu", static_cast<unsigned long long>(read_value<std::uint64_t>(parameters, parameter_index)));
             break;
         }
         case EEventArgumentType::float32:
         {
-            size = std::snprintf(text, sizeof(text), "%.9g", static_cast<double>(read_value<float>(arguments, payload_offset)));
+            size = std::snprintf(text, sizeof(text), "%.9g", static_cast<double>(read_value<float>(parameters, parameter_index)));
             break;
         }
         case EEventArgumentType::float64:
         {
-            size = std::snprintf(text, sizeof(text), "%.17g", read_value<double>(arguments, payload_offset));
+            size = std::snprintf(text, sizeof(text), "%.17g", read_value<double>(parameters, parameter_index));
             break;
         }
         case EEventArgumentType::inline_text:
         {
-            const char* const value = reinterpret_cast<const char*>(arguments.payload + payload_offset);
+            const char* const value = reinterpret_cast<const char*>(parameters[parameter_index].bytes);
             const void* const terminator = std::memchr(value, 0, k_inline_text_capacity);
             if (terminator == nullptr)
             {
@@ -251,7 +248,7 @@ template<typename T>
         }
         case EEventArgumentType::type_id:
         {
-            return append_type_id(output, read_value<type_ids::id_type>(arguments, payload_offset));
+            return append_type_id(output, read_value<type_ids::id_type>(parameters, parameter_index));
         }
         default:
         {
@@ -262,35 +259,67 @@ template<typename T>
     return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
 }
 
-[[nodiscard]] EEventFormatResult validate(
-    const SEventArguments& arguments) noexcept
+[[nodiscard]] bool bytes_are_zero(
+    const std::byte* const bytes, const std::size_t begin) noexcept
 {
-    if ((arguments.parameter_count > k_event_argument_count) ||
-        (arguments.payload_size > k_event_argument_payload_capacity) ||
-        (arguments.reserved != 0u))
+    for (std::size_t index = begin; index < k_event_argument_slot_size; ++index)
+    {
+        if (bytes[index] != std::byte{})
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] EEventFormatResult validate(
+    const std::uint8_t parameter_count,
+    const EEventArgumentType (&parameter_types)[k_event_argument_count],
+    const SEventParameterValue (&parameters)[k_event_argument_count]) noexcept
+{
+    if (parameter_count > k_event_argument_count)
     {
         return EEventFormatResult::invalid_descriptor;
     }
 
-    if ((arguments.parameter_count < k_event_argument_count) &&
-        ((arguments.type_tags >> static_cast<std::uint32_t>(arguments.parameter_count * 4u)) != 0u))
+    for (std::size_t index = 0u; index < parameter_count; ++index)
     {
-        return EEventFormatResult::invalid_descriptor;
-    }
-
-    std::size_t expected_payload_size = 0u;
-    for (std::size_t index = 0u; index < arguments.parameter_count; ++index)
-    {
-        const std::size_t size = payload_size(get_type(arguments, index));
-        if ((size > k_event_argument_payload_capacity) || (expected_payload_size > (k_event_argument_payload_capacity - size)))
+        const EEventArgumentType type = parameter_types[index];
+        const std::size_t size = value_size(type);
+        if ((size > k_event_argument_slot_size) ||
+            !bytes_are_zero(parameters[index].bytes, size))
         {
             return EEventFormatResult::invalid_descriptor;
         }
 
-        expected_payload_size += size;
+        if (type == EEventArgumentType::inline_text)
+        {
+            const void* const terminator = std::memchr(
+                parameters[index].bytes, 0, k_inline_text_capacity);
+            if (terminator == nullptr)
+            {
+                return EEventFormatResult::invalid_descriptor;
+            }
+
+            const std::size_t terminator_index =
+                static_cast<const std::byte*>(terminator) - parameters[index].bytes;
+            if (!bytes_are_zero(parameters[index].bytes, terminator_index + 1u))
+            {
+                return EEventFormatResult::invalid_descriptor;
+            }
+        }
     }
 
-    return (expected_payload_size == arguments.payload_size) ? EEventFormatResult::success : EEventFormatResult::invalid_descriptor;
+    for (std::size_t index = parameter_count; index < k_event_argument_count; ++index)
+    {
+        if ((parameter_types[index] != EEventArgumentType::unused) ||
+            !bytes_are_zero(parameters[index].bytes, 0u))
+        {
+            return EEventFormatResult::invalid_descriptor;
+        }
+    }
+
+    return EEventFormatResult::success;
 }
 
 }   //  namespace event_formatting
@@ -298,7 +327,10 @@ template<typename T>
 EEventFormatResult format_event_text(
     char* const destination, const std::size_t destination_capacity,
     const char* const format, const std::size_t format_size,
-    const SEventArguments& arguments, std::size_t& out_size) noexcept
+    const std::uint8_t parameter_count,
+    const EEventArgumentType (&parameter_types)[k_event_argument_count],
+    const SEventParameterValue (&parameters)[k_event_argument_count],
+    std::size_t& out_size) noexcept
 {
     out_size = 0u;
     if ((destination == nullptr) || (destination_capacity == 0u) || (format == nullptr))
@@ -307,7 +339,8 @@ EEventFormatResult format_event_text(
     }
 
     destination[0] = 0;
-    const EEventFormatResult validation = event_formatting::validate(arguments);
+    const EEventFormatResult validation = event_formatting::validate(
+        parameter_count, parameter_types, parameters);
     if (validation != EEventFormatResult::success)
     {
         return validation;
@@ -315,7 +348,6 @@ EEventFormatResult format_event_text(
 
     event_formatting::SOutput output{ destination, destination_capacity, 0u };
     std::size_t argument_index = 0u;
-    std::size_t payload_offset = 0u;
     std::size_t literal_begin = 0u;
 
     for (std::size_t index = 0u; index < format_size; ++index)
@@ -354,22 +386,22 @@ EEventFormatResult format_event_text(
                 return EEventFormatResult::output_too_small;
             }
 
-            if (argument_index >= arguments.parameter_count)
+            if (argument_index >= parameter_count)
             {
                 return EEventFormatResult::argument_mismatch;
             }
 
-            const EEventArgumentType type = event_formatting::get_type(arguments, argument_index);
+            const EEventArgumentType type = parameter_types[argument_index];
             EEventFormatResult result;
             if (insertion_begin < index)
             {
                 result = event_formatting::append_hex_argument(
-                    output, arguments, type, payload_offset, format[insertion_begin]);
+                    output, parameters, type, argument_index, format[insertion_begin]);
             }
             else
             {
                 result = event_formatting::append_argument(
-                    output, arguments, type, payload_offset);
+                    output, parameters, type, argument_index);
             }
 
             if (result != EEventFormatResult::success)
@@ -377,7 +409,6 @@ EEventFormatResult format_event_text(
                 return result;
             }
 
-            payload_offset += event_formatting::payload_size(type);
             ++argument_index;
             ++index;
             literal_begin = index + 1u;
@@ -408,7 +439,7 @@ EEventFormatResult format_event_text(
         return EEventFormatResult::output_too_small;
     }
 
-    if (argument_index != arguments.parameter_count)
+    if (argument_index != parameter_count)
     {
         return EEventFormatResult::argument_mismatch;
     }

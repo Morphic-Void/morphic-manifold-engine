@@ -147,40 +147,47 @@ snapshot design.
 
 ## Event Transport
 
-The transitional event contains:
+The transported event contains:
 
 ```text
+64-bit ambient system identity
 uint32 incident identity
-uint32 content size
-uint32 content type
+uint32 source line
+uint8 content type
 uint8 event level
 uint8 event type
-uint16 literal prefix size
-64-bit ambient system identity
-uint32 source line
-uint32 source suffix size
-96-byte source suffix buffer
-192-byte content buffer
-72-byte bounded argument descriptor
-120-byte expansion reserve
+uint8 reserved
+uint8 filename size
+uint8 expression size
+uint8 format size
+uint8 parameter count
+8 byte-wide parameter types
+32-byte filename buffer
+192-byte expression buffer
+128-byte format buffer
+8 explicitly aligned 16-byte parameter slots
 ```
 
-`SEvent` is fixed at 512 bytes with a compile-time size assertion. The trailing
-120-byte reserve allows modest metadata and routing expansion without changing
-the transport memory footprint or slot layout. Existing field capacities are
-not enlarged merely to consume the reserve.
+`SEvent` is fixed at 512 bytes and explicitly aligned to 64 bytes. Compile-time
+size, alignment, standard-layout, trivial-copyability, and member-offset
+assertions fix the representation. Full-width identity fields occupy bytes
+0-15. The byte metadata occupies bytes 16-23, with the named reserved byte at
+19 and the filename, expression, and format lengths in payload order at bytes
+20-22. The parameter count remains immediately before the parameter types at
+23. The type array occupies bytes 24-31, the filename occupies bytes 32-63,
+the expression occupies bytes 64-255, and the format occupies bytes 256-383.
+The eight parameter slots occupy bytes 384-511 as two complete 64-byte cache
+lines.
 
-The level, type, and literal-prefix size completely occupy the four bytes which
-would otherwise be alignment padding before `SEventSource`. Compile-time offset
-assertions fix level at byte 12, type at byte 13, literal-prefix size at byte
-14, source at byte 16, content at byte 128, arguments at byte 320, and expansion
-at byte 392.
+The previous generic expansion area is deliberately removed. Future argument
+representation growth is supplied primarily by the byte-wide type namespace
+and the eight generous typed slots rather than an unstructured tail.
 
-The literal-prefix size is zero for ordinary formatted events. Assertion events
-use it to mark the stringized condition and fixed explanatory prefix as literal
-text; only the optional message suffix is interpreted as a format. This keeps
-legal C++ braces in condition expressions from acquiring format semantics and
-requires no producer-side parsing or escaping.
+Ordinary events have an empty expression. Assertion events copy their fixed
+explanatory prefix and stringized condition into the expression buffer; only
+the optional message in the format buffer is interpreted by the formatter.
+This keeps legal C++ braces in condition expressions from acquiring format
+semantics and requires no producer-side parsing or escaping.
 
 Typed submission receives level and type as compile-time template parameters.
 The permitted compositions are:
@@ -197,32 +204,36 @@ also validates transported metadata before reconstruction.
 
 Typed submission captures the producing thread's ambient
 `system_ids::id_type`, the compiler-provided source line, and a static source
-file literal. The source literal length is known by the call-site template, so
-capture does not scan it. A source path requiring 96 bytes or more is truncated
-from the left: the rightmost 95 bytes are retained and followed by a
-terminator. No source hash or truncation marker is transported.
+file literal. Both `/` and `\` are recognised as separators and only the
+filename plus extension is retained. A filename of at most 31 bytes is copied
+unchanged. A longer filename is represented by `...` followed by up to the
+final 28 bytes. If that initial suffix position is a UTF-8 continuation byte,
+it advances to the next leading byte so truncation does not create an orphaned
+leading continuation byte. Every representation is explicitly terminated.
+The source line normally disambiguates the rare collision between equal
+truncated filenames.
 
 Missing or invalid ambient system identity rejects normal submission. This
 enforces the surrounding startup, thread, DLL-binding, and teardown contract;
 the later bounded infrastructure-failure route remains responsible for
 diagnosing a violation without recursion.
 
-The argument descriptor is stable within this design checkpoint:
+The argument representation is:
 
 ```text
-uint32 packed type tags
-uint8  parameter count
-uint8  payload size
-uint16 reserved
-64-byte payload
+uint8 parameter count
+8 byte-wide parameter types
+8 explicitly aligned 16-byte value slots
 ```
 
-There are at most eight parameters. Each type tag occupies four explicitly
-shifted bits; C++ bitfield layout is not used. Values are packed consecutively
-with `memcpy`, so the payload contains no alignment padding. Typed submission
-encodes directly into a reserved arena slot. If no slot is available, the
-producer encodes a temporary descriptor and formats it while holding the
-direct-log lock.
+There are at most eight parameters. Parameter `i` has type `i` and value slot
+`i`; decoding requires no packed-tag extraction or variable-payload traversal.
+Every value is copied with `memcpy` into the beginning of its slot. The event,
+the parameter array, and every parameter slot have explicit 16-byte alignment.
+Slot tails, unused descriptors, unused slots, and the event reserved byte are
+zeroed deterministically. Typed submission encodes directly into a reset arena
+slot. If no slot is available, the producer encodes an equivalent direct-path
+argument helper and formats while holding the direct-log lock.
 
 The implemented argument tags are:
 
@@ -238,18 +249,22 @@ float32
 float64
 inline_text
 type_id
+reserved_local_id_text
+reserved_local_id_failure
 ```
 
 Boolean values consume no payload bytes. `CInlineText16` owns exactly 16 bytes,
 including a guaranteed terminator, and therefore carries at most 15 text
 characters. `type_ids::id_type` consumes four payload bytes and formats as a
 registered symbolic name when one exists, otherwise as an explicit
-`unregistered-type:0x...` or `invalid-type:0x...` diagnostic. Five tag values
-remain reserved and unassigned.
+`unregistered-type:0x...` or `invalid-type:0x...` diagnostic. The two named
+local-ID representations reserve namespace for a later phase and are rejected
+by phase-one validation; they do not change current ID semantics.
 
-Unsupported C++ argument types, more than eight arguments, and a payload over
-64 bytes are compile-time errors. Pointers, references as transported state,
-arbitrary strings, and implicit object conversions are not admitted.
+Unsupported C++ argument types, more than eight arguments, and any value larger
+than one 16-byte slot are compile-time errors. Pointers, references as
+transported state, arbitrary strings, and implicit object conversions are not
+admitted.
 
 The initial format grammar supports sequential `{}` substitutions, `{{` and
 `}}` escaped braces, and hexadecimal integer insertions written as `#{}`,
@@ -262,10 +277,13 @@ hexadecimal uses, reserved tags, and formatting-buffer exhaustion are explicit
 formatter results.
 
 The transport retains a provisional capacity hint of 128, giving its typed
-arena a fixed 64 KiB footprint. The copied format and source capacities remain
-provisional within the 512-byte element. Subject to use of the explicit
-expansion reserve for later additions, the normal transport payload now
-contains every field required by the current design.
+arena a fixed 64 KiB event footprint. Transported expression literals contain
+at most 191 bytes plus their terminator and format literals at most 127 bytes
+plus their terminator. Oversized typed literals fail compilation. Runtime typed
+entry points reject text which does not fit its corresponding field.
+Uninterpreted `submit_text()` uses the format field literally and retains its
+existing direct fallback for oversized text. `MV_REPORT` remains the rich
+direct-formatting mechanism.
 
 The free `submit_text()` facade resolves the module-local service and delegates
 to `CDebugServiceState::submit_text()`. It remains as a compatibility facade
@@ -274,7 +292,8 @@ not acquire format semantics. Typed `submit_event()`:
 
 1. allocates an incident identity;
 2. reserves an MPMC event slot;
-3. copies the bounded format and encodes arguments directly into that slot;
+3. copies the bounded expression and format and encodes arguments directly
+   into that slot;
 4. publishes the completed event and signals the writer wake epoch;
 5. formats and writes synchronously under the direct-log lock when no slot is
    immediately available.
@@ -298,10 +317,10 @@ the malformed event further.
 
 The current record envelope renders the transported system identity as a
 fixed-width hexadecimal value, renders the compositional level and type, and
-adds the source suffix and line when they are available:
+adds the source filename and line when they are available:
 
 ```text
-[decimal incident identity] [hex system identity] [level:type] [source suffix:line] text
+[decimal incident identity] [hex system identity] [level:type] [filename:line] text
 ```
 
 The direct formatting buffer is covered by the same mutex as direct-log
@@ -367,9 +386,9 @@ lifecycle calls rather than redesign the service.
 - complete configuration publication;
 - monotonic shutdown reasons;
 - compile-time supported-type classification;
-- fixed 72-byte descriptor shape;
-- tag ordering and zero-payload boolean encoding;
-- the eight-argument and 64-byte payload boundaries;
+- fixed 512-byte event shape and explicit 64-byte alignment;
+- byte-wide type ordering and zero-payload boolean encoding;
+- the eight-argument and 16-byte slot boundaries;
 - integer, floating-point, boolean, and inline-text formatting;
 - transported type-id formatting and valid/unregistered/invalid fallback;
 - sequential substitutions, escaped braces, and hexadecimal insertions;
@@ -378,10 +397,12 @@ lifecycle calls rather than redesign the service.
 - writer startup and state publication;
 - MPMC legacy-text and typed-event delivery;
 - ambient system identity capture on the producer;
-- source-line capture and deterministic left truncation of long source paths;
+- source-line capture, basename extraction, UTF-8-safe leading ellipsis
+  truncation, and deterministic termination;
 - raw system identity and source metadata reconstruction;
 - compile-time and writer-side level/type validation;
-- explicit packed metadata offsets and bounded literal-prefix validation;
+- explicit metadata, parameter, filename, expression, and format offsets,
+  including the named reserved byte;
 - identical level/type reconstruction on event and direct routes;
 - explicit pre-install opening of both configured log paths;
 - deferred event-log opening by writer startup;
