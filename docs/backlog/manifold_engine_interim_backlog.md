@@ -4,7 +4,7 @@ License: MIT (see LICENSE file in repository root)
 File:   manifold_engine_interim_backlog.md  
 Author: Ritchie Brannan  
 Drafting and editorial assistance: OpenAI tools  
-Date:   Updated 5 Aug 26  
+Date:   Updated 11 Aug 26
 
 This represents the second run capture of the backlog.
 
@@ -857,32 +857,37 @@ Provide narrow Katakana-specific string conditioning.
 
 # 13. Tooling / codebase hygiene backlog
 
-## 13.1 Code sanitisation / codebase rule checker
+## 13.1 Pre-build code policy validator
 
 **Status:** Later  
 **Scale:** Medium initially, possibly larger over time  
-**Domain:** Tooling / static-analysis-style support
+**Domain:** Tooling / build validation / static-analysis-style support
 
 ### Purpose
 
-Build a small code parser/scanner to detect unwanted language and architectural usage creeping into the codebase.
+Build a pre-build policy validator to detect unwanted language, library,
+allocation, and architectural usage before compilation proceeds.
 
-### Initial checks
+### Core checks
 
-- detect use of `new`
-- detect use of `delete`, if not already implied
-- detect exception usage
-- detect `throw`
-- detect `try`
-- detect `catch`
-- detect exception-bearing patterns where practical
+- Detect memory allocation that does not pass through approved allocation
+  paths.
+- Detect direct use of `new` and `delete`.
+- Detect disallowed STL headers, types, algorithms, and facilities.
+- Detect exception usage, including `throw`, `try`, and `catch`.
+- Detect exception-bearing patterns where practical.
+- Detect forbidden global-ID registration from module-owned code.
+- Detect forbidden includes and dependency directions between component
+  directories.
 
 ### Supported invariants
 
 - no exceptions
 - no general `new` / `delete`
 - allocation through the controlled memory layer
+- no unapproved STL use
 - module/host boundary discipline
+- global-ID registration remains host-authoritative
 
 ### Likely later expansion
 
@@ -895,6 +900,19 @@ Build a small code parser/scanner to detect unwanted language and architectural 
 - dependency direction violations
 - accidental use of disallowed standard library facilities
 
+### Implementation direction
+
+- Begin with inexpensive source/token and include checks where those checks are
+  unambiguous.
+- Prefer compiler configuration for restrictions it can enforce directly.
+- Add preprocessor-aware or syntax-aware checks where raw text matching would
+  create unacceptable false positives or miss active code.
+- Consider binary/import inspection as a backstop for allocation and runtime
+  library violations that cannot be proven reliably from source alone.
+- Keep any suppressions narrow, explicit, and reviewable.
+- Allow rules to vary by component path where host, core, and module policy
+  legitimately differs.
+
 ### Timing
 
 This should remain later backlog work because its useful shape depends on more progress in:
@@ -905,6 +923,11 @@ This should remain later backlog work because its useful shape depends on more p
 - allocation rules in final form
 - exception quarantine rules, if any external SDKs require them
 - directory/layer structure
+
+The current module, ID-system, debug-transport, and code-layout work should
+establish the stable paths and boundary rules that this validator will later
+encode. Until then, build configuration, restricted registration interfaces,
+review, and tests remain the interim enforcement mechanisms.
 
 ---
 
@@ -966,8 +989,15 @@ Rename the public infrastructure to avoid confusion with *Manifold Garden*.
 
 ### Scope
 
-- Select a distinct public project and infrastructure name.
+- Use the selected Morphic naming consistently in place of the former Manifold
+  naming.
+- Audit filenames and document navigation references, including the current
+  `manifold_engine_interim_backlog.md` filename.
+- Audit remaining source, project, solution, binary, namespace, documentation,
+  log, and visible branding references to the old name.
 - Rename public repository names where appropriate.
+- Rename the local working directory when it will no longer disrupt active
+  Codex tasks associated with the existing path.
 - Update repository links and other public references.
 - Update project, solution, binary, namespace, documentation, and visible
   branding references according to the chosen migration boundary.
@@ -975,6 +1005,14 @@ Rename the public infrastructure to avoid confusion with *Manifold Garden*.
   locations.
 - Verify that package, build, CI, badge, and external integration references
   remain valid after migration.
+
+### Ordering
+
+Complete the current module, ID-system, debug-transport, and layout work before
+renaming the local directory or GitHub repository. Those location changes can
+disrupt active Codex tasks and other tooling bound to the current workspace or
+remote name. Perform the naming audit first, then execute the rename as a
+deliberate coordinated migration.
 
 ---
 

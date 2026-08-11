@@ -6,7 +6,8 @@ This file is a short navigation layer rather than an independent detailed
 backlog:
 
 - `manifold_engine_interim_backlog.md` contains the broader engine backlog and
-  subsystem dependencies.
+  subsystem dependencies. Its legacy filename is retained temporarily and is
+  included in the deferred Morphic rebranding audit.
 - `../project/future_work_notes.md` retains useful cross-task context that is
   not an active priority.
 - `../project/completed_milestones.md` records completed cross-cutting work.
@@ -22,8 +23,12 @@ backlog:
 
 - Add command-line selection of named tests and test groups without requiring
   the complete aggregate suite.
-- Rebrand the public infrastructure to avoid confusion with *Manifold Garden*,
-  including repository names and links.
+- After the current module, ID-system, debug-transport, and layout work, audit
+  and complete the Manifold-to-Morphic rebrand, including the legacy backlog
+  filename, local working directory, GitHub repository, references, and links.
+- Build a pre-build code policy validator once the new layout and component
+  rules are stable, covering approved allocation paths, STL and exception
+  restrictions, ID registration, includes, and dependency direction.
 - Complete allocator bootstrap ordering before removing the temporary fallback
   allocator.
 - Resume thread provisioning, TLS, and formal threading stress tests when the
