@@ -20,21 +20,38 @@
 namespace threading
 {
 
-void CThreadContext::startup() noexcept
+std::uint32_t MV_STD_ABI_CALL CThreadPackage::thread_entry_point(void* const user_data) noexcept
 {
-    m_resources.control_state.mark_startup();
+    CThreadResources* const resources = static_cast<CThreadResources*>(user_data);
+    if ((resources == nullptr) || (resources->config.entry_point == nullptr))
+    {
+        return ~0u;
+    }
 
-    const thread_ids::id_type thread_id = m_resources.config.thread_id;
-    (void)system_context::set_ambient_thread_id(thread_id);
+    const ThreadConfig& config = resources->config;
+    (void)system_context::set_ambient_thread_id(config.thread_id);
 
-    const char* const thread_name = system_id_registry::lookup_thread_name(thread_id);
+    const char* const thread_name = system_id_registry::lookup_thread_name(config.thread_id);
     MV_ASSERT(thread_name != nullptr);
     if (thread_name != nullptr)
     {
         (void)platform::threading::set_current_thread_name(thread_name);
     }
+    (void)platform::threading::set_current_thread_priority(config.priority);
 
-    (void)platform::threading::set_current_thread_priority(m_resources.config.priority);
+    if ((config.prepare != nullptr) &&
+        !config.prepare(config.prepare_context, config.thread_id, resources))
+    {
+        resources->control_state.mark_failed(~0u);
+        return ~0u;
+    }
+
+    return config.entry_point(resources);
+}
+
+void CThreadContext::startup() noexcept
+{
+    m_resources.control_state.mark_startup();
 }
 
 std::uint32_t CThreadContext::wait_for_new_epoch(const std::uint32_t epoch) noexcept
@@ -52,6 +69,11 @@ std::uint32_t CThreadContext::wait_for_new_epoch(const std::uint32_t epoch) noex
 
 bool CThreadPackage::startup() noexcept
 {
+    if (m_resources.config.entry_point == nullptr)
+    {
+        return false;
+    }
+
     if (m_resources.host_to_worker_msgs.initialise_growable(0u))
     {
         if (m_resources.worker_to_host_msgs.initialise_growable(0u))
@@ -61,7 +83,7 @@ bool CThreadPackage::startup() noexcept
                 if (m_resources.wait_predicate.acquire_control())
                 {
                     m_resources.control_state.mark_pending();
-                    m_resources.created = m_resources.thread.create(m_resources.config.entry_point, &m_resources);
+                    m_resources.created = m_resources.thread.create(&CThreadPackage::thread_entry_point, &m_resources);
                     if (m_resources.created)
                     {
                         while (m_resources.control_state.is_starting())

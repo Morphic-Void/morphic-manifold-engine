@@ -26,7 +26,7 @@ namespace host
 class CHostWorkerThread
 {
 public:
-    static std::uint32_t entry_point(void* user_data) noexcept;
+    static std::uint32_t MV_STD_ABI_CALL entry_point(void* user_data) noexcept;
 
 private:
     CHostWorkerThread(const CHostWorkerThread&) noexcept = delete;
@@ -45,7 +45,7 @@ private:
     threading::CThreadContext m_context;
 };
 
-std::uint32_t CHostWorkerThread::entry_point(void* user_data) noexcept
+std::uint32_t MV_STD_ABI_CALL CHostWorkerThread::entry_point(void* user_data) noexcept
 {
     if (user_data == nullptr)
     {

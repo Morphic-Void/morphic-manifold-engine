@@ -11,6 +11,7 @@
 #include <cstdint>      //  std::int32_t, std::uint32_t, std::uint64_t
 
 #include "modules/application/application_thread.hpp"
+#include "modules/module_binding_context.hpp"
 
 #include "debug/macros.hpp"
 #include "image/codec/tga.hpp"
@@ -36,7 +37,7 @@ namespace application
 class CApplicationThread
 {
 public:
-    static std::uint32_t entry_point(void* user_data) noexcept;
+    static std::uint32_t MV_STD_ABI_CALL entry_point(void* user_data) noexcept;
 
 private:
     CApplicationThread(const CApplicationThread&) noexcept = delete;
@@ -61,7 +62,7 @@ private:
     std::uint32_t m_failure_code{ 0u };
 };
 
-std::uint32_t CApplicationThread::entry_point(void* user_data) noexcept
+std::uint32_t MV_STD_ABI_CALL CApplicationThread::entry_point(void* user_data) noexcept
 {
     if (user_data == nullptr)
     {
@@ -70,6 +71,13 @@ std::uint32_t CApplicationThread::entry_point(void* user_data) noexcept
     }
 
     threading::CThreadResources& resources = *static_cast<threading::CThreadResources*>(user_data);
+    if (!modules::is_thread_context_ready(user_data))
+    {
+        resources.control_state.mark_failed(~0u);
+        MV_ERROR("CApplicationThread entry detected incomplete module context installation");
+        return ~0u;
+    }
+
     CApplicationThread thread(resources);
     return thread.main();
 }
@@ -270,7 +278,7 @@ void CApplicationThread::fail(const std::uint32_t code) noexcept
     m_operation_complete = true;
 }
 
-platform::threading::FThreadEntry application_thread_entry_point() noexcept
+FApplicationThread application_thread_entry_point() noexcept
 {
     return &CApplicationThread::entry_point;
 }

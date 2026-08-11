@@ -24,6 +24,8 @@
 #include "containers/TInstance.hpp"
 #include "containers/TUnorderedCollection.hpp"
 #include "debug/service.hpp"
+#include "host/bound_module.hpp"
+#include "modules/application/application_binding.hpp"
 #include "platform/system/performance_counter.hpp"
 #include "system/async_state.hpp"
 #include "threading/CThreadPackage.hpp"
@@ -56,6 +58,7 @@ private:
 
     void initialise_debug_service() noexcept;
     [[nodiscard]] bool initialise_runtime() noexcept;
+    [[nodiscard]] bool bind_application_module() noexcept;
     [[nodiscard]] bool start_threads() noexcept;
     void run() noexcept;
     void shutdown() noexcept;
@@ -73,6 +76,8 @@ private:
     CAssetRepository m_assets;
     CASyncStates m_async_states;
     platform::system::CPerfCountConversion m_perf_count_conversion;
+    CBoundModule m_application_module;
+    application::FApplicationThread m_application_thread{ nullptr };
     std::int32_t m_thread_slots[k_thread_count]{ -1, -1, -1 };
 };
 

@@ -81,4 +81,9 @@ void host_context_install() noexcept
     (void)memory::set_module_memory_context(&s_host_memory_context);
 }
 
+memory::CMemoryContext* host_memory_context() noexcept
+{
+    return &s_host_memory_context;
+}
+
 }   //  namespace host

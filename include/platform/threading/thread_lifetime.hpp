@@ -38,6 +38,8 @@
 
 #include <cstdint>      //  std::uint32_t, std::uint64_t
 
+#include "platform/platform_defines.hpp"
+
 namespace platform::threading
 {
 
@@ -45,7 +47,7 @@ namespace platform::threading
 //  Native thread lifetime
 //==============================================================================
 
-using FThreadEntry = std::uint32_t(*)(void* user_data) noexcept;
+using FThreadEntry = std::uint32_t(MV_STD_ABI_CALL*)(void* user_data) noexcept;
 
 class CThread
 {

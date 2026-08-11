@@ -33,11 +33,15 @@
 namespace threading
 {
 
+using FThreadPrepare = bool(MV_STD_ABI_CALL*)(void* context, thread_ids::id_type thread_id, void* thread_resources) noexcept;
+
 struct ThreadConfig
 {
     thread_ids::id_type thread_id{};
     platform::threading::EThreadPriority priority{ platform::threading::EThreadPriority::Normal };
     platform::threading::FThreadEntry entry_point{ nullptr };
+    FThreadPrepare prepare{ nullptr };
+    void* prepare_context{ nullptr };
 };
 
 class CThreadResources
@@ -113,6 +117,8 @@ public:
     [[nodiscard]] EThreadRunState query_state() const noexcept;
 
 private:
+    static std::uint32_t MV_STD_ABI_CALL thread_entry_point(void* user_data) noexcept;
+
     CThreadResources m_resources;
 };
 

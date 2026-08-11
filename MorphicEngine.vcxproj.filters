@@ -423,11 +423,23 @@
     <ClInclude Include="include\host\host.hpp">
       <Filter>include\host</Filter>
     </ClInclude>
+    <ClInclude Include="include\host\bound_module.hpp">
+      <Filter>include\host</Filter>
+    </ClInclude>
     <ClInclude Include="include\host\host_worker_thread.hpp">
       <Filter>include\host</Filter>
     </ClInclude>
     <ClInclude Include="include\modules\application\application_thread.hpp">
       <Filter>include\modules\application</Filter>
+    </ClInclude>
+    <ClInclude Include="include\modules\application\application_binding.hpp">
+      <Filter>include\modules\application</Filter>
+    </ClInclude>
+    <ClInclude Include="include\modules\module_binding.hpp">
+      <Filter>include\modules</Filter>
+    </ClInclude>
+    <ClInclude Include="include\modules\module_binding_context.hpp">
+      <Filter>include\modules</Filter>
     </ClInclude>
     <ClInclude Include="include\threading\transports\TBulkTransport.hpp">
       <Filter>include\threading\transports</Filter>
@@ -632,11 +644,11 @@
     <ClCompile Include="src\host\host.cpp">
       <Filter>src\host</Filter>
     </ClCompile>
-    <ClCompile Include="src\host\host_worker_thread.cpp">
+    <ClCompile Include="src\host\bound_module.cpp">
       <Filter>src\host</Filter>
     </ClCompile>
-    <ClCompile Include="src\modules\application\application_thread.cpp">
-      <Filter>src\modules\application</Filter>
+    <ClCompile Include="src\host\host_worker_thread.cpp">
+      <Filter>src\host</Filter>
     </ClCompile>
     <ClCompile Include="src\threading\CThreadPackage.cpp">
       <Filter>src\threading</Filter>

@@ -13,12 +13,12 @@
 #ifndef APPLICATION_THREAD_HPP_INCLUDED
 #define APPLICATION_THREAD_HPP_INCLUDED
 
-#include "platform/threading/thread_lifetime.hpp"
+#include "modules/application/application_binding.hpp"
 
 namespace application
 {
 
-platform::threading::FThreadEntry application_thread_entry_point() noexcept;
+FApplicationThread application_thread_entry_point() noexcept;
 
 }   //  namespace application
 

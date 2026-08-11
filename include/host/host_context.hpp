@@ -20,11 +20,21 @@
 #ifndef HOST_CONTEXT_HPP_INCLUDED
 #define HOST_CONTEXT_HPP_INCLUDED
 
+//==============================================================================
+//  External declarations
+//==============================================================================
+
+namespace memory
+{
+class CMemoryContext;
+}
+
 namespace host
 {
 
 //  Installs the host context.
 void host_context_install() noexcept;
+[[nodiscard]] memory::CMemoryContext* host_memory_context() noexcept;
 
 }   //  namespace host
 

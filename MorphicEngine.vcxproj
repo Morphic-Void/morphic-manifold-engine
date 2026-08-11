@@ -230,12 +230,12 @@
     <ClCompile Include="src\debug\event_arguments.cpp" />
     <ClCompile Include="src\debug\service.cpp" />
     <ClCompile Include="src\host\host.cpp" />
+    <ClCompile Include="src\host\bound_module.cpp" />
     <ClCompile Include="src\host\host_context.cpp" />
     <ClCompile Include="src\host\host_worker_thread.cpp" />
     <ClCompile Include="src\image\codec\tga.cpp" />
     <ClCompile Include="src\main\MorphicEngine.cpp" />
     <ClCompile Include="src\memory\memory_context.cpp" />
-    <ClCompile Include="src\modules\application\application_thread.cpp" />
     <ClCompile Include="src\platform\filesystem\file.cpp" />
     <ClCompile Include="src\platform\filesystem\internal\file_utils.cpp" />
     <ClCompile Include="src\platform\filesystem\log.cpp" />
@@ -308,6 +308,7 @@
     <ClInclude Include="include\debug\macros.hpp" />
     <ClInclude Include="include\debug\event_arguments.hpp" />
     <ClInclude Include="include\debug\service.hpp" />
+    <ClInclude Include="include\host\bound_module.hpp" />
     <ClInclude Include="include\host\host.hpp" />
     <ClInclude Include="include\host\host_context.hpp" />
     <ClInclude Include="include\host\host_worker_thread.hpp" />
@@ -316,7 +317,10 @@
     <ClInclude Include="include\memory\memory_policies.hpp" />
     <ClInclude Include="include\memory\memory_token.hpp" />
     <ClInclude Include="include\memory\memory_view.hpp" />
+    <ClInclude Include="include\modules\application\application_binding.hpp" />
     <ClInclude Include="include\modules\application\application_thread.hpp" />
+    <ClInclude Include="include\modules\module_binding.hpp" />
+    <ClInclude Include="include\modules\module_binding_context.hpp" />
     <ClInclude Include="include\platform\filesystem\file.hpp" />
     <ClInclude Include="include\platform\filesystem\internal\file_utils.hpp" />
     <ClInclude Include="include\platform\filesystem\log.hpp" />

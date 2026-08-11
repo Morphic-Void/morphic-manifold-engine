@@ -261,7 +261,7 @@ private:
         std::size_t& output_size) noexcept;
     [[nodiscard]] static const char* level_name(const EEventLevel level) noexcept;
     [[nodiscard]] static const char* type_name(const EEventType type) noexcept;
-    static std::uint32_t writer_thread_entry(void* const user_data) noexcept;
+    static std::uint32_t MV_STD_ABI_CALL writer_thread_entry(void* const user_data) noexcept;
     [[nodiscard]] std::uint32_t writer_thread_main() noexcept;
 
     [[nodiscard]] bool log_paths_configured() const noexcept;
@@ -478,4 +478,3 @@ template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std:
 }   //  namespace debug_system
 
 #endif  //  #ifndef DEBUG_SERVICE_HPP_INCLUDED
-

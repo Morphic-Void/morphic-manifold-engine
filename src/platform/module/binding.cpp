@@ -136,6 +136,28 @@ void* CPlatformModule::find_symbol(const char* const symbol_name) const noexcept
     return symbol;
 }
 
+FModuleFunction CPlatformModule::find_function(const char* const symbol_name) const noexcept
+{
+    FModuleFunction symbol = nullptr;
+
+    if ((m_native_handle != nullptr) && (symbol_name != nullptr) && (symbol_name[0] != 0))
+    {
+#if MV_PLATFORM_WINDOWS
+        HMODULE handle = reinterpret_cast<HMODULE>(m_native_handle);
+        const FARPROC proc = GetProcAddress(handle, symbol_name);
+
+        if (proc != nullptr)
+        {
+            symbol = reinterpret_cast<FModuleFunction>(proc);
+        }
+#else
+        symbol = reinterpret_cast<FModuleFunction>(dlsym(m_native_handle, symbol_name));
+#endif
+    }
+
+    return symbol;
+}
+
 void* CPlatformModule::native_handle() const noexcept
 {
     return m_native_handle;

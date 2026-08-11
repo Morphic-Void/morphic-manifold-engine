@@ -23,9 +23,11 @@
 #include "assets/asset_repository.hpp"
 #include "containers/containers.hpp"
 #include "host/host.hpp"
+#include "host/host_context.hpp"
 #include "host/host_worker_thread.hpp"
 #include "image/codec/tga.hpp"
-#include "modules/application/application_thread.hpp"
+#include "modules/application/application_binding.hpp"
+#include "platform/path/native_path.hpp"
 #include "platform/system/performance_counter.hpp"
 #include "system/async_state.hpp"
 #include "system/erased_owner.hpp"
@@ -99,10 +101,11 @@ void CHost::initialise_debug_service() noexcept
 
 bool CHost::start_threads() noexcept
 {
-    static const threading::ThreadConfig thread_configs[k_thread_count]{
+    const threading::ThreadConfig thread_configs[k_thread_count]{
         {thread_ids::bg_file_io, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
         {thread_ids::bg_conditioning, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
-        {thread_ids::application, platform::threading::EThreadPriority::Normal, application::application_thread_entry_point()} };
+        {thread_ids::application, platform::threading::EThreadPriority::Normal, m_application_thread,
+            &CBoundModule::prepare_thread, &m_application_module} };
 
     for (std::size_t thread_index = 0u; thread_index < k_thread_count; ++thread_index)
     {
@@ -121,12 +124,74 @@ bool CHost::start_threads() noexcept
     return true;
 }
 
+bool CHost::bind_application_module() noexcept
+{
+    constexpr modules::SAdvertisedHostIdentity advertised_host_identity{ module_ids::executable, { 1u, 1u } };
+    constexpr std::uint32_t expected_module_major = 1u;
+    constexpr std::uint32_t functional_major = 1u;
+
+    const platform::path::NativePath module_path =
+        platform::path::makeNativePath("MorphicApplication.dll");
+    if (!module_path.is_ready() ||
+        !m_application_module.bind(
+            module_path, module_ids::application, advertised_host_identity, functional_major) ||
+        !m_application_module.install(module_ids::application, host_memory_context(), m_debug_service))
+    {
+        MV_ERROR("Host failed to bind and install the application module");
+        return false;
+    }
+
+    const modules::SAdvertisedModuleIdentity& module_identity = m_application_module.advertised_identity();
+    modules::SCoreFunctions version_zero_core;
+    modules::SCoreFunctions unsupported_core;
+    modules::FModuleFunction version_zero_thread = nullptr;
+    modules::FModuleFunction application_thread = nullptr;
+    modules::FModuleFunction unsupported_thread = nullptr;
+    modules::FModuleFunction unknown_thread = nullptr;
+    MV_INFO("Application module version {}.{} supports functional majors [{},{}]",
+        module_identity.version.major,
+        module_identity.version.minor,
+        module_identity.minimum_functional_major,
+        module_identity.maximum_functional_major);
+
+    if ((module_identity.version.major != expected_module_major) ||
+        (module_identity.minimum_functional_major != 0u) ||
+        (module_identity.maximum_functional_major != 1u) ||
+        !m_application_module.populate_core_functions(0u, version_zero_core) ||
+        m_application_module.populate_core_functions(2u, unsupported_core) ||
+        (unsupported_core.install_ambient_module_id != nullptr) ||
+        (unsupported_core.install_module_memory_context != nullptr) ||
+        (unsupported_core.install_debug_service != nullptr) ||
+        (unsupported_core.install_ambient_thread_id != nullptr) ||
+        (unsupported_core.install_thread_memory_context != nullptr) ||
+        (unsupported_core.install_thread_provisioning != nullptr) ||
+        (unsupported_core.query_function != nullptr) ||
+        !m_application_module.query_function(
+            type_ids::application_thread_function, 0u, version_zero_thread) ||
+        !m_application_module.query_function(
+            type_ids::application_thread_function, functional_major, application_thread) ||
+        m_application_module.query_function(
+            type_ids::application_thread_function, 2u, unsupported_thread) ||
+        m_application_module.query_function(type_ids::undefined, 1u, unknown_thread) ||
+        (version_zero_thread == nullptr) ||
+        (unsupported_thread != nullptr) ||
+        (unknown_thread != nullptr))
+    {
+        MV_ERROR("Host failed the application module compatibility checks");
+        return false;
+    }
+
+    m_application_thread = reinterpret_cast<application::FApplicationThread>(application_thread);
+    return m_application_thread != nullptr;
+}
+
 bool CHost::initialise_runtime() noexcept
 {
     return m_perf_count_conversion.init() &&
         m_thread_packages.initialise() &&
         m_assets.initialise() &&
         m_async_states.initialise() &&
+        bind_application_module() &&
         start_threads();
 }
 
@@ -521,6 +586,8 @@ void CHost::shutdown_debug_service() noexcept
 void CHost::shutdown() noexcept
 {
     shutdown_threads();
+    m_application_thread = nullptr;
+    m_application_module.unbind();
     m_async_states.deallocate();
     m_assets.deallocate();
     m_thread_packages.deallocate();

@@ -162,4 +162,12 @@
 #define MV_STD_ABI_CALL
 #endif
 
+#if MV_PLATFORM_WINDOWS && defined(_MSC_VER) && defined(_M_IX86)
+#define MV_MODULE_EXPORT extern "C"
+#elif MV_PLATFORM_WINDOWS
+#define MV_MODULE_EXPORT extern "C" __declspec(dllexport)
+#else
+#define MV_MODULE_EXPORT extern "C" __attribute__((visibility("default")))
+#endif
+
 #endif  //  #ifndef PLATFORM_DEFINES_HPP_INCLUDED

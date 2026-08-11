@@ -22,9 +22,12 @@
 #define MODULE_BINDING_HPP_INCLUDED
 
 #include "platform/path/native_path.hpp"
+#include "platform/platform_defines.hpp"
 
 namespace platform::module
 {
+
+using FModuleFunction = void(MV_STD_ABI_CALL*)() noexcept;
 
 const char* get_modules_std_ext() noexcept;
 
@@ -48,6 +51,7 @@ public:
 
     //  Queries
     [[nodiscard]] bool is_bound() const noexcept;
+    [[nodiscard]] FModuleFunction find_function(const char* symbol_name) const noexcept;
     [[nodiscard]] void* find_symbol(const char* const symbol_name) const noexcept;
     [[nodiscard]] void* native_handle() const noexcept;
 

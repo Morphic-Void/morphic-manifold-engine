@@ -762,7 +762,7 @@ bool CDebugServiceState::write_event(const SEvent& event) noexcept
     return write_direct_record(event.level, event.type, incident, m_event_format_buffer, text_size);
 }
 
-std::uint32_t CDebugServiceState::writer_thread_entry(void* const user_data) noexcept
+std::uint32_t MV_STD_ABI_CALL CDebugServiceState::writer_thread_entry(void* const user_data) noexcept
 {
     if (user_data == nullptr)
     {
