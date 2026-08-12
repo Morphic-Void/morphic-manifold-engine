@@ -2,10 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   DebugService_test_suite.cpp
-//  Primary implementation: OpenAI tools
-//  Used, occasionally adjusted, and accepted by: Ritchie Brannan
-//  Date:   28 Jul 26
+//  File:    DebugService_test_suite.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    28 Jul 26
 
 #include <cstdio>
 #include <cstdint>

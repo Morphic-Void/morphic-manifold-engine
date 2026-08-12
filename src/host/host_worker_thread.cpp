@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    host_worker_thread.cpp
-//  Authors: Ritchie Brannan / OpenAI tools
+//  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    7 Aug 26
 //
 //  Host-owned file and image conditioning worker thread.

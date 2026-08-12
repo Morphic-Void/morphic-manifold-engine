@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    host.cpp
-//  Authors: Ritchie Brannan / OpenAI tools
+//  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    15 May 26
 //
 //  Requirements:

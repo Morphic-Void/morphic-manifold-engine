@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   erased_pod.hpp
-//  Author: Ritchie Brannan
-//  Date:   14 May 2026
+//  File:    erased_pod.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    14 May 2026
 //
 //  Requirements:
 //  - Requires C++17 or later.
@@ -58,7 +58,7 @@ private:
         std::uint64_t reserved{ 0u };
     };
 
-    static_assert(sizeof(SHeader) == 16u, "TErasedPod header must occupy 16 bytes.");
+    static_assert((sizeof(SHeader) == 16u), "TErasedPod header must occupy 16 bytes.");
 
 public:
 

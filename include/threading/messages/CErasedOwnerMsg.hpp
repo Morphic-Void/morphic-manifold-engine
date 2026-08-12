@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    CErasedOwnerMsg.hpp
-//  Authors: Ritchie Brannan / OpenAI tools
+//  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    8 Aug 26
 //
 //  Move-only erased message carrying independently typed owned content.
@@ -67,10 +67,8 @@ static_assert(std::is_nothrow_default_constructible_v<CErasedOwnerMsg>);
 static_assert(std::is_nothrow_move_constructible_v<CErasedOwnerMsg>);
 static_assert(std::is_nothrow_move_assignable_v<CErasedOwnerMsg>);
 static_assert(std::is_nothrow_destructible_v<CErasedOwnerMsg>);
-static_assert(sizeof(CErasedOwnerMsg) == 48u,
-    "CErasedOwnerMsg must occupy 48 bytes on supported targets.");
-static_assert(alignof(CErasedOwnerMsg) == 16u,
-    "CErasedOwnerMsg must retain 16-byte alignment.");
+static_assert((sizeof(CErasedOwnerMsg) == 48u), "CErasedOwnerMsg must occupy 48 bytes on supported targets.");
+static_assert((alignof(CErasedOwnerMsg) == 16u), "CErasedOwnerMsg must retain 16-byte alignment.");
 
 //==============================================================================
 //  CErasedOwnerMsg out of class function bodies

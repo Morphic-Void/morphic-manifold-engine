@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    asset_repository.hpp
-//  Authors: Ritchie Brannan / OpenAI tools
+//  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    6 Aug 26
 //
 //  Requirements:
@@ -65,7 +65,7 @@ private:
 
 static_assert(std::is_trivially_copyable_v<CAssetId>, "CAssetId must be trivially copyable.");
 static_assert(std::is_standard_layout_v<CAssetId>, "CAssetId must have standard layout.");
-static_assert(sizeof(CAssetId) == sizeof(std::uint64_t), "CAssetId must occupy 64 bits.");
+static_assert((sizeof(CAssetId) == sizeof(std::uint64_t)), "CAssetId must occupy 64 bits.");
 
 //==============================================================================
 //  CAssetRecord

@@ -2,6 +2,10 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
+//  File:    system_ids.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
+//
 //  Shared installed-view lookup for host-authored system identity names.
 
 #include "system/system_id_registry.hpp"
@@ -11,25 +15,20 @@
 namespace system_id_registry
 {
 
-namespace
-{
-
-SSystemRegistryView s_installed_view{};
-bool s_view_installed{ false };
+static SSystemRegistryView s_installed_view{};
+static bool s_view_installed{ false };
 
 template<typename T>
-[[nodiscard]] bool table_shape_is_valid(const T* const table, const std::uint32_t count) noexcept
+[[nodiscard]] static bool table_shape_is_valid(const T* const table, const std::uint32_t count) noexcept
 {
     return (count == 0u) ? (table == nullptr) : (table != nullptr);
 }
 
-[[nodiscard]] bool name_is_valid(const char* const name, const std::uint32_t size) noexcept
+[[nodiscard]] static bool name_is_valid(const char* const name, const std::uint32_t size) noexcept
 {
     return (name != nullptr) && (size != 0u) && (size <= k_max_system_name_size) &&
         (name[size] == 0) && (std::memchr(name, 0, size) == nullptr);
 }
-
-}   //  namespace
 
 bool validate_view(const SSystemRegistryView& view) noexcept
 {
@@ -137,14 +136,13 @@ const STypeRegistration* find_type(const SSystemRegistryView* const view, const 
         return nullptr;
     }
     const STypeRegistration& registration = view->types[ordinal];
-    return (registration.id == id) && (registration.index == index) &&
-        name_is_valid(registration.name, registration.name_size) ? &registration : nullptr;
+    return ((registration.id == id) && (registration.index == index) &&
+        name_is_valid(registration.name, registration.name_size)) ? &registration : nullptr;
 }
 
 const SMountPointRegistration* find_mount_point(const SSystemRegistryView* const view, const mount_point_ids::id_type id) noexcept
 {
-    if ((view == nullptr) || !mount_point_ids::is_valid_id(id) ||
-        !table_shape_is_valid(view->mount_points, view->mount_point_count))
+    if ((view == nullptr) || !mount_point_ids::is_valid_id(id) || !table_shape_is_valid(view->mount_points, view->mount_point_count))
     {
         return nullptr;
     }
@@ -154,14 +152,13 @@ const SMountPointRegistration* find_mount_point(const SSystemRegistryView* const
         return nullptr;
     }
     const SMountPointRegistration& registration = view->mount_points[index.raw_value()];
-    return (registration.id == id) && (registration.index == index) &&
-        name_is_valid(registration.name, registration.name_size) ? &registration : nullptr;
+    return ((registration.id == id) && (registration.index == index) &&
+        name_is_valid(registration.name, registration.name_size)) ? &registration : nullptr;
 }
 
 const SThreadRegistration* find_thread(const SSystemRegistryView* const view, const thread_ids::id_type id) noexcept
 {
-    if ((view == nullptr) || !thread_ids::is_valid_id(id) ||
-        !table_shape_is_valid(view->threads, view->thread_count))
+    if ((view == nullptr) || !thread_ids::is_valid_id(id) || !table_shape_is_valid(view->threads, view->thread_count))
     {
         return nullptr;
     }
@@ -171,14 +168,13 @@ const SThreadRegistration* find_thread(const SSystemRegistryView* const view, co
         return nullptr;
     }
     const SThreadRegistration& registration = view->threads[index.raw_value()];
-    return (registration.id == id) && (registration.index == index) &&
-        name_is_valid(registration.name, registration.name_size) ? &registration : nullptr;
+    return ((registration.id == id) && (registration.index == index) &&
+        name_is_valid(registration.name, registration.name_size)) ? &registration : nullptr;
 }
 
 const SModuleRegistration* find_module(const SSystemRegistryView* const view, const module_ids::id_type id) noexcept
 {
-    if ((view == nullptr) || !module_ids::is_valid_id(id) ||
-        !table_shape_is_valid(view->modules, view->module_count))
+    if ((view == nullptr) || !module_ids::is_valid_id(id) || !table_shape_is_valid(view->modules, view->module_count))
     {
         return nullptr;
     }
@@ -188,10 +184,10 @@ const SModuleRegistration* find_module(const SSystemRegistryView* const view, co
         return nullptr;
     }
     const SModuleRegistration& registration = view->modules[index.raw_value()];
-    return (registration.id == id) && (registration.index == index) &&
+    return ((registration.id == id) && (registration.index == index) &&
         mount_point_ids::is_valid_id(registration.mount_point_id) &&
         (module_ids::get_mount_point_id(registration.id) == registration.mount_point_id) &&
-        name_is_valid(registration.name, registration.name_size) ? &registration : nullptr;
+        name_is_valid(registration.name, registration.name_size)) ? &registration : nullptr;
 }
 
 const STypeRegistration* find_type(const system_type_id id) noexcept { return find_type(installed_view(), id); }
@@ -245,8 +241,7 @@ bool format_system_name(
         return false;
     }
 
-    const std::size_t required_size =
-        static_cast<std::size_t>(module->name_size) + 1u + thread->name_size;
+    const std::size_t required_size = static_cast<std::size_t>(module->name_size) + 1u + thread->name_size;
     if (required_size >= destination_capacity)
     {
         return false;

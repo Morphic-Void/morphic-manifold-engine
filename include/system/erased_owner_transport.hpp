@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   erased_owner_transport.hpp
-//  Author: Ritchie Brannan
-//  Date:   26 Jul 26
+//  File:    erased_owner_transport.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    26 Jul 26
 //
 //  Attribution-aware SPSC transport for CErasedOwner.
 

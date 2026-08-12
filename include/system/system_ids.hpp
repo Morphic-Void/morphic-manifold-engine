@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   system_ids.hpp
-//  Author: Ritchie Brannan
-//  Date:   26 Jul 26
+//  File:    system_ids.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    26 Jul 26
 //
 //  Requirements:
 //  - Requires C++17 or later.
@@ -256,8 +256,8 @@ private:
     return !(lhs == rhs);
 }
 
-static_assert(sizeof(type_id) == sizeof(std::uint32_t), "type_id must occupy exactly four bytes.");
-static_assert(alignof(type_id) == alignof(std::uint32_t), "type_id must retain four-byte alignment.");
+static_assert((sizeof(type_id) == sizeof(std::uint32_t)), "type_id must occupy exactly four bytes.");
+static_assert((alignof(type_id) == alignof(std::uint32_t)), "type_id must retain four-byte alignment.");
 static_assert(std::is_standard_layout_v<type_id>, "type_id must retain standard layout.");
 static_assert(std::is_trivially_copyable_v<type_id>, "type_id must remain trivially copyable.");
 

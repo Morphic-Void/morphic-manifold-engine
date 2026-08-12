@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    application_thread.cpp
-//  Authors: Ritchie Brannan / OpenAI tools
+//  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    7 Aug 26
 //
 //  Application thread and the current TGA flow test.
@@ -106,8 +106,7 @@ bool CApplicationThread::initialise() noexcept
     char registry_name[64]{};
     std::size_t registry_name_size = 0u;
     constexpr char registry_format[]{ "{}" };
-    const debug_system::SEventArguments registry_arguments =
-        debug_system::encode_event_arguments(system_type_ids::file_load_request);
+    const debug_system::SEventArguments registry_arguments = debug_system::encode_event_arguments(system_type_ids::file_load_request);
     if ((debug_system::format_event_text(
             registry_name, sizeof(registry_name),
             registry_format, (sizeof(registry_format) - 1u),
@@ -120,6 +119,7 @@ bool CApplicationThread::initialise() noexcept
         fail(1u);
         return false;
     }
+
     MV_REPORT("Application system registry authority: %s", registry_name);
 
     if (!m_perf_counter.update() ||

@@ -2,6 +2,10 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
+//  File:    type_id_binding_category.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
+//
 //  Compile-time category ownership for system and local type-ID bindings.
 
 #pragma once

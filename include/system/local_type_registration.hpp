@@ -1,5 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
+//
+//  File:    local_type_registration.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
 //
 //  C++ type binding for component-local type identities.
 

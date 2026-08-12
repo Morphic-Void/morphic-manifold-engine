@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 // 
-//  File:   run_tests.cpp
-//  Author: Ritchie Brannan
-//  Date:   24 Apr 26
+//  File:    run_tests.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    24 Apr 26
 
 #include "tests/run_tests.hpp"
 #include "tests/AssetRepository_test_suite.hpp"

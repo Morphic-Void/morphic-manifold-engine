@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   erased_owner_transport.cpp
-//  Author: Ritchie Brannan
-//  Date:   26 Jul 26
+//  File:    erased_owner_transport.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    26 Jul 26
 
 #include <utility>      //  std::move
 
@@ -97,16 +97,12 @@ bool CErasedOwnerTransport::initialise(const std::uint32_t capacity) noexcept
 bool CErasedOwnerTransport::attribution_is_valid() const noexcept
 {
     memory::CMemoryContext* const transport_context = memory_context();
-    memory::CMemoryContext* const destination_context =
-        (m_recipient_context != nullptr) ? m_recipient_context : transport_context;
+    memory::CMemoryContext* const destination_context = (m_recipient_context != nullptr) ? m_recipient_context : transport_context;
     return module_ids::is_valid_id(m_destination_module_id) &&
-        (transport_context != nullptr) &&
-        (destination_context != nullptr) &&
+        (transport_context != nullptr) && (destination_context != nullptr) &&
         system_ids::is_valid_id(destination_context->get_system_id()) &&
-        (system_ids::get_module_id(destination_context->get_system_id()) ==
-            m_destination_module_id) &&
-        ((m_recipient_context == nullptr) ||
-            transport_context->is_compatible_with(*m_recipient_context));
+        (system_ids::get_module_id(destination_context->get_system_id()) == m_destination_module_id) &&
+        ((m_recipient_context == nullptr) || transport_context->is_compatible_with(*m_recipient_context));
 }
 
 }   //  namespace threading::transports

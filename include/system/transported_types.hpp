@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   transported_types.hpp
-//  Author: Ritchie Brannan
-//  Date:   26 Jul 26
+//  File:    transported_types.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    26 Jul 26
 //
 //  Built-in system payload declarations and C++ type registrations.
 

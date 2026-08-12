@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   system_type_registration.hpp
-//  Author: Ritchie Brannan
-//  Date:   26 Jul 26
+//  File:    system_type_registration.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    26 Jul 26
 //
 //  C++ type binding for generated system type ids and explicit erased-owner
 //  payload eligibility.

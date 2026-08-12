@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   erased_owner.cpp
-//  Author: Ritchie Brannan
-//  Date:   26 Jul 26
+//  File:    erased_owner.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    26 Jul 26
 //
 //  Closed-world destruction and lifetime implementation for CErasedOwner.
 
@@ -50,20 +50,28 @@ void CErasedOwner::destroy() noexcept
             switch (m_type_id.raw_value())
             {
                 case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
+                {
                     static_cast<LoadedFile*>(payload)->~LoadedFile();
                     break;
+                }
 
                 case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
+                {
                     static_cast<EncodedTga*>(payload)->~EncodedTga();
                     break;
+                }
 
                 case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
+                {
                     static_cast<DecodedTga*>(payload)->~DecodedTga();
                     break;
+                }
 
                 default:
+                {
                     MV_CRITICAL_ASSERT(false);
                     break;
+                }
             }
         }
     }
@@ -88,10 +96,11 @@ bool CErasedOwner::has_hazard(const mount_point_ids::id_type mount_point_id) con
     return (bit != 0u) && ((m_hazards & bit) != 0u);
 }
 
-bool CErasedOwner::can_reattribute_to(memory::CMemoryContext* target) const noexcept
+bool CErasedOwner::can_reattribute_to(memory::CMemoryContext* const target) const noexcept
 {
-    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
-    if (target == nullptr)
+    memory::CMemoryContext* const resolved_target =
+        (target != nullptr) ? target : memory::get_ambient_memory_context();
+    if (resolved_target == nullptr)
     {
         return false;
     }
@@ -102,14 +111,15 @@ bool CErasedOwner::can_reattribute_to(memory::CMemoryContext* target) const noex
 
     memory::CMemoryContext* source = nullptr;
     return is_ready() && memory_source_context(source) &&
-        m_storage.can_reattribute_to(target) &&
-        payload_can_reattribute_to(target);
+        m_storage.can_reattribute_to(resolved_target) &&
+        payload_can_reattribute_to(resolved_target);
 }
 
-bool CErasedOwner::reattribute(memory::CMemoryContext* target) noexcept
+bool CErasedOwner::reattribute(memory::CMemoryContext* const target) noexcept
 {
-    target = (target != nullptr) ? target : memory::get_ambient_memory_context();
-    if ((target == nullptr) || !can_reattribute_to(target))
+    memory::CMemoryContext* const resolved_target =
+        (target != nullptr) ? target : memory::get_ambient_memory_context();
+    if ((resolved_target == nullptr) || !can_reattribute_to(resolved_target))
     {
         return false;
     }
@@ -123,15 +133,15 @@ bool CErasedOwner::reattribute(memory::CMemoryContext* target) noexcept
     {
         return false;
     }
-    if ((source != nullptr) && (source != target) &&
+    if ((source != nullptr) && (source != resolved_target) &&
         !memory::reattribute(
-            *source, *target, memory_allocation_count(), memory_allocation_size()))
+            *source, *resolved_target, memory_allocation_count(), memory_allocation_size()))
     {
         return false;
     }
 
-    m_storage.unsafe_replace_context_without_accounting(source, target);
-    unsafe_replace_payload_memory_context_without_accounting(source, target);
+    m_storage.unsafe_replace_context_without_accounting(source, resolved_target);
+    unsafe_replace_payload_memory_context_without_accounting(source, resolved_target);
     return true;
 }
 
@@ -157,39 +167,43 @@ bool CErasedOwner::memory_source_context(memory::CMemoryContext*& source) const 
     switch (m_type_id.raw_value())
     {
         case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
+        {
             payload_source =
                 static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_source_context();
             break;
+        }
 
         case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
+        {
             payload_source =
                 static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_source_context();
             break;
+        }
 
         case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
+        {
             payload_source =
                 static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_source_context();
             break;
+        }
 
         default:
+        {
             MV_CRITICAL_ASSERT(false);
             return false;
+        }
     }
     return (payload_source == nullptr) || (payload_source == source);
 }
 
 std::uint32_t CErasedOwner::memory_allocation_count() const noexcept
 {
-    return is_empty()
-        ? 0u
-        : (m_storage.memory_allocation_count() + payload_memory_allocation_count());
+    return is_empty() ? 0u : (m_storage.memory_allocation_count() + payload_memory_allocation_count());
 }
 
 std::uint64_t CErasedOwner::memory_allocation_size() const noexcept
 {
-    return is_empty()
-        ? 0u
-        : (m_storage.memory_allocation_size() + payload_memory_allocation_size());
+    return is_empty() ? 0u : (m_storage.memory_allocation_size() + payload_memory_allocation_size());
 }
 
 std::uint32_t CErasedOwner::payload_memory_allocation_count() const noexcept
@@ -197,17 +211,25 @@ std::uint32_t CErasedOwner::payload_memory_allocation_count() const noexcept
     switch (m_type_id.raw_value())
     {
         case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
+        {
             return static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_allocation_count();
+        }
 
         case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
+        {
             return static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_allocation_count();
+        }
 
         case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
+        {
             return static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_allocation_count();
+        }
 
         default:
+        {
             MV_CRITICAL_ASSERT(false);
             return 0u;
+        }
     }
 }
 
@@ -216,17 +238,25 @@ std::uint64_t CErasedOwner::payload_memory_allocation_size() const noexcept
     switch (m_type_id.raw_value())
     {
         case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
+        {
             return static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_allocation_size();
+        }
 
         case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
+        {
             return static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_allocation_size();
+        }
 
         case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
+        {
             return static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_allocation_size();
+        }
 
         default:
+        {
             MV_CRITICAL_ASSERT(false);
             return 0u;
+        }
     }
 }
 
@@ -235,17 +265,25 @@ bool CErasedOwner::payload_can_reattribute_to(memory::CMemoryContext* const targ
     switch (m_type_id.raw_value())
     {
         case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
+        {
             return static_cast<const LoadedFile*>(m_storage.data())->buffer.can_reattribute_to(target);
+        }
 
         case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
+        {
             return static_cast<const EncodedTga*>(m_storage.data())->buffer.can_reattribute_to(target);
+        }
 
         case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
+        {
             return static_cast<const DecodedTga*>(m_storage.data())->buffer.can_reattribute_to(target);
+        }
 
         default:
+        {
             MV_CRITICAL_ASSERT(false);
             return false;
+        }
     }
 }
 
@@ -256,23 +294,31 @@ void CErasedOwner::unsafe_replace_payload_memory_context_without_accounting(
     switch (m_type_id.raw_value())
     {
         case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
+        {
             static_cast<LoadedFile*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
+        }
 
         case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
+        {
             static_cast<EncodedTga*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
+        }
 
         case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
+        {
             static_cast<DecodedTga*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
+        }
 
         default:
+        {
             MV_CRITICAL_ASSERT(false);
             break;
+        }
     }
 }
 

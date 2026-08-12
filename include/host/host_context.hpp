@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   host_context.hpp
-//  Author: Ritchie Brannan
-//  Date:   13 July 26
+//  File:    host_context.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    13 July 26
 //
 //  Installs the host context including the host memory context.
 // 

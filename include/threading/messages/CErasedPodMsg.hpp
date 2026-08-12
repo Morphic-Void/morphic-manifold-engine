@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    CErasedPodMsg.hpp
-//  Authors: Ritchie Brannan / OpenAI tools
+//  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    14 May 2026
 //
 //  Requirements:
@@ -69,9 +69,9 @@ private:
         alignas(k_payload_align) unsigned char payload[k_payload_size]{};
     };
 
-    static_assert(offsetof(SStorage, header) == 0u, "CErasedPodMsg header must be first.");
-    static_assert(offsetof(SStorage, payload) == 16u, "CErasedPodMsg payload must follow the header.");
-    static_assert(sizeof(SStorage) == 64u, "CErasedPodMsg storage must occupy exactly 64 bytes.");
+    static_assert((offsetof(SStorage, header) == 0u), "CErasedPodMsg header must be first.");
+    static_assert((offsetof(SStorage, payload) == 16u), "CErasedPodMsg payload must follow the header.");
+    static_assert((sizeof(SStorage) == 64u), "CErasedPodMsg storage must occupy exactly 64 bytes.");
 
 public:
     [[nodiscard]] std::int32_t query_async_slot() const noexcept

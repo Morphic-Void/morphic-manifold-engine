@@ -17,23 +17,12 @@
 namespace modules
 {
 
-namespace
-{
-
-CModuleBindingContext* s_active_binding{ nullptr };
-thread_local void* t_thread_provisioning{ nullptr };
-
-}   //  namespace
-
-CModuleBindingContext::CModuleBindingContext(const SModuleBindingConfig& config) noexcept
-    : m_config{ config }
-{
-}
+static CModuleBindingContext* s_active_binding{ nullptr };
+static thread_local void* t_thread_provisioning{ nullptr };
 
 bool is_thread_context_ready(const void* const provisioning) noexcept
 {
-    return (s_active_binding != nullptr) &&
-        s_active_binding->is_thread_context_ready(provisioning);
+    return (s_active_binding != nullptr) && s_active_binding->is_thread_context_ready(provisioning);
 }
 
 bool CModuleBindingContext::is_ready() const noexcept
@@ -124,6 +113,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_peer_identity(cons
     {
         return EBindingResult::incompatible_peer;
     }
+
     if (binding.m_peer_identity_installed)
     {
         return EBindingResult::already_installed;
@@ -252,6 +242,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::query_function(
     {
         return EBindingResult::unsupported_version;
     }
+
     return s_active_binding->m_config.query_function(function_type, functional_major, function);
 }
 
@@ -278,11 +269,13 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::populate_core_functions(
     {
         return EBindingResult::unsupported_version;
     }
+
     if (s_active_binding->m_functional_major_negotiated &&
         (functional_major != s_active_binding->m_negotiated_functional_major))
     {
         return EBindingResult::already_installed;
     }
+
     SCoreFunctions populated;
     populated.install_system_registry_view = &install_system_registry_view;
     populated.install_ambient_module_id = &install_ambient_module_id;

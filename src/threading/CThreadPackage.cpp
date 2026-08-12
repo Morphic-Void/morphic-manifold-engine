@@ -2,10 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   CThreadPackage.cpp
-//  Author: Ritchie Brannan
-//  Drafting and refactoring assistance: OpenAI tools
-//  Date:   7 Aug 26
+//  File:    CThreadPackage.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    7 Aug 26
 //
 //  Common resources and owner/thread-facing interfaces for an engine thread.
 

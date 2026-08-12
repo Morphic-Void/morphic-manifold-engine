@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   CErasedOwnerMsgTransport.cpp
-//  Authors: Ritchie Brannan / OpenAI tools
-//  Date:   8 Aug 26
+//  File:    CErasedOwnerMsgTransport.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    8 Aug 26
 
 #include <utility>      //  std::move
 
@@ -37,8 +37,7 @@ bool CErasedOwnerMsgTransport::posting_is_valid() const noexcept
 bool CErasedOwnerMsgTransport::post(threading::CErasedOwnerMsg&& msg) noexcept
 {
     if (!posting_is_valid() || (writable_count() == 0u) || !msg.has_message_type() ||
-        !erased_transport_admission::is_admissible(
-            msg.query_message_type_id(), m_destination_module_id))
+        !erased_transport_admission::is_admissible(msg.query_message_type_id(), m_destination_module_id))
     {
         return false;
     }
@@ -107,8 +106,7 @@ bool CErasedOwnerMsgTransport::initialise(const std::uint32_t capacity) noexcept
 bool CErasedOwnerMsgTransport::attribution_is_valid() const noexcept
 {
     memory::CMemoryContext* const transport_context = memory_context();
-    memory::CMemoryContext* const destination_context =
-        (m_recipient_context != nullptr) ? m_recipient_context : transport_context;
+    memory::CMemoryContext* const destination_context = (m_recipient_context != nullptr) ? m_recipient_context : transport_context;
     return module_ids::is_valid_id(m_destination_module_id) &&
         (transport_context != nullptr) &&
         (destination_context != nullptr) &&

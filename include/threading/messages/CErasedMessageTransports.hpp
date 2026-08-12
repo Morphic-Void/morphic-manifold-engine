@@ -3,7 +3,7 @@
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:    CErasedMessageTransports.hpp
-//  Authors: Ritchie Brannan / OpenAI tools
+//  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    8 Aug 26
 //
 //  Concrete transports for erased POD and owning thread messages.
@@ -29,11 +29,8 @@ class CErasedPodMsgTransport
 {
 public:
     CErasedPodMsgTransport() noexcept = default;
-    explicit CErasedPodMsgTransport(
-        const module_ids::id_type destination_module_id) noexcept
-        : m_destination_module_id(destination_module_id)
-    {
-    }
+    explicit CErasedPodMsgTransport(const module_ids::id_type destination_module_id) noexcept
+        : m_destination_module_id(destination_module_id) {}
     CErasedPodMsgTransport(const CErasedPodMsgTransport&) = delete;
     CErasedPodMsgTransport& operator=(const CErasedPodMsgTransport&) = delete;
     CErasedPodMsgTransport(CErasedPodMsgTransport&&) = delete;
@@ -42,13 +39,11 @@ public:
 
     [[nodiscard]] bool posting_is_valid() const noexcept
     {
-        return module_ids::is_valid_id(m_destination_module_id) &&
-            m_transport.posting_is_valid();
+        return module_ids::is_valid_id(m_destination_module_id) && m_transport.posting_is_valid();
     }
     [[nodiscard]] bool posting_is_ready() const noexcept
     {
-        return module_ids::is_valid_id(m_destination_module_id) &&
-            m_transport.posting_is_ready();
+        return module_ids::is_valid_id(m_destination_module_id) && m_transport.posting_is_ready();
     }
     [[nodiscard]] bool posting_poisoned() const noexcept
     {
@@ -57,8 +52,7 @@ public:
     [[nodiscard]] bool post(const threading::CErasedPodMsg& msg) noexcept
     {
         return erased_transport_admission::is_admissible(
-            msg.query_message_type_id(), m_destination_module_id) &&
-            m_transport.post(msg);
+            msg.query_message_type_id(), m_destination_module_id) && m_transport.post(msg);
     }
     [[nodiscard]] bool post_would_reallocate(const std::uint32_t count) const noexcept
     {
@@ -67,13 +61,11 @@ public:
 
     [[nodiscard]] bool reading_is_valid() const noexcept
     {
-        return module_ids::is_valid_id(m_destination_module_id) &&
-            m_transport.reading_is_valid();
+        return module_ids::is_valid_id(m_destination_module_id) && m_transport.reading_is_valid();
     }
     [[nodiscard]] bool reading_is_ready() const noexcept
     {
-        return module_ids::is_valid_id(m_destination_module_id) &&
-            m_transport.reading_is_ready();
+        return module_ids::is_valid_id(m_destination_module_id) && m_transport.reading_is_ready();
     }
     [[nodiscard]] bool read(threading::CErasedPodMsg& msg) noexcept
     {
@@ -88,19 +80,13 @@ public:
         return m_transport.refresh_readable_count();
     }
 
-    [[nodiscard]] bool initialise_fixed(
-        const std::uint32_t capacity,
-        const bool allow_discard = false) noexcept
+    [[nodiscard]] bool initialise_fixed(const std::uint32_t capacity, const bool allow_discard = false) noexcept
     {
-        return module_ids::is_valid_id(m_destination_module_id) &&
-            m_transport.initialise_fixed(capacity, allow_discard);
+        return module_ids::is_valid_id(m_destination_module_id) && m_transport.initialise_fixed(capacity, allow_discard);
     }
-    [[nodiscard]] bool initialise_growable(
-        const std::uint32_t capacity,
-        const std::uint32_t max_capacity = 0u) noexcept
+    [[nodiscard]] bool initialise_growable(const std::uint32_t capacity, const std::uint32_t max_capacity = 0u) noexcept
     {
-        return module_ids::is_valid_id(m_destination_module_id) &&
-            m_transport.initialise_growable(capacity, max_capacity);
+        return module_ids::is_valid_id(m_destination_module_id) && m_transport.initialise_growable(capacity, max_capacity);
     }
     void deallocate() noexcept { m_transport.deallocate(); }
 
@@ -170,10 +156,7 @@ private:
 class CErasedOwnerMsgProducerEndpoint
 {
 public:
-    explicit CErasedOwnerMsgProducerEndpoint(CErasedOwnerMsgTransport& transport) noexcept
-        : m_transport(transport)
-    {
-    }
+    explicit CErasedOwnerMsgProducerEndpoint(CErasedOwnerMsgTransport& transport) noexcept : m_transport(transport) {}
     ~CErasedOwnerMsgProducerEndpoint() noexcept = default;
 
     [[nodiscard]] bool is_valid() const noexcept { return m_transport.posting_is_valid(); }
@@ -191,10 +174,7 @@ private:
 class CErasedOwnerMsgConsumerEndpoint
 {
 public:
-    explicit CErasedOwnerMsgConsumerEndpoint(CErasedOwnerMsgTransport& transport) noexcept
-        : m_transport(transport)
-    {
-    }
+    explicit CErasedOwnerMsgConsumerEndpoint(CErasedOwnerMsgTransport& transport) noexcept : m_transport(transport) {}
     ~CErasedOwnerMsgConsumerEndpoint() noexcept = default;
 
     [[nodiscard]] bool is_valid() const noexcept { return m_transport.reading_is_valid(); }

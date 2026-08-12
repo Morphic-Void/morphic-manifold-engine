@@ -2,10 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   event_arguments.cpp
-//  Primary implementation: OpenAI tools
-//  Reviewed and accepted by: Ritchie Brannan
-//  Date:   29 Jul 26
+//  File:    event_arguments.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    29 Jul 26
 //
 //  Bounded argument decoding and formatting for transported debug events.
 

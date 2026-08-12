@@ -2,6 +2,10 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
+//  File:    local_type_registry.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
+//
 //  Component-local installed type-registry view and validated lookup.
 
 #include "system/local_type_registry.hpp"
@@ -9,13 +13,10 @@
 namespace local_type_registry
 {
 
-namespace
-{
+static SLocalTypeRegistryView s_installed_view{};
+static bool s_view_installed{ false };
 
-SLocalTypeRegistryView s_installed_view{};
-bool s_view_installed{ false };
-
-[[nodiscard]] bool validate_name(const SLocalTypeName& name) noexcept
+[[nodiscard]] static bool validate_name(const SLocalTypeName& name) noexcept
 {
     if (name.bytes[0] == 0)
     {
@@ -41,8 +42,6 @@ bool s_view_installed{ false };
     }
     return true;
 }
-
-}   //  namespace
 
 bool validate_view(const SLocalTypeRegistryView& view) noexcept
 {

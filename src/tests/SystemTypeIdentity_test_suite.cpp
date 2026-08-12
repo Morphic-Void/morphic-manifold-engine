@@ -1,5 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
+//
+//  File:    SystemTypeIdentity_test_suite.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
 
 #include <cstring>
 #include <iostream>
@@ -19,7 +24,7 @@
 #include "system/type_registration.hpp"
 #include "tests/SystemTypeIdentity_test_suite.hpp"
 
-namespace
+namespace identity_tests
 {
 struct CUnregisteredType;
 struct TTestContext
@@ -284,18 +289,18 @@ void test_system_authority(TTestContext& ctx)
     TEST_EXPECT(ctx, !system_id_registry::validate_view(corrupt_view));
     TEST_EXPECT(ctx, system_id_registry::find_type(&corrupt_view, corrupt.id) == nullptr);
 }
-}
+}   //  namespace identity_tests
 
 int run_system_type_identity_tests()
 {
-    TTestContext ctx;
-    test_encoding(ctx);
-    test_category_bearing_identity(ctx);
-    test_registration_categories(ctx);
-    test_erased_transport_admission(ctx);
-    test_advertised_identity_negotiation(ctx);
-    test_local_names_and_lookup(ctx);
-    test_system_authority(ctx);
+    identity_tests::TTestContext ctx;
+    identity_tests::test_encoding(ctx);
+    identity_tests::test_category_bearing_identity(ctx);
+    identity_tests::test_registration_categories(ctx);
+    identity_tests::test_erased_transport_admission(ctx);
+    identity_tests::test_advertised_identity_negotiation(ctx);
+    identity_tests::test_local_names_and_lookup(ctx);
+    identity_tests::test_system_authority(ctx);
     std::cout << "SystemTypeIdentity: " << ctx.passed << " passed, "
         << ctx.failed << " failed\n";
     return ctx.failed;

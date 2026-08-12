@@ -34,7 +34,7 @@ struct SModuleBindingConfig
 class CModuleBindingContext
 {
 public:
-    explicit CModuleBindingContext(const SModuleBindingConfig& config) noexcept;
+    explicit CModuleBindingContext(const SModuleBindingConfig& config) noexcept : m_config{ config } {}
     ~CModuleBindingContext() noexcept = default;
 
     CModuleBindingContext(const CModuleBindingContext&) = delete;

@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   erased_owner.hpp
-//  Author: Ritchie Brannan
-//  Date:   26 Jul 26
+//  File:    erased_owner.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    26 Jul 26
 //
 //  Move-only ownership for one registered, type-erased SYSTEM payload.
 //  The stored identity uses the category-bearing erased-carrier representation;
@@ -42,7 +42,7 @@ public:
     [[nodiscard]] type_id query_type_id() const noexcept { return m_type_id; }
 
     template<typename T>
-    [[nodiscard]] static CErasedOwner create(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] static CErasedOwner create(memory::CMemoryContext* const context = nullptr) noexcept;
 
     template<typename T>
     [[nodiscard]] T* payload() noexcept;
@@ -59,8 +59,8 @@ public:
     [[nodiscard]] std::uint32_t hazard_mask() const noexcept { return m_hazards; }
 
     [[nodiscard]] memory::CMemoryContext* memory_context() const noexcept { return m_storage.context(); }
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* const context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
     [[nodiscard]] static std::uint32_t hazard_bit(mount_point_ids::id_type mount_point_id) noexcept;
@@ -69,7 +69,7 @@ private:
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
     [[nodiscard]] std::uint32_t payload_memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t payload_memory_allocation_size() const noexcept;
-    [[nodiscard]] bool payload_can_reattribute_to(memory::CMemoryContext* context) const noexcept;
+    [[nodiscard]] bool payload_can_reattribute_to(memory::CMemoryContext* const context) const noexcept;
     void unsafe_replace_payload_memory_context_without_accounting(
         memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
     void make_canonical_empty() noexcept;
@@ -79,11 +79,11 @@ private:
     std::uint32_t        m_hazards{ 0u };
 };
 
-static_assert(mount_point_ids::k_count <= 32u,
+static_assert((mount_point_ids::k_count <= 32u),
     "CErasedOwner hazard storage cannot represent all registered mounting points");
-static_assert(sizeof(void*) != 8u || sizeof(CErasedOwner) == 32u,
+static_assert(((sizeof(void*) != 8u) || (sizeof(CErasedOwner) == 32u)),
     "CErasedOwner must occupy 32 bytes on a 64-bit target");
-static_assert(sizeof(void*) != 4u || sizeof(CErasedOwner) == 24u,
+static_assert(((sizeof(void*) != 4u) || (sizeof(CErasedOwner) == 24u)),
     "CErasedOwner must occupy 24 bytes on a 32-bit target");
 
 //==============================================================================
@@ -105,7 +105,7 @@ inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) 
         "CErasedOwner payloads must be nothrow move assignable.");
     static_assert(std::is_nothrow_destructible_v<T>,
         "CErasedOwner payloads must be nothrow destructible.");
-    static_assert(sizeof(T) <= 0xffffu,
+    static_assert((sizeof(T) <= 0xffffu),
         "CErasedOwner payload size exceeds the memory-token stride field.");
 
     CErasedOwner owner;

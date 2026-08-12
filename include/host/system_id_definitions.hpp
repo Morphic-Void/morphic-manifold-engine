@@ -2,6 +2,10 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
+//  File:    system_id_definitions.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
+//
 //  Host-owned canonical system identity name tables.
 
 #pragma once

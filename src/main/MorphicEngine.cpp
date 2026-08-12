@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 // 
-//  File:   MorphicEngine.cpp
-//  Author: Ritchie Brannan
-//  Date:   24 Apr 26
+//  File:    MorphicEngine.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    24 Apr 26
 //
 //  The main() function.
 //  This is the entry point for the host thread.

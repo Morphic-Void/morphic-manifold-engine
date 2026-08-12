@@ -2,10 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   service.cpp
-//  Primary implementation: OpenAI tools
-//  Reviewed and accepted by: Ritchie Brannan
-//  Date:   28 Jul 26
+//  File:    service.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    28 Jul 26
 //
 //  Bounded executable-owned debug service substrate.
 

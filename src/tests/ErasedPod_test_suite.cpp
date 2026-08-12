@@ -2,7 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   ErasedPod_test_suite.cpp
+//  File:    ErasedPod_test_suite.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
 
 #include <cstdint>
 #include <cstring>

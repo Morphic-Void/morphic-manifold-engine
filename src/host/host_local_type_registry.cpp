@@ -1,13 +1,17 @@
 
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
+//
+//  File:    host_local_type_registry.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
 
 #include "host/host_local_type_registry.hpp"
 
 namespace host
 {
 
-namespace
+namespace local_types
 {
 constexpr local_type_registry::SLocalTypeRegistration s_types[] =
 {
@@ -18,11 +22,11 @@ constexpr local_type_registry::SLocalTypeRegistration s_types[] =
 };
 
 constexpr local_type_registry::SLocalTypeRegistryView s_view{ s_types, static_cast<std::uint32_t>(host_local_type_ids::k_count) };
-}
+}   //  namespace local_types
 
 const local_type_registry::SLocalTypeRegistryView& local_type_registry_view() noexcept
 {
-    return s_view;
+    return local_types::s_view;
 }
 
 }   //  namespace host

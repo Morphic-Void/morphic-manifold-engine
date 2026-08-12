@@ -1,5 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
+//
+//  File:    erased_transport_admission.hpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
 //
 //  Destination-aware identity admission for concrete erased transports.
 
@@ -19,8 +24,7 @@ namespace erased_transport_admission
     const type_id identity,
     const module_ids::id_type destination_module_id) noexcept
 {
-    const module_ids::id_type source_module_id =
-        system_context::get_ambient_module_id();
+    const module_ids::id_type source_module_id = system_context::get_ambient_module_id();
     if (!module_ids::is_valid_id(source_module_id) ||
         !module_ids::is_valid_id(destination_module_id) ||
         !identity.is_valid())
@@ -35,7 +39,8 @@ namespace erased_transport_admission
     }
 
     local_type_id local_identity;
-    return (source_module_id == destination_module_id) &&
+    return
+        (source_module_id == destination_module_id) &&
         identity.try_local_type_id(local_identity) &&
         (local_type_registry::find_type(local_identity) != nullptr);
 }

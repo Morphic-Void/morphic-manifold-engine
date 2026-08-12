@@ -1,5 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
+//
+//  File:    system_id_definitions.cpp
+//  Authors: Ritchie Brannan / OpenAI Codex
+//  Date:    12 Aug 26
 //
 //  Host-owned canonical system identity name tables.
 
@@ -10,7 +15,7 @@
 namespace host
 {
 
-namespace
+namespace system_id_definitions
 {
 
 constexpr system_id_registry::STypeRegistration s_type_registrations[] =
@@ -69,11 +74,11 @@ static_assert(count_of(s_mount_point_registrations) == mount_point_ids::k_count)
 static_assert(count_of(s_thread_registrations) == thread_ids::k_count);
 static_assert(count_of(s_module_registrations) == module_ids::k_count);
 
-}   //  namespace
+}   //  namespace system_id_definitions
 
 const system_id_registry::SSystemRegistryView& system_registry_view() noexcept
 {
-    return s_system_registry_view;
+    return system_id_definitions::s_system_registry_view;
 }
 
 }   //  namespace host
