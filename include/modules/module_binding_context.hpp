@@ -61,7 +61,7 @@ private:
     static EBindingResult MV_STD_ABI_CALL install_thread_memory_context(memory::CMemoryContext* const context) noexcept;
     static EBindingResult MV_STD_ABI_CALL install_thread_provisioning(void* const provisioning) noexcept;
     static EBindingResult MV_STD_ABI_CALL query_function(
-        const type_ids::id_type function_type,
+        const system_type_id function_type,
         const std::uint32_t functional_major,
         FModuleFunction* const function) noexcept;
 

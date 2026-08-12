@@ -92,14 +92,14 @@ private:
 
 void test_registration_and_empty_state(TTestContext& ctx)
 {
-    static_assert(k_type_id_v<CByteBuffer> == type_ids::byte_buffer);
-    static_assert(k_type_id_v<CByteRectBuffer> == type_ids::byte_rect_buffer);
-    static_assert(k_type_id_v<CSimpleString> == type_ids::simple_string);
-    static_assert(k_type_id_v<CStringBuffer> == type_ids::string_buffer);
-    static_assert(k_type_id_v<CStableStrings> == type_ids::stable_strings);
+    static_assert(k_system_type_id_v<CByteBuffer> == system_type_ids::byte_buffer);
+    static_assert(k_system_type_id_v<CByteRectBuffer> == system_type_ids::byte_rect_buffer);
+    static_assert(k_system_type_id_v<CSimpleString> == system_type_ids::simple_string);
+    static_assert(k_system_type_id_v<CStringBuffer> == system_type_ids::string_buffer);
+    static_assert(k_system_type_id_v<CStableStrings> == system_type_ids::stable_strings);
     static_assert(k_is_erased_owner_payload_v<LoadedFile>);
     static_assert(!k_is_erased_owner_payload_v<FileLoadRequest>);
-    static_assert(std::is_same_v<decltype(CErasedOwner{}.query_type_id()), type_ids::id_type>);
+    static_assert(std::is_same_v<decltype(CErasedOwner{}.query_type_id()), system_type_id>);
 
     CErasedOwner owner;
     const CErasedOwner& const_owner = owner;
@@ -107,7 +107,7 @@ void test_registration_and_empty_state(TTestContext& ctx)
     TEST_EXPECT(ctx, owner.is_empty());
     TEST_EXPECT(ctx, !owner.is_ready());
     TEST_EXPECT(ctx, !owner);
-    TEST_EXPECT(ctx, owner.query_type_id() == type_ids::undefined);
+    TEST_EXPECT(ctx, owner.query_type_id() == system_type_ids::undefined);
     TEST_EXPECT(ctx, owner.payload<LoadedFile>() == nullptr);
     TEST_EXPECT(ctx, const_owner.payload<LoadedFile>() == nullptr);
     TEST_EXPECT(ctx, !owner.has_any_hazard());
@@ -130,7 +130,7 @@ void test_creation_accounting_and_destruction(TTestContext& ctx)
         LoadedFile* const payload = owner.payload<LoadedFile>();
 
         TEST_EXPECT(ctx, owner.is_ready());
-        TEST_EXPECT(ctx, owner.query_type_id() == k_type_id_v<LoadedFile>);
+        TEST_EXPECT(ctx, owner.query_type_id() == k_system_type_id_v<LoadedFile>);
         TEST_EXPECT(ctx, payload != nullptr);
         TEST_EXPECT(ctx, owner.payload<EncodedTga>() == nullptr);
         TEST_EXPECT(ctx, context.get_live_allocation_count() == 1u);
@@ -182,7 +182,7 @@ void test_allocation_failure_is_canonical(TTestContext& ctx)
 
     TEST_EXPECT(ctx, owner.is_empty());
     TEST_EXPECT(ctx, !owner.is_ready());
-    TEST_EXPECT(ctx, owner.query_type_id() == type_ids::undefined);
+    TEST_EXPECT(ctx, owner.query_type_id() == system_type_ids::undefined);
     TEST_EXPECT(ctx, owner.hazard_mask() == 0u);
     TEST_EXPECT(ctx, context.get_live_allocation_count() == 0u);
 }
@@ -376,7 +376,7 @@ void test_erased_owner_message(TTestContext& ctx)
     threading::CErasedOwnerMsg source;
     TEST_EXPECT(ctx, !source.has_message_type());
     TEST_EXPECT(ctx, !source.has_owner());
-    TEST_EXPECT(ctx, source.query_message_type_id() == type_ids::undefined);
+    TEST_EXPECT(ctx, source.query_message_type_id() == system_type_ids::undefined);
     TEST_EXPECT(ctx, source.query_async_slot() == 0);
 
     CErasedOwner content = CErasedOwner::create<DecodedTga>();
@@ -389,7 +389,7 @@ void test_erased_owner_message(TTestContext& ctx)
     source.set_owner(std::move(content));
 
     TEST_EXPECT(ctx, source.is_message_a<TgaDecodeResult>());
-    TEST_EXPECT(ctx, source.query_owner_type_id() == k_type_id_v<DecodedTga>);
+    TEST_EXPECT(ctx, source.query_owner_type_id() == k_system_type_id_v<DecodedTga>);
     TEST_EXPECT(ctx, source.owner().payload<DecodedTga>() == payload);
 
     threading::CErasedOwnerMsg moved{ std::move(source) };

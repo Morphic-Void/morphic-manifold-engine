@@ -18,7 +18,7 @@ namespace application::module_binding
 {
 
 static modules::EBindingResult MV_STD_ABI_CALL query_function(
-    const type_ids::id_type function_type,
+    const system_type_id function_type,
     const std::uint32_t,
     modules::FModuleFunction* const function) noexcept
 {
@@ -28,7 +28,7 @@ static modules::EBindingResult MV_STD_ABI_CALL query_function(
     }
     *function = nullptr;
 
-    if (function_type != type_ids::application_thread_function)
+    if (function_type != system_type_ids::application_thread_function)
     {
         return modules::EBindingResult::unsupported_function;
     }

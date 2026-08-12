@@ -363,7 +363,7 @@
     <ClInclude Include="include\system\system_id_registry.hpp" />
     <ClInclude Include="include\system\thread_ids.def" />
     <ClInclude Include="include\system\TStaticLookup.hpp" />
-    <ClInclude Include="include\system\type_ids.def" />
+    <ClInclude Include="include\system\system_type_ids.def" />
     <ClInclude Include="include\tests\AssetRepository_test_suite.hpp" />
     <ClInclude Include="include\tests\AsyncState_test_suite.hpp" />
     <ClInclude Include="include\tests\ByteBuffers_test_suite.hpp" />

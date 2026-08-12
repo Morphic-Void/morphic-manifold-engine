@@ -84,7 +84,7 @@ public:
     ~CAssetRecord() noexcept = default;
 
     [[nodiscard]] bool is_ready() const noexcept { return m_owner.is_ready(); }
-    [[nodiscard]] type_ids::id_type query_type_id() const noexcept { return m_owner.query_type_id(); }
+    [[nodiscard]] system_type_id query_type_id() const noexcept { return m_owner.query_type_id(); }
 
     template<typename T>
     [[nodiscard]] T* payload() noexcept { return m_owner.payload<T>(); }

@@ -176,7 +176,7 @@ void test_argument_encoding(TTestContext& ctx)
     static_assert(
         debug_system::is_supported_event_argument_v<
             debug_system::CInlineText16>);
-    static_assert(debug_system::is_supported_event_argument_v<type_ids::id_type>);
+    static_assert(debug_system::is_supported_event_argument_v<system_type_id>);
     static_assert(!debug_system::is_supported_event_argument_v<const char*>);
 
     const debug_system::SEventArguments empty =
@@ -251,7 +251,7 @@ void test_argument_encoding(TTestContext& ctx)
         debug_system::EEventArgumentType::inline_text);
 
     const debug_system::SEventArguments type_id =
-        debug_system::encode_event_arguments(type_ids::file_load_request);
+        debug_system::encode_event_arguments(system_type_ids::file_load_request);
     TEST_EXPECT(ctx, type_id.parameter_count == 1u);
     TEST_EXPECT(ctx,
         argument_type(type_id, 0u) ==
@@ -342,8 +342,8 @@ void test_argument_formatting(TTestContext& ctx)
     TEST_EXPECT(ctx, std::strcmp(output, "#{ x{ X{ { }") == 0);
 
     char expected_type_output[160]{};
-    const type_ids::id_type unregistered_type_id =
-        type_ids::encode_id(type_ids::encode_index(type_ids::k_count));
+    const system_type_id unregistered_type_id =
+        system_type_ids::encode_id(system_type_ids::encode_index(system_type_ids::k_count));
     const int expected_type_output_size = std::snprintf(
         expected_type_output,
         sizeof(expected_type_output),
@@ -357,9 +357,9 @@ void test_argument_formatting(TTestContext& ctx)
             sizeof(output),
             "{} | {} | {}",
             debug_system::encode_event_arguments(
-                type_ids::file_load_request,
+                system_type_ids::file_load_request,
                 unregistered_type_id,
-                type_ids::id_type{ 0x00000002u }),
+                system_type_id{ 0x00000002u }),
             output_size) ==
         debug_system::EEventFormatResult::success);
     TEST_EXPECT(ctx, std::strcmp(output, expected_type_output) == 0);
@@ -494,13 +494,13 @@ void test_argument_formatting(TTestContext& ctx)
 
 void test_system_id_name_registry(TTestContext& ctx)
 {
-    static_assert(type_ids::undefined.raw_value() == 0u);
-    static_assert(!type_ids::is_defined(type_ids::undefined));
-    static_assert(!type_ids::is_valid_id(type_ids::undefined));
-    static_assert(type_ids::is_defined(type_ids::byte_buffer));
-    static_assert(type_ids::is_valid_id(type_ids::byte_buffer));
+    static_assert(system_type_ids::undefined.raw_value() == 0u);
+    static_assert(!system_type_ids::is_defined(system_type_ids::undefined));
+    static_assert(!system_type_ids::is_valid_id(system_type_ids::undefined));
+    static_assert(system_type_ids::is_defined(system_type_ids::byte_buffer));
+    static_assert(system_type_ids::is_valid_id(system_type_ids::byte_buffer));
 
-    TEST_EXPECT(ctx, system_id_registry::type_count() == type_ids::k_count);
+    TEST_EXPECT(ctx, system_id_registry::type_count() == system_type_ids::k_count);
     TEST_EXPECT(ctx,
         system_id_registry::mount_point_count() ==
         mount_point_ids::k_count);
@@ -513,15 +513,15 @@ void test_system_id_name_registry(TTestContext& ctx)
     TEST_EXPECT(ctx, system_id_registry::validate_all());
 
     const system_id_registry::STypeRegistration* const type_registration =
-        system_id_registry::find_type(type_ids::file_load_request);
+        system_id_registry::find_type(system_type_ids::file_load_request);
     TEST_EXPECT(ctx, type_registration != nullptr);
     if (type_registration != nullptr)
     {
         TEST_EXPECT(ctx,
-            type_registration->index == type_ids::file_load_request_index);
+            type_registration->index == system_type_ids::file_load_request_index);
     }
     const char* const type_name =
-        system_id_registry::lookup_type_name(type_ids::file_load_request);
+        system_id_registry::lookup_type_name(system_type_ids::file_load_request);
     TEST_EXPECT(ctx, type_name != nullptr);
     if (type_name != nullptr)
     {
@@ -600,7 +600,7 @@ void test_system_id_name_registry(TTestContext& ctx)
     TEST_EXPECT(ctx, small_system_name[0] == 0);
     TEST_EXPECT(ctx, small_system_name_size == 0u);
 
-    TEST_EXPECT(ctx, system_id_registry::lookup_type_name(type_ids::undefined) == nullptr);
+    TEST_EXPECT(ctx, system_id_registry::lookup_type_name(system_type_ids::undefined) == nullptr);
     TEST_EXPECT(ctx, system_id_registry::lookup_mount_point_name({}) == nullptr);
     TEST_EXPECT(ctx, system_id_registry::lookup_module_name({}) == nullptr);
     TEST_EXPECT(ctx, system_id_registry::lookup_thread_name({}) == nullptr);
@@ -774,11 +774,11 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             debug_system::EShutdownReason::none,
             "typed {} {} {}",
             std::int32_t{ -7 },
-            type_ids::file_load_request,
+            system_type_ids::file_load_request,
             debug_system::CInlineText16{ "payload" })));
 
-    const type_ids::id_type unregistered_type_id =
-        type_ids::encode_id(type_ids::encode_index(type_ids::k_count));
+    const system_type_id unregistered_type_id =
+        system_type_ids::encode_id(system_type_ids::encode_index(system_type_ids::k_count));
     TEST_EXPECT(ctx,
         (debug_system::process_event<
             debug_system::EEventLevel::error,
@@ -790,7 +790,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             debug_system::EShutdownReason::none,
             "typed {} {}",
             unregistered_type_id,
-            type_ids::id_type{ 0x00000002u })));
+            system_type_id{ 0x00000002u })));
 
     char oversized[debug_system::k_event_format_capacity + 32u];
     std::memset(oversized, 'x', sizeof(oversized) - 1u);

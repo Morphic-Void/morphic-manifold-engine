@@ -96,7 +96,7 @@ using FInstallDebugService = EBindingResult(MV_STD_ABI_CALL*)(debug_system::CDeb
 using FInstallAmbientThreadId = EBindingResult(MV_STD_ABI_CALL*)(const thread_ids::id_type thread_id) noexcept;
 using FInstallThreadMemoryContext = EBindingResult(MV_STD_ABI_CALL*)(memory::CMemoryContext* const context) noexcept;
 using FInstallThreadProvisioning = EBindingResult(MV_STD_ABI_CALL*)(void* const provisioning) noexcept;
-using FQueryFunction = EBindingResult(MV_STD_ABI_CALL*)(const type_ids::id_type function_type, const std::uint32_t functional_major, FModuleFunction* const function) noexcept;
+using FQueryFunction = EBindingResult(MV_STD_ABI_CALL*)(const system_type_id function_type, const std::uint32_t functional_major, FModuleFunction* const function) noexcept;
 
 struct SCoreFunctions
 {

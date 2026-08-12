@@ -30,8 +30,8 @@ struct SApplicationTgaSaveState { CAssetId source; };
 
 }   //  namespace application
 
-MV_REGISTER_SYSTEM_TYPE(application::SApplicationTgaLoadState, type_ids::application_tga_load_state);
-MV_REGISTER_SYSTEM_TYPE(application::SApplicationTgaSaveState, type_ids::application_tga_save_state);
+MV_REGISTER_SYSTEM_TYPE(application::SApplicationTgaLoadState, system_type_ids::application_tga_load_state);
+MV_REGISTER_SYSTEM_TYPE(application::SApplicationTgaSaveState, system_type_ids::application_tga_save_state);
 
 namespace application
 {
@@ -114,7 +114,7 @@ bool CApplicationThread::initialise() noexcept
     std::size_t registry_name_size = 0u;
     constexpr char registry_format[]{ "{}" };
     const debug_system::SEventArguments registry_arguments =
-        debug_system::encode_event_arguments(type_ids::file_load_request);
+        debug_system::encode_event_arguments(system_type_ids::file_load_request);
     if ((debug_system::format_event_text(
             registry_name, sizeof(registry_name),
             registry_format, (sizeof(registry_format) - 1u),
@@ -186,7 +186,7 @@ void CApplicationThread::operate() noexcept
 
             switch (inbound_msg.query_message_type_id())
             {
-                case (k_type_id_v<TgaLoadResult>):
+                case (k_system_type_id_v<TgaLoadResult>):
                 {
                     MV_DETAIL("Application: TGA load result");
 
@@ -229,7 +229,7 @@ void CApplicationThread::operate() noexcept
                     }
                     break;
                 }
-                case (k_type_id_v<TgaSaveResult>):
+                case (k_system_type_id_v<TgaSaveResult>):
                 {
                     MV_DETAIL("Application: TGA save result");
 

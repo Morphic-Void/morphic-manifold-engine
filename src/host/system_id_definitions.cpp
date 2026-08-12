@@ -15,8 +15,8 @@ namespace
 
 constexpr system_id_registry::STypeRegistration s_type_registrations[] =
 {
-#define MV_SYSTEM_TYPE(name) { type_ids::name, type_ids::name##_index, #name, sizeof(#name) - 1u },
-#include "system/type_ids.def"
+#define MV_SYSTEM_TYPE(name) { system_type_ids::name, system_type_ids::name##_index, #name, sizeof(#name) - 1u },
+#include "system/system_type_ids.def"
 #undef MV_SYSTEM_TYPE
 };
 
@@ -64,7 +64,7 @@ constexpr system_id_registry::SSystemRegistryView s_system_registry_view{
     count_of(s_module_registrations)
 };
 
-static_assert(count_of(s_type_registrations) == type_ids::k_count);
+static_assert(count_of(s_type_registrations) == system_type_ids::k_count);
 static_assert(count_of(s_mount_point_registrations) == mount_point_ids::k_count);
 static_assert(count_of(s_thread_registrations) == thread_ids::k_count);
 static_assert(count_of(s_module_registrations) == module_ids::k_count);

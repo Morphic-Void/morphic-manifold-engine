@@ -105,7 +105,7 @@ bool CBoundModule::install(
 }
 
 bool CBoundModule::query_function(
-    const type_ids::id_type function_type,
+    const system_type_id function_type,
     modules::FModuleFunction& function) const noexcept
 {
     function = nullptr;

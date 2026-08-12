@@ -86,7 +86,7 @@ void CHostWorkerThread::operate() noexcept
 
             switch (inbound_msg.query_message_type_id())
             {
-                case (k_type_id_v<FileLoadRequest>):
+                case (k_system_type_id_v<FileLoadRequest>):
                 {
                     MV_DETAIL("Worker file load request");
 
@@ -104,7 +104,7 @@ void CHostWorkerThread::operate() noexcept
                     (void)m_context.post(std::move(outbound_msg));
                     break;
                 }
-                case (k_type_id_v<FileSaveRequest>):
+                case (k_system_type_id_v<FileSaveRequest>):
                 {
                     MV_DETAIL("Worker file save request");
 
@@ -118,7 +118,7 @@ void CHostWorkerThread::operate() noexcept
                     (void)m_context.post(outbound_msg);
                     break;
                 }
-                case (k_type_id_v<TgaEncodeRequest>):
+                case (k_system_type_id_v<TgaEncodeRequest>):
                 {
                     MV_DETAIL("Worker TGA encode request");
 
@@ -136,7 +136,7 @@ void CHostWorkerThread::operate() noexcept
                     (void)m_context.post(std::move(outbound_msg));
                     break;
                 }
-                case (k_type_id_v<TgaDecodeRequest>):
+                case (k_system_type_id_v<TgaDecodeRequest>):
                 {
                     MV_DETAIL("Worker TGA decode request");
 

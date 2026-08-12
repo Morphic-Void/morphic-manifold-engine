@@ -304,7 +304,7 @@ The transport-facing contract is:
   errors and do not implicitly select another reporting path.
 
 The initial supported set covers fixed-width signed and unsigned integers,
-`bool`, `float`, `double`, `type_ids::id_type`, and an owning 16-byte inline
+`bool`, `float`, `double`, `system_type_id`, and an owning 16-byte inline
 text value. The technical limit is eight arguments, each with a byte-wide type
 and a fixed, explicitly aligned 16-byte value slot. Boolean truth is carried by
 its type and its value slot remains zero.

@@ -56,7 +56,7 @@ struct SOutput
         }
         case EEventArgumentType::type_id:
         {
-            return sizeof(type_ids::id_type);
+            return sizeof(system_type_id);
         }
         default:
         {
@@ -164,7 +164,7 @@ template<typename T>
     }
 }
 
-[[nodiscard]] EEventFormatResult append_type_id(SOutput& output, const type_ids::id_type id) noexcept
+[[nodiscard]] EEventFormatResult append_type_id(SOutput& output, const system_type_id id) noexcept
 {
     const system_id_registry::STypeRegistration* const registration = system_id_registry::find_type(id);
     if (registration != nullptr)
@@ -175,7 +175,7 @@ template<typename T>
     }
 
     char text[64]{};
-    const bool valid = type_ids::is_valid_id(id);
+    const bool valid = system_type_ids::is_valid_id(id);
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-type:0x%08x" : "invalid-type:0x%08x",
         static_cast<unsigned int>(id));
@@ -246,7 +246,7 @@ template<typename T>
         }
         case EEventArgumentType::type_id:
         {
-            return append_type_id(output, read_value<type_ids::id_type>(parameters, parameter_index));
+            return append_type_id(output, read_value<system_type_id>(parameters, parameter_index));
         }
         default:
         {

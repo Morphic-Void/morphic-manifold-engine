@@ -237,7 +237,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_provisionin
 }
 
 EBindingResult MV_STD_ABI_CALL CModuleBindingContext::query_function(
-    const type_ids::id_type function_type,
+    const system_type_id function_type,
     const std::uint32_t functional_major,
     FModuleFunction* const function) noexcept
 {

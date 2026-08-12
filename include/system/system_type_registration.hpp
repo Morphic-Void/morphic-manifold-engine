@@ -24,10 +24,10 @@
 //==============================================================================
 
 template<typename T>
-struct TTypeId;
+struct TSystemTypeId;
 
 template<typename T>
-inline constexpr type_ids::id_type k_type_id_v = TTypeId<T>::value;
+inline constexpr system_type_id k_system_type_id_v = TSystemTypeId<T>::value;
 
 //==============================================================================
 //  Erased-owner payload eligibility
@@ -50,11 +50,11 @@ struct TTypeIdBindingCategory<T> \
     static constexpr ETypeIdBindingCategory value = ETypeIdBindingCategory::system; \
 }; \
 template<> \
-struct TTypeId<T> \
+struct TSystemTypeId<T> \
 { \
-    static_assert(type_ids::is_valid_id(type_id_value), \
+    static_assert(system_type_ids::is_valid_id(type_id_value), \
         "MV_REGISTER_SYSTEM_TYPE requires a valid, non-zero type id."); \
-    static constexpr type_ids::id_type value = type_id_value; \
+    static constexpr system_type_id value = type_id_value; \
 }
 
 #define MV_REGISTER_ERASED_OWNER_PAYLOAD(T) \

@@ -83,10 +83,10 @@ public:
 
     [[nodiscard]] bool has_message_type() const noexcept
     {
-        return type_ids::is_defined(m_storage.header.message_type_id);
+        return system_type_ids::is_defined(m_storage.header.message_type_id);
     }
 
-    [[nodiscard]] type_ids::id_type query_message_type_id() const noexcept
+    [[nodiscard]] system_type_id query_message_type_id() const noexcept
     {
         return m_storage.header.message_type_id;
     }
@@ -104,7 +104,7 @@ public:
     [[nodiscard]] bool is_payload_a() const noexcept
     {
         validate_payload_type<T>();
-        return m_storage.header.message_type_id == k_type_id_v<T>;
+        return m_storage.header.message_type_id == k_system_type_id_v<T>;
     }
 
     template<typename T>
@@ -114,7 +114,7 @@ public:
 
         std::memset(m_storage.payload, 0, k_payload_size);
         std::memcpy(m_storage.payload, &value, sizeof(T));
-        m_storage.header.message_type_id = k_type_id_v<T>;
+        m_storage.header.message_type_id = k_system_type_id_v<T>;
     }
 
     template<typename T>
@@ -122,7 +122,7 @@ public:
     {
         validate_payload_type<T>();
 
-        if (m_storage.header.message_type_id != k_type_id_v<T>)
+        if (m_storage.header.message_type_id != k_system_type_id_v<T>)
         {
             return false;
         }
@@ -134,7 +134,7 @@ private:
     template<typename T>
     static constexpr void validate_payload_type() noexcept
     {
-        static_assert(type_ids::is_valid_id(k_type_id_v<T>),
+        static_assert(system_type_ids::is_valid_id(k_system_type_id_v<T>),
             "CErasedPodMsg requires a valid, non-zero payload type id.");
         static_assert(is_payload_compatible_with<T>(),
             "CErasedPodMsg requires a trivially copyable, standard-layout payload that fits its fixed 48-byte, 16-byte-aligned storage.");

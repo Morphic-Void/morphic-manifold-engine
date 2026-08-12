@@ -182,11 +182,12 @@ struct CSystemIdTag {};
 //  ID field definitions
 //==============================================================================
 
-namespace type_ids
+using system_type_id = system_id_util::TValue<system_id_util::CSystemTypeIdTag, std::uint32_t>;
+
+namespace system_type_ids
 {
-using id_type = system_id_util::TValue<system_id_util::CSystemTypeIdTag, std::uint32_t>;
 using index_type = std::uint32_t;
-static constexpr id_type undefined{ 0u };
+static constexpr system_type_id undefined{ 0u };
 static constexpr std::uint32_t k_encoded_payload_mask = 0x15555555u; //  15 alternating payload bits
 static constexpr std::uint32_t k_system_type_flag = 0x40000000u;
 static constexpr std::uint32_t k_id_field_mask = k_encoded_payload_mask | k_system_type_flag;
@@ -206,10 +207,10 @@ namespace local_type_ids
 using id_type = system_id_util::TValue<system_id_util::CLocalTypeIdTag, std::uint32_t>;
 using index_type = std::uint32_t;
 static constexpr id_type undefined{ 0u };
-static constexpr index_type k_ordinal_mask = type_ids::k_ordinal_mask;
-static constexpr index_type k_max_ordinal = type_ids::k_max_ordinal;
-static constexpr index_type k_capacity = type_ids::k_capacity;
-static constexpr index_type k_invalid_index = type_ids::k_invalid_index;
+static constexpr index_type k_ordinal_mask = system_type_ids::k_ordinal_mask;
+static constexpr index_type k_max_ordinal = system_type_ids::k_max_ordinal;
+static constexpr index_type k_capacity = system_type_ids::k_capacity;
+static constexpr index_type k_invalid_index = system_type_ids::k_invalid_index;
 static constexpr index_type k_local_index_min = 0u;
 static constexpr index_type k_local_index_max = k_max_ordinal;
 }
@@ -280,14 +281,14 @@ static constexpr std::uint64_t k_invalid_id_mask = ~(k_module_id_mask | k_thread
 //  Type id helpers
 //==============================================================================
 
-namespace type_ids
+namespace system_type_ids
 {
 
 //  Type-id states:
 //  - undefined is the canonical zero value and has no type attribution;
 //  - a valid id has a structurally valid non-zero encoding;
 //  - a registered id additionally resolves through system_id_registry::find_type().
-constexpr bool is_defined(const id_type id) noexcept
+constexpr bool is_defined(const system_type_id id) noexcept
 {
     return id != undefined;
 }
@@ -299,7 +300,7 @@ constexpr bool is_valid_index(const index_type value) noexcept
         ((value & k_ordinal_mask) <= k_max_ordinal);
 }
 
-constexpr bool is_valid_id(const id_type id) noexcept
+constexpr bool is_valid_id(const system_type_id id) noexcept
 {
     const std::uint32_t raw = id.raw_value();
     return is_defined(id) &&
@@ -318,15 +319,15 @@ constexpr index_type decode_index(const index_type value) noexcept
     return is_valid_index(value) ? (value & k_ordinal_mask) : k_invalid_index;
 }
 
-constexpr id_type encode_id(const index_type value) noexcept
+constexpr system_type_id encode_id(const index_type value) noexcept
 {
     return is_valid_index(value)
-        ? id_type(static_cast<std::uint32_t>(
+        ? system_type_id(static_cast<std::uint32_t>(
             bit_ops::spread_to_even_bits(k_ordinal_mask - decode_index(value))) | k_system_type_flag)
         : undefined;
 }
 
-constexpr index_type decode_id(const id_type id) noexcept
+constexpr index_type decode_id(const system_type_id id) noexcept
 {
     return is_valid_id(id)
         ? encode_index(static_cast<index_type>(k_ordinal_mask -
@@ -334,7 +335,7 @@ constexpr index_type decode_id(const id_type id) noexcept
         : k_invalid_index;
 }
 
-}   //  namespace type_ids
+}   //  namespace system_type_ids
 
 //==============================================================================
 //  Local type id helpers
@@ -350,8 +351,8 @@ constexpr bool is_defined(const id_type id) noexcept
 
 constexpr bool is_valid_index(const index_type value) noexcept
 {
-    return ((value & ~type_ids::k_tagged_index_mask) == 0u) &&
-        ((value & type_ids::k_category_bit) == 0u) &&
+    return ((value & ~system_type_ids::k_tagged_index_mask) == 0u) &&
+        ((value & system_type_ids::k_category_bit) == 0u) &&
         (value <= k_max_ordinal);
 }
 
@@ -359,9 +360,9 @@ constexpr bool is_valid_id(const id_type id) noexcept
 {
     const std::uint32_t raw = id.raw_value();
     return is_defined(id) &&
-        ((raw & type_ids::k_invalid_id_mask) == 0u) &&
-        ((raw & type_ids::k_system_type_flag) == 0u) &&
-        ((raw & type_ids::k_encoded_payload_mask) != 0u);
+        ((raw & system_type_ids::k_invalid_id_mask) == 0u) &&
+        ((raw & system_type_ids::k_system_type_flag) == 0u) &&
+        ((raw & system_type_ids::k_encoded_payload_mask) != 0u);
 }
 
 constexpr index_type encode_index(const index_type value) noexcept
@@ -386,7 +387,7 @@ constexpr index_type decode_id(const id_type id) noexcept
 {
     return is_valid_id(id)
         ? encode_index(static_cast<index_type>(k_ordinal_mask -
-            bit_ops::pack_from_even_bits(id.raw_value() & type_ids::k_encoded_payload_mask)))
+            bit_ops::pack_from_even_bits(id.raw_value() & system_type_ids::k_encoded_payload_mask)))
         : k_invalid_index;
 }
 
@@ -529,13 +530,13 @@ constexpr mount_point_ids::index_type get_mount_point_index(const id_type system
 //  Type ids
 //==============================================================================
 
-namespace type_ids
+namespace system_type_ids
 {
 
 #define MV_SYSTEM_TYPE(name) name##_index_value,
 enum : index_type
 {
-#include "system/type_ids.def"
+#include "system/system_type_ids.def"
     k_count
 };
 #undef MV_SYSTEM_TYPE
@@ -545,11 +546,11 @@ static_assert((k_count <= k_capacity),
 
 #define MV_SYSTEM_TYPE(name) \
 constexpr index_type name##_index = encode_index(name##_index_value); \
-constexpr id_type name = encode_id(name##_index);
-#include "system/type_ids.def"
+constexpr system_type_id name = encode_id(name##_index);
+#include "system/system_type_ids.def"
 #undef MV_SYSTEM_TYPE
 
-}   //  namespace type_ids
+}   //  namespace system_type_ids
 
 //==============================================================================
 //  Mount point ids

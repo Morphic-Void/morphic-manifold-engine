@@ -37,7 +37,7 @@ bool validate_view(const SSystemRegistryView& view) noexcept
         !table_shape_is_valid(view.mount_points, view.mount_point_count) ||
         !table_shape_is_valid(view.threads, view.thread_count) ||
         !table_shape_is_valid(view.modules, view.module_count) ||
-        (view.type_count > type_ids::k_capacity))
+        (view.type_count > system_type_ids::k_capacity))
     {
         return false;
     }
@@ -45,10 +45,10 @@ bool validate_view(const SSystemRegistryView& view) noexcept
     for (std::uint32_t index = 0u; index < view.type_count; ++index)
     {
         const STypeRegistration& registration = view.types[index];
-        if (!type_ids::is_valid_id(registration.id) ||
-            !type_ids::is_valid_index(registration.index) ||
-            (registration.index != type_ids::encode_index(index)) ||
-            (type_ids::encode_id(registration.index) != registration.id) ||
+        if (!system_type_ids::is_valid_id(registration.id) ||
+            !system_type_ids::is_valid_index(registration.index) ||
+            (registration.index != system_type_ids::encode_index(index)) ||
+            (system_type_ids::encode_id(registration.index) != registration.id) ||
             !name_is_valid(registration.name, registration.name_size))
         {
             return false;
@@ -122,16 +122,16 @@ std::uint32_t thread_count() noexcept { return s_view_installed ? s_installed_vi
 const SModuleRegistration* modules() noexcept { return s_view_installed ? s_installed_view.modules : nullptr; }
 std::uint32_t module_count() noexcept { return s_view_installed ? s_installed_view.module_count : 0u; }
 
-const STypeRegistration* find_type(const SSystemRegistryView* const view, const type_ids::id_type id) noexcept
+const STypeRegistration* find_type(const SSystemRegistryView* const view, const system_type_id id) noexcept
 {
-    if ((view == nullptr) || !type_ids::is_valid_id(id) ||
-        (view->type_count > type_ids::k_capacity) ||
+    if ((view == nullptr) || !system_type_ids::is_valid_id(id) ||
+        (view->type_count > system_type_ids::k_capacity) ||
         !table_shape_is_valid(view->types, view->type_count))
     {
         return nullptr;
     }
-    const type_ids::index_type index = type_ids::decode_id(id);
-    const type_ids::index_type ordinal = type_ids::decode_index(index);
+    const system_type_ids::index_type index = system_type_ids::decode_id(id);
+    const system_type_ids::index_type ordinal = system_type_ids::decode_index(index);
     if (ordinal >= view->type_count)
     {
         return nullptr;
@@ -194,12 +194,12 @@ const SModuleRegistration* find_module(const SSystemRegistryView* const view, co
         name_is_valid(registration.name, registration.name_size) ? &registration : nullptr;
 }
 
-const STypeRegistration* find_type(const type_ids::id_type id) noexcept { return find_type(installed_view(), id); }
+const STypeRegistration* find_type(const system_type_id id) noexcept { return find_type(installed_view(), id); }
 const SMountPointRegistration* find_mount_point(const mount_point_ids::id_type id) noexcept { return find_mount_point(installed_view(), id); }
 const SThreadRegistration* find_thread(const thread_ids::id_type id) noexcept { return find_thread(installed_view(), id); }
 const SModuleRegistration* find_module(const module_ids::id_type id) noexcept { return find_module(installed_view(), id); }
 
-const char* lookup_type_name(const type_ids::id_type id) noexcept
+const char* lookup_type_name(const system_type_id id) noexcept
 {
     const STypeRegistration* const registration = find_type(id);
     return (registration != nullptr) ? registration->name : nullptr;

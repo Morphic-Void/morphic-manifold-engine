@@ -29,6 +29,6 @@ using FApplicationThread = platform::threading::FThreadEntry;
 
 }   //  namespace application
 
-MV_REGISTER_SYSTEM_TYPE(application::CApplicationThreadFunction, type_ids::application_thread_function);
+MV_REGISTER_SYSTEM_TYPE(application::CApplicationThreadFunction, system_type_ids::application_thread_function);
 
 #endif  //  #ifndef APPLICATION_BINDING_HPP_INCLUDED

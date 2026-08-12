@@ -8,7 +8,7 @@ License: MIT (see LICENSE file in repository root)
 System type identities are the deliberate cross-component identity category.
 Any C++ type used by a shared ABI, function query, erased payload, owner,
 message, transport, or another component boundary requires a host-authored
-system ID. `system/type_ids.def` is the sole canonical definition list.
+system ID. `system/system_type_ids.def` is the sole canonical definition list.
 `MV_REGISTER_SYSTEM_TYPE` binds a C++ type to an existing system ID; it does
 not author an ID or a name.
 
@@ -50,7 +50,7 @@ after validating the category. `encode_id` accepts the resulting tagged index;
 `decode_id` returns it. This makes the former `0xfffe`/`0xffff` edge explicit:
 `0xfffe` is the last valid system index and `0xffff` is invalid.
 
-`type_ids::id_type` and `local_type_ids::id_type` are distinct strong C++
+`system_type_id` and `local_type_ids::id_type` are distinct strong C++
 types. Their validators also reject raw encodings from the other category.
 
 ## Local Definitions

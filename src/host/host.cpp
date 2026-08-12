@@ -66,10 +66,10 @@ struct SHostTgaFileSaveState
     CAssetId encoded_file;
 };
 
-MV_REGISTER_SYSTEM_TYPE(SHostTgaFileLoadState, type_ids::host_tga_file_load_state);
-MV_REGISTER_SYSTEM_TYPE(SHostTgaDecodeState, type_ids::host_tga_decode_state);
-MV_REGISTER_SYSTEM_TYPE(SHostTgaEncodeState, type_ids::host_tga_encode_state);
-MV_REGISTER_SYSTEM_TYPE(SHostTgaFileSaveState, type_ids::host_tga_file_save_state);
+MV_REGISTER_SYSTEM_TYPE(SHostTgaFileLoadState, system_type_ids::host_tga_file_load_state);
+MV_REGISTER_SYSTEM_TYPE(SHostTgaDecodeState, system_type_ids::host_tga_decode_state);
+MV_REGISTER_SYSTEM_TYPE(SHostTgaEncodeState, system_type_ids::host_tga_encode_state);
+MV_REGISTER_SYSTEM_TYPE(SHostTgaFileSaveState, system_type_ids::host_tga_file_save_state);
 
 namespace host
 {
@@ -188,8 +188,8 @@ bool CHost::validate_application_module_compatibility(
 
     modules::FModuleFunction raw_application_thread = nullptr;
     modules::FModuleFunction unknown_thread = nullptr;
-    if (!m_application_module.query_function(type_ids::application_thread_function, raw_application_thread) ||
-        m_application_module.query_function(type_ids::undefined, unknown_thread) || (unknown_thread != nullptr))
+    if (!m_application_module.query_function(system_type_ids::application_thread_function, raw_application_thread) ||
+        m_application_module.query_function(system_type_ids::undefined, unknown_thread) || (unknown_thread != nullptr))
     {
         return false;
     }
@@ -299,7 +299,7 @@ void CHost::run() noexcept
 
                 switch (inbound_msg.query_message_type_id())
                 {
-                    case (k_type_id_v<FileSaveResult>):
+                    case (k_system_type_id_v<FileSaveResult>):
                     {
                         FileSaveResult result;
                         (void)inbound_msg.copy_payload_to(result);
@@ -317,7 +317,7 @@ void CHost::run() noexcept
                         (void)async_states.release(async_slot);
                         break;
                     }
-                    case (k_type_id_v<TgaLoadRequest>):
+                    case (k_system_type_id_v<TgaLoadRequest>):
                     {
                         MV_DETAIL("Host: Recieved a TGA load request");
 
@@ -349,7 +349,7 @@ void CHost::run() noexcept
                         }
                         break;
                     }
-                    case (k_type_id_v<TgaSaveRequest>):
+                    case (k_system_type_id_v<TgaSaveRequest>):
                     {
                         MV_DETAIL("Host: Recieved a TGA save request");
 
@@ -393,7 +393,7 @@ void CHost::run() noexcept
                         }
                         break;
                     }
-                    case (k_type_id_v<UnrecognisedMsg>):
+                    case (k_system_type_id_v<UnrecognisedMsg>):
                     {
                         UnrecognisedMsg unrecognised;
                         (void)inbound_msg.copy_payload_to(unrecognised);
@@ -417,7 +417,7 @@ void CHost::run() noexcept
                 CErasedOwner content = inbound_owned_msg.take_owner();
                 switch (inbound_owned_msg.query_message_type_id())
                 {
-                    case (k_type_id_v<FileLoadResult>):
+                    case (k_system_type_id_v<FileLoadResult>):
                     {
                         MV_DETAIL("Host: Took ownership of a loaded file buffer");
 
@@ -467,7 +467,7 @@ void CHost::run() noexcept
                         }
                         break;
                     }
-                    case (k_type_id_v<TgaEncodeResult>):
+                    case (k_system_type_id_v<TgaEncodeResult>):
                     {
                         MV_DETAIL("Host: Took ownership of an encoded TGA file buffer");
 
@@ -517,7 +517,7 @@ void CHost::run() noexcept
                         }
                         break;
                     }
-                    case (k_type_id_v<TgaDecodeResult>):
+                    case (k_system_type_id_v<TgaDecodeResult>):
                     {
                         MV_DETAIL("Host: Took ownership of a decoded TGA image buffer");
 

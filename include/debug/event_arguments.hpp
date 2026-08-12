@@ -136,7 +136,7 @@ MV_DEFINE_EVENT_ARGUMENT_TRAITS(std::uint64_t, EEventArgumentType::uint64);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(float, EEventArgumentType::float32);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(double, EEventArgumentType::float64);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(CInlineText16, EEventArgumentType::inline_text);
-MV_DEFINE_EVENT_ARGUMENT_TRAITS(type_ids::id_type, EEventArgumentType::type_id);
+MV_DEFINE_EVENT_ARGUMENT_TRAITS(system_type_id, EEventArgumentType::type_id);
 
 #undef MV_DEFINE_EVENT_ARGUMENT_TRAITS
 

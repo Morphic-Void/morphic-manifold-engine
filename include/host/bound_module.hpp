@@ -42,7 +42,7 @@ public:
 
     [[nodiscard]] modules::EBindingResult populate_core_functions(
         const std::uint32_t functional_major, modules::SCoreFunctions& functions) const noexcept;
-    [[nodiscard]] bool query_function(const type_ids::id_type function_type, modules::FModuleFunction& function) const noexcept;
+    [[nodiscard]] bool query_function(const system_type_id function_type, modules::FModuleFunction& function) const noexcept;
     [[nodiscard]] const modules::SAdvertisedIdentity& advertised_host_identity() const noexcept { return m_advertised_host_identity; }
     [[nodiscard]] const modules::SAdvertisedIdentity& advertised_module_identity() const noexcept { return m_advertised_module_identity; }
     [[nodiscard]] std::uint32_t negotiated_functional_major() const noexcept { return m_negotiated_functional_major; }

@@ -33,50 +33,50 @@ struct TTestContext
 
 void test_encoding(TTestContext& ctx)
 {
-    static_assert(type_ids::k_encoded_payload_mask == 0x15555555u);
-    static_assert(type_ids::k_system_type_flag == 0x40000000u);
-    static_assert(type_ids::k_id_field_mask == 0x55555555u);
-    static_assert(type_ids::k_invalid_id_mask == 0xaaaaaaaau);
-    static_assert(type_ids::k_capacity == 0x7fffu);
-    static_assert(type_ids::k_max_ordinal == 0x7ffeu);
-    static_assert(type_ids::k_category_bit == 0x8000u);
-    static_assert(type_ids::k_system_index_min == 0x8000u);
-    static_assert(type_ids::k_system_index_max == 0xfffeu);
-    static_assert(type_ids::k_invalid_index == 0xffffu);
+    static_assert(system_type_ids::k_encoded_payload_mask == 0x15555555u);
+    static_assert(system_type_ids::k_system_type_flag == 0x40000000u);
+    static_assert(system_type_ids::k_id_field_mask == 0x55555555u);
+    static_assert(system_type_ids::k_invalid_id_mask == 0xaaaaaaaau);
+    static_assert(system_type_ids::k_capacity == 0x7fffu);
+    static_assert(system_type_ids::k_max_ordinal == 0x7ffeu);
+    static_assert(system_type_ids::k_category_bit == 0x8000u);
+    static_assert(system_type_ids::k_system_index_min == 0x8000u);
+    static_assert(system_type_ids::k_system_index_max == 0xfffeu);
+    static_assert(system_type_ids::k_invalid_index == 0xffffu);
     static_assert(local_type_ids::k_local_index_min == 0u);
     static_assert(local_type_ids::k_local_index_max == 0x7ffeu);
-    static_assert(local_type_ids::k_capacity == type_ids::k_capacity);
-    static_assert(!std::is_same_v<type_ids::id_type, local_type_ids::id_type>);
+    static_assert(local_type_ids::k_capacity == system_type_ids::k_capacity);
+    static_assert(!std::is_same_v<system_type_id, local_type_ids::id_type>);
 
-    constexpr type_ids::index_type system_first_index = type_ids::encode_index(0u);
-    constexpr type_ids::index_type system_last_index = type_ids::encode_index(type_ids::k_max_ordinal);
+    constexpr system_type_ids::index_type system_first_index = system_type_ids::encode_index(0u);
+    constexpr system_type_ids::index_type system_last_index = system_type_ids::encode_index(system_type_ids::k_max_ordinal);
     constexpr local_type_ids::index_type local_first_index = local_type_ids::encode_index(0u);
     constexpr local_type_ids::index_type local_last_index = local_type_ids::encode_index(local_type_ids::k_max_ordinal);
-    constexpr type_ids::id_type system_first = type_ids::encode_id(system_first_index);
-    constexpr type_ids::id_type system_last = type_ids::encode_id(system_last_index);
+    constexpr system_type_id system_first = system_type_ids::encode_id(system_first_index);
+    constexpr system_type_id system_last = system_type_ids::encode_id(system_last_index);
     constexpr local_type_ids::id_type local_first = local_type_ids::encode_id(local_first_index);
     constexpr local_type_ids::id_type local_last = local_type_ids::encode_id(local_last_index);
     static_assert(system_first.raw_value() == 0x55555555u);
     static_assert(system_last.raw_value() == 0x40000001u);
     static_assert(local_first.raw_value() == 0x15555555u);
     static_assert(local_last.raw_value() == 0x00000001u);
-    static_assert(type_ids::decode_id(system_first) == 0x8000u);
-    static_assert(type_ids::decode_id(system_last) == 0xfffeu);
+    static_assert(system_type_ids::decode_id(system_first) == 0x8000u);
+    static_assert(system_type_ids::decode_id(system_last) == 0xfffeu);
     static_assert(local_type_ids::decode_id(local_first) == 0u);
     static_assert(local_type_ids::decode_id(local_last) == 0x7ffeu);
-    static_assert(type_ids::is_valid_index(0xfffeu));
-    static_assert(!type_ids::is_valid_index(0xffffu));
-    static_assert(!type_ids::is_valid_index(0x7ffeu));
+    static_assert(system_type_ids::is_valid_index(0xfffeu));
+    static_assert(!system_type_ids::is_valid_index(0xffffu));
+    static_assert(!system_type_ids::is_valid_index(0x7ffeu));
     static_assert(local_type_ids::is_valid_index(0x7ffeu));
     static_assert(!local_type_ids::is_valid_index(0x8000u));
 
-    TEST_EXPECT(ctx, !type_ids::is_valid_index(type_ids::k_invalid_index));
+    TEST_EXPECT(ctx, !system_type_ids::is_valid_index(system_type_ids::k_invalid_index));
     TEST_EXPECT(ctx, !local_type_ids::is_valid_index(local_type_ids::k_invalid_index));
-    TEST_EXPECT(ctx, type_ids::encode_id(type_ids::k_invalid_index) == type_ids::undefined);
+    TEST_EXPECT(ctx, system_type_ids::encode_id(system_type_ids::k_invalid_index) == system_type_ids::undefined);
     TEST_EXPECT(ctx, local_type_ids::encode_id(local_type_ids::k_invalid_index) == local_type_ids::undefined);
-    TEST_EXPECT(ctx, !type_ids::is_valid_id(type_ids::id_type{ local_first.raw_value() }));
+    TEST_EXPECT(ctx, !system_type_ids::is_valid_id(system_type_id{ local_first.raw_value() }));
     TEST_EXPECT(ctx, !local_type_ids::is_valid_id(local_type_ids::id_type{ system_first.raw_value() }));
-    TEST_EXPECT(ctx, !type_ids::is_valid_id(type_ids::id_type{ type_ids::k_system_type_flag }));
+    TEST_EXPECT(ctx, !system_type_ids::is_valid_id(system_type_id{ system_type_ids::k_system_type_flag }));
     TEST_EXPECT(ctx, !local_type_ids::is_valid_id(local_type_ids::id_type{}));
 }
 
@@ -91,7 +91,7 @@ void test_registration_categories(TTestContext& ctx)
     static_assert(!k_can_register_type_id_v<host::CHost>);
     static_assert(k_can_register_type_id_v<CUnregisteredType>);
     static_assert(!debug_system::is_supported_event_argument_v<local_type_ids::id_type>);
-    TEST_EXPECT(ctx, type_ids::is_valid_id(k_type_id_v<CByteBuffer>));
+    TEST_EXPECT(ctx, system_type_ids::is_valid_id(k_system_type_id_v<CByteBuffer>));
     TEST_EXPECT(ctx, local_type_ids::is_valid_id(k_local_type_id_v<host::CHost>));
 }
 
@@ -161,21 +161,21 @@ void test_system_authority(TTestContext& ctx)
     TEST_EXPECT(ctx, !system_id_registry::install_view(host::system_registry_view()));
     TEST_EXPECT(ctx, system_id_registry::find_type(
         static_cast<const system_id_registry::SSystemRegistryView*>(nullptr),
-        type_ids::byte_buffer) == nullptr);
+        system_type_ids::byte_buffer) == nullptr);
     const system_id_registry::SSystemRegistryView unavailable_view{ nullptr, 1u };
     TEST_EXPECT(ctx, system_id_registry::find_type(
-        &unavailable_view, type_ids::encode_id(type_ids::encode_index(0u))) == nullptr);
+        &unavailable_view, system_type_ids::encode_id(system_type_ids::encode_index(0u))) == nullptr);
 
     constexpr char long_name[] = "a-system-name-is-not-limited-to-fifteen-bytes";
     const system_id_registry::STypeRegistration registration{
-        type_ids::encode_id(type_ids::encode_index(0u)), type_ids::encode_index(0u),
+        system_type_ids::encode_id(system_type_ids::encode_index(0u)), system_type_ids::encode_index(0u),
         long_name, sizeof(long_name) - 1u };
     const system_id_registry::SSystemRegistryView view{ &registration, 1u };
     TEST_EXPECT(ctx, system_id_registry::validate_view(view));
     TEST_EXPECT(ctx, system_id_registry::find_type(&view, registration.id) == &registration);
 
     system_id_registry::STypeRegistration corrupt = registration;
-    corrupt.id = type_ids::encode_id(type_ids::encode_index(1u));
+    corrupt.id = system_type_ids::encode_id(system_type_ids::encode_index(1u));
     const system_id_registry::SSystemRegistryView corrupt_view{ &corrupt, 1u };
     TEST_EXPECT(ctx, !system_id_registry::validate_view(corrupt_view));
     TEST_EXPECT(ctx, system_id_registry::find_type(&corrupt_view, corrupt.id) == nullptr);

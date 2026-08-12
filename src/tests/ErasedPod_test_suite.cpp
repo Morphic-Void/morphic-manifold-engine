@@ -82,19 +82,19 @@ void test_erased_pod_redefinition_and_access(TTestContext& ctx)
     static_assert(!storage_type::is_compatible_with<CNonTriviallyCopyable>());
 
     storage_type storage;
-    TEST_EXPECT(ctx, storage.query_type_id() == type_ids::undefined);
+    TEST_EXPECT(ctx, storage.query_type_id() == system_type_ids::undefined);
     TEST_EXPECT(ctx, storage.query_tag() == 0u);
     TEST_EXPECT(ctx, storage.payload<UnrecognisedMsg>() == nullptr);
 
     storage.set_tag(41u);
     UnrecognisedMsg& unrecognised = storage.redefine<UnrecognisedMsg>();
-    unrecognised.msg_id = type_ids::file_load_request;
+    unrecognised.msg_id = system_type_ids::file_load_request;
 
-    TEST_EXPECT(ctx, storage.query_type_id() == k_type_id_v<UnrecognisedMsg>);
+    TEST_EXPECT(ctx, storage.query_type_id() == k_system_type_id_v<UnrecognisedMsg>);
     TEST_EXPECT(ctx, storage.query_tag() == 41u);
     TEST_EXPECT(ctx, storage.is_a<UnrecognisedMsg>());
     TEST_EXPECT(ctx, storage.payload<UnrecognisedMsg>() == &unrecognised);
-    TEST_EXPECT(ctx, storage.payload<UnrecognisedMsg>()->msg_id == type_ids::file_load_request);
+    TEST_EXPECT(ctx, storage.payload<UnrecognisedMsg>()->msg_id == system_type_ids::file_load_request);
 
     const storage_type& const_storage = storage;
     TEST_EXPECT(ctx, const_storage.payload<UnrecognisedMsg>() == &unrecognised);
@@ -104,7 +104,7 @@ void test_erased_pod_redefinition_and_access(TTestContext& ctx)
     TEST_EXPECT(ctx, storage.query_tag() == 41u);
     result.success = true;
 
-    TEST_EXPECT(ctx, storage.query_type_id() == k_type_id_v<FileSaveResult>);
+    TEST_EXPECT(ctx, storage.query_type_id() == k_system_type_id_v<FileSaveResult>);
     TEST_EXPECT(ctx, storage.payload<UnrecognisedMsg>() == nullptr);
     TEST_EXPECT(ctx, storage.payload<FileSaveResult>() == &result);
     TEST_EXPECT(ctx, storage.payload<FileSaveResult>()->success);
@@ -192,7 +192,7 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
     const unsigned char zero_message[sizeof(CErasedPodMsg)]{};
     TEST_EXPECT(ctx, std::memcmp(&message, zero_message, sizeof(message)) == 0);
     TEST_EXPECT(ctx, !message.has_message_type());
-    TEST_EXPECT(ctx, message.query_message_type_id() == type_ids::undefined);
+    TEST_EXPECT(ctx, message.query_message_type_id() == system_type_ids::undefined);
     TEST_EXPECT(ctx, message.query_async_slot() == 0);
 
     message.set_async_slot(41);
@@ -205,7 +205,7 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
     TEST_EXPECT(ctx, message.has_message_type());
     TEST_EXPECT(ctx, message.query_async_slot() == 41);
     TEST_EXPECT(ctx, message.is_payload_a<FileSaveResult>());
-    TEST_EXPECT(ctx, message.query_message_type_id() == k_type_id_v<FileSaveResult>);
+    TEST_EXPECT(ctx, message.query_message_type_id() == k_system_type_id_v<FileSaveResult>);
 
     FileSaveResult copied{ false };
     TEST_EXPECT(ctx, message.copy_payload_to(copied));
@@ -215,9 +215,9 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
     TEST_EXPECT(ctx, message.copy_payload_to(copied));
     TEST_EXPECT(ctx, copied.success);
 
-    UnrecognisedMsg mismatch{ type_ids::tga_save_request };
+    UnrecognisedMsg mismatch{ system_type_ids::tga_save_request };
     TEST_EXPECT(ctx, !message.copy_payload_to(mismatch));
-    TEST_EXPECT(ctx, mismatch.msg_id == type_ids::tga_save_request);
+    TEST_EXPECT(ctx, mismatch.msg_id == system_type_ids::tga_save_request);
 }
 
 void test_thread_message_clears_previous_representation(TTestContext& ctx)
@@ -228,7 +228,7 @@ void test_thread_message_clears_previous_representation(TTestContext& ctx)
         { image::codec::tga::image_encode_src::AutoTrue32, true, true, false } };
     reused.assign_payload(larger);
 
-    const UnrecognisedMsg small{ type_ids::file_save_result };
+    const UnrecognisedMsg small{ system_type_ids::file_save_result };
     reused.assign_payload(small);
 
     threading::CErasedPodMsg fresh;

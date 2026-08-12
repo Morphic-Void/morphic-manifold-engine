@@ -255,7 +255,7 @@ reserved_local_id_failure
 
 Boolean values consume no payload bytes. `CInlineText16` owns exactly 16 bytes,
 including a guaranteed terminator, and therefore carries at most 15 text
-characters. `type_ids::id_type` consumes four payload bytes and formats as a
+characters. `system_type_id` consumes four payload bytes and formats as a
 registered symbolic name when one exists, otherwise as an explicit
 `unregistered-type:0x...` or `invalid-type:0x...` diagnostic. The two named
 local-type representations reserve namespace for a later transport phase and

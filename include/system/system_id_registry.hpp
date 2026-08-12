@@ -22,8 +22,8 @@ inline constexpr std::uint32_t k_max_system_name_size = 4096u;
 
 struct STypeRegistration
 {
-    type_ids::id_type id{ type_ids::undefined };
-    type_ids::index_type index{ type_ids::k_invalid_index };
+    system_type_id id{ system_type_ids::undefined };
+    system_type_ids::index_type index{ system_type_ids::k_invalid_index };
     const char* name{ nullptr };
     std::uint32_t name_size{ 0u };
 };
@@ -82,17 +82,17 @@ static_assert(sizeof(SSystemRegistryView) == (sizeof(void*) * 8u));
 [[nodiscard]] const SModuleRegistration* modules() noexcept;
 [[nodiscard]] std::uint32_t module_count() noexcept;
 
-[[nodiscard]] const STypeRegistration* find_type(const SSystemRegistryView* const view, const type_ids::id_type id) noexcept;
+[[nodiscard]] const STypeRegistration* find_type(const SSystemRegistryView* const view, const system_type_id id) noexcept;
 [[nodiscard]] const SMountPointRegistration* find_mount_point(const SSystemRegistryView* const view, const mount_point_ids::id_type id) noexcept;
 [[nodiscard]] const SThreadRegistration* find_thread(const SSystemRegistryView* const view, const thread_ids::id_type id) noexcept;
 [[nodiscard]] const SModuleRegistration* find_module(const SSystemRegistryView* const view, const module_ids::id_type id) noexcept;
 
-[[nodiscard]] const STypeRegistration* find_type(const type_ids::id_type id) noexcept;
+[[nodiscard]] const STypeRegistration* find_type(const system_type_id id) noexcept;
 [[nodiscard]] const SMountPointRegistration* find_mount_point(const mount_point_ids::id_type id) noexcept;
 [[nodiscard]] const SThreadRegistration* find_thread(const thread_ids::id_type id) noexcept;
 [[nodiscard]] const SModuleRegistration* find_module(const module_ids::id_type id) noexcept;
 
-[[nodiscard]] const char* lookup_type_name(const type_ids::id_type id) noexcept;
+[[nodiscard]] const char* lookup_type_name(const system_type_id id) noexcept;
 [[nodiscard]] const char* lookup_mount_point_name(const mount_point_ids::id_type id) noexcept;
 [[nodiscard]] const char* lookup_thread_name(const thread_ids::id_type id) noexcept;
 [[nodiscard]] const char* lookup_module_name(const module_ids::id_type id) noexcept;

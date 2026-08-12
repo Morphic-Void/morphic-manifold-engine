@@ -75,8 +75,8 @@ void test_acquisition_redefinition_and_release(TTestContext& ctx)
 
     UnrecognisedMsg* const initial_payload = states.payload<UnrecognisedMsg>(first_slot);
     TEST_EXPECT(ctx, initial_payload != nullptr);
-    TEST_EXPECT(ctx, initial_payload->msg_id == type_ids::undefined);
-    initial_payload->msg_id = type_ids::file_load_request;
+    TEST_EXPECT(ctx, initial_payload->msg_id == system_type_ids::undefined);
+    initial_payload->msg_id = system_type_ids::file_load_request;
 
     FileSaveResult* const redefined_payload = states.redefine<FileSaveResult>(first_slot);
     TEST_EXPECT(ctx, redefined_payload != nullptr);
@@ -102,7 +102,7 @@ void test_reused_slot_is_reinitialised(TTestContext& ctx)
 
     const std::int32_t released_slot = states.acquire<UnrecognisedMsg>(0xffffffffu);
     TEST_EXPECT(ctx, released_slot >= 0);
-    states.payload<UnrecognisedMsg>(released_slot)->msg_id = type_ids::tga_save_request;
+    states.payload<UnrecognisedMsg>(released_slot)->msg_id = system_type_ids::tga_save_request;
     TEST_EXPECT(ctx, states.release(released_slot));
 
     const std::int32_t acquired_slot = states.acquire<FileSaveResult>(7u);

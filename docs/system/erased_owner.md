@@ -24,7 +24,7 @@ remains outside the allocation it may release.
 
 ## Registration
 
-System payload identity is declared in `system/type_ids.def` and associated
+System payload identity is declared in `system/system_type_ids.def` and associated
 with a C++ type through `MV_REGISTER_SYSTEM_TYPE`.
 
 Owning-erasure eligibility is a separate explicit trait declared with
