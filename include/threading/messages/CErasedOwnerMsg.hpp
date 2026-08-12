@@ -18,6 +18,7 @@
 #include <utility>      //  std::move
 
 #include "system/erased_owner.hpp"
+#include "system/type_registration.hpp"
 #include "threading/messages/SErasedMsgHeader.hpp"
 
 namespace threading
@@ -37,7 +38,7 @@ public:
     void set_async_slot(std::int32_t async_slot) noexcept;
 
     [[nodiscard]] bool has_message_type() const noexcept;
-    [[nodiscard]] system_type_id query_message_type_id() const noexcept;
+    [[nodiscard]] type_id query_message_type_id() const noexcept;
 
     template<typename T>
     [[nodiscard]] bool is_message_a() const noexcept;
@@ -46,7 +47,7 @@ public:
     void set_message_type() noexcept;
 
     [[nodiscard]] bool has_owner() const noexcept;
-    [[nodiscard]] system_type_id query_owner_type_id() const noexcept;
+    [[nodiscard]] type_id query_owner_type_id() const noexcept;
     [[nodiscard]] CErasedOwner& owner() noexcept;
     [[nodiscard]] const CErasedOwner& owner() const noexcept;
     void set_owner(CErasedOwner&& owner) noexcept;
@@ -105,10 +106,10 @@ inline void CErasedOwnerMsg::set_async_slot(const std::int32_t async_slot) noexc
 
 inline bool CErasedOwnerMsg::has_message_type() const noexcept
 {
-    return system_type_ids::is_defined(m_header.message_type_id);
+    return m_header.message_type_id.is_valid();
 }
 
-inline system_type_id CErasedOwnerMsg::query_message_type_id() const noexcept
+inline type_id CErasedOwnerMsg::query_message_type_id() const noexcept
 {
     return m_header.message_type_id;
 }
@@ -117,14 +118,14 @@ template<typename T>
 inline bool CErasedOwnerMsg::is_message_a() const noexcept
 {
     validate_message_type<T>();
-    return m_header.message_type_id == k_system_type_id_v<T>;
+    return m_header.message_type_id == k_type_id_v<T>;
 }
 
 template<typename T>
 inline void CErasedOwnerMsg::set_message_type() noexcept
 {
     validate_message_type<T>();
-    m_header.message_type_id = k_system_type_id_v<T>;
+    m_header.message_type_id = k_type_id_v<T>;
 }
 
 inline bool CErasedOwnerMsg::has_owner() const noexcept
@@ -132,7 +133,7 @@ inline bool CErasedOwnerMsg::has_owner() const noexcept
     return m_owner.is_ready();
 }
 
-inline system_type_id CErasedOwnerMsg::query_owner_type_id() const noexcept
+inline type_id CErasedOwnerMsg::query_owner_type_id() const noexcept
 {
     return m_owner.query_type_id();
 }
@@ -160,7 +161,7 @@ inline CErasedOwner CErasedOwnerMsg::take_owner() noexcept
 template<typename T>
 constexpr void CErasedOwnerMsg::validate_message_type() noexcept
 {
-    static_assert(system_type_ids::is_valid_id(k_system_type_id_v<T>),
+    static_assert(k_type_id_v<T>.is_valid(),
         "CErasedOwnerMsg requires a valid, non-zero message type id.");
 }
 

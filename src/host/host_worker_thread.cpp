@@ -84,9 +84,9 @@ void CHostWorkerThread::operate() noexcept
         {
             MV_TRACE("Worker message received");
 
-            switch (inbound_msg.query_message_type_id())
+            switch (inbound_msg.query_message_type_id().raw_value())
             {
-                case (k_system_type_id_v<FileLoadRequest>):
+                case k_type_id_v<FileLoadRequest>.raw_value():
                 {
                     MV_DETAIL("Worker file load request");
 
@@ -104,7 +104,7 @@ void CHostWorkerThread::operate() noexcept
                     (void)m_context.post(std::move(outbound_msg));
                     break;
                 }
-                case (k_system_type_id_v<FileSaveRequest>):
+                case k_type_id_v<FileSaveRequest>.raw_value():
                 {
                     MV_DETAIL("Worker file save request");
 
@@ -118,7 +118,7 @@ void CHostWorkerThread::operate() noexcept
                     (void)m_context.post(outbound_msg);
                     break;
                 }
-                case (k_system_type_id_v<TgaEncodeRequest>):
+                case k_type_id_v<TgaEncodeRequest>.raw_value():
                 {
                     MV_DETAIL("Worker TGA encode request");
 
@@ -136,7 +136,7 @@ void CHostWorkerThread::operate() noexcept
                     (void)m_context.post(std::move(outbound_msg));
                     break;
                 }
-                case (k_system_type_id_v<TgaDecodeRequest>):
+                case k_type_id_v<TgaDecodeRequest>.raw_value():
                 {
                     MV_DETAIL("Worker TGA decode request");
 
@@ -156,10 +156,17 @@ void CHostWorkerThread::operate() noexcept
                 }
                 default:
                 {
-                    MV_DETAIL("Worker unrecognised message type {}", inbound_msg.query_message_type_id());
+                    system_type_id unrecognised_id;
+                    if (!inbound_msg.query_message_type_id().try_system_type_id(
+                            unrecognised_id))
+                    {
+                        MV_DETAIL("Worker unrecognised LOCAL message type");
+                        break;
+                    }
+                    MV_DETAIL("Worker unrecognised message type {}", unrecognised_id);
 
                     UnrecognisedMsg unrecognised;
-                    unrecognised.msg_id = inbound_msg.query_message_type_id();
+                    unrecognised.msg_id = unrecognised_id;
                     threading::CErasedPodMsg outbound_msg;
                     outbound_msg.set_async_slot(inbound_msg.query_async_slot());
                     outbound_msg.assign_payload(unrecognised);

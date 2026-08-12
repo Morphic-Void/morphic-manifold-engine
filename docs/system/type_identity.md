@@ -91,8 +91,7 @@ The host TGA continuation states and application TGA continuation states are
 stored only in their component-owned `CASyncStates`. They therefore belong to
 their respective local tables rather than the system table. `TErasedPod` and
 `CASyncState` carry `type_id`, retain their existing fixed layouts, and accept
-either registered binding category. Shared erased messages remain SYSTEM-only
-until their category-bearing migration.
+either registered binding category.
 
 Destination-aware admission belongs to the concrete erased-message and
 erased-owner wrappers, not the generic queue and owning transport templates.
@@ -106,7 +105,17 @@ retrieval only performs its required exit-side memory re-attribution.
 
 Owning wrappers additionally require the declared destination to match the
 module represented by the recipient context, or by the transport context when
-there is no distinct recipient.
+there is no distinct recipient. `SErasedMsgHeader`, `CErasedPodMsg`,
+`CErasedOwnerMsg`, `CErasedOwner`, and `CAssetRecord` expose category-bearing
+identity without changing their established fixed layouts. `CErasedOwner`
+creation and destruction remain deliberately closed over registered SYSTEM
+payloads even though the carrier field preserves the umbrella category.
+
+Message dispatch compares the umbrella value locally. An unrecognised value
+must be explicitly extracted as SYSTEM before it can enter the SYSTEM-only
+`UnrecognisedMsg` response or existing debug argument transport. Unknown LOCAL
+identity is neither echoed nor formatted, so the reserved local-type debug
+codes remain unsupported.
 
 ## System Name Authority
 

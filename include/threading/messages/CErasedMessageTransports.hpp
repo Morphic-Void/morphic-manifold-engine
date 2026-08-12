@@ -57,7 +57,7 @@ public:
     [[nodiscard]] bool post(const threading::CErasedPodMsg& msg) noexcept
     {
         return erased_transport_admission::is_admissible(
-            type_id{ msg.query_message_type_id() }, m_destination_module_id) &&
+            msg.query_message_type_id(), m_destination_module_id) &&
             m_transport.post(msg);
     }
     [[nodiscard]] bool post_would_reallocate(const std::uint32_t count) const noexcept

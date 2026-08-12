@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "debug/macros.hpp"
+#include "host/host_local_type_registry.hpp"
 #include "memory/memory_context.hpp"
 #include "system/erased_owner.hpp"
 #include "system/erased_owner_transport.hpp"
@@ -99,7 +100,7 @@ void test_registration_and_empty_state(TTestContext& ctx)
     static_assert(k_system_type_id_v<CStableStrings> == system_type_ids::stable_strings);
     static_assert(k_is_erased_owner_payload_v<LoadedFile>);
     static_assert(!k_is_erased_owner_payload_v<FileLoadRequest>);
-    static_assert(std::is_same_v<decltype(CErasedOwner{}.query_type_id()), system_type_id>);
+    static_assert(std::is_same_v<decltype(CErasedOwner{}.query_type_id()), type_id>);
 
     CErasedOwner owner;
     const CErasedOwner& const_owner = owner;
@@ -107,7 +108,7 @@ void test_registration_and_empty_state(TTestContext& ctx)
     TEST_EXPECT(ctx, owner.is_empty());
     TEST_EXPECT(ctx, !owner.is_ready());
     TEST_EXPECT(ctx, !owner);
-    TEST_EXPECT(ctx, owner.query_type_id() == system_type_ids::undefined);
+    TEST_EXPECT(ctx, owner.query_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, owner.payload<LoadedFile>() == nullptr);
     TEST_EXPECT(ctx, const_owner.payload<LoadedFile>() == nullptr);
     TEST_EXPECT(ctx, !owner.has_any_hazard());
@@ -130,7 +131,7 @@ void test_creation_accounting_and_destruction(TTestContext& ctx)
         LoadedFile* const payload = owner.payload<LoadedFile>();
 
         TEST_EXPECT(ctx, owner.is_ready());
-        TEST_EXPECT(ctx, owner.query_type_id() == k_system_type_id_v<LoadedFile>);
+        TEST_EXPECT(ctx, owner.query_type_id() == k_type_id_v<LoadedFile>);
         TEST_EXPECT(ctx, payload != nullptr);
         TEST_EXPECT(ctx, owner.payload<EncodedTga>() == nullptr);
         TEST_EXPECT(ctx, context.get_live_allocation_count() == 1u);
@@ -182,7 +183,7 @@ void test_allocation_failure_is_canonical(TTestContext& ctx)
 
     TEST_EXPECT(ctx, owner.is_empty());
     TEST_EXPECT(ctx, !owner.is_ready());
-    TEST_EXPECT(ctx, owner.query_type_id() == system_type_ids::undefined);
+    TEST_EXPECT(ctx, owner.query_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, owner.hazard_mask() == 0u);
     TEST_EXPECT(ctx, context.get_live_allocation_count() == 0u);
 }
@@ -378,10 +379,14 @@ void test_erased_owner_transport_rejection(TTestContext& ctx)
 
 void test_erased_owner_message(TTestContext& ctx)
 {
+    static_assert(std::is_same_v<
+        decltype(threading::CErasedOwnerMsg{}.query_message_type_id()), type_id>);
+    static_assert(std::is_same_v<
+        decltype(threading::CErasedOwnerMsg{}.query_owner_type_id()), type_id>);
     threading::CErasedOwnerMsg source;
     TEST_EXPECT(ctx, !source.has_message_type());
     TEST_EXPECT(ctx, !source.has_owner());
-    TEST_EXPECT(ctx, source.query_message_type_id() == system_type_ids::undefined);
+    TEST_EXPECT(ctx, source.query_message_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, source.query_async_slot() == 0);
 
     CErasedOwner content = CErasedOwner::create<DecodedTga>();
@@ -394,7 +399,7 @@ void test_erased_owner_message(TTestContext& ctx)
     source.set_owner(std::move(content));
 
     TEST_EXPECT(ctx, source.is_message_a<TgaDecodeResult>());
-    TEST_EXPECT(ctx, source.query_owner_type_id() == k_system_type_id_v<DecodedTga>);
+    TEST_EXPECT(ctx, source.query_owner_type_id() == k_type_id_v<DecodedTga>);
     TEST_EXPECT(ctx, source.owner().payload<DecodedTga>() == payload);
 
     threading::CErasedOwnerMsg moved{ std::move(source) };
@@ -459,6 +464,37 @@ void test_erased_owner_message_transport(TTestContext& ctx)
 
     threading::CErasedOwnerMsg untyped;
     TEST_EXPECT(ctx, !producer.post(std::move(untyped)));
+
+    threading::CErasedOwnerMsg local_message;
+    local_message.set_message_type<host::CHost>();
+    local_message.set_async_slot(33);
+    TEST_EXPECT(ctx, producer.post(std::move(local_message)));
+    TEST_EXPECT(ctx, consumer.read(received));
+    TEST_EXPECT(ctx, received.is_message_a<host::CHost>());
+    TEST_EXPECT(ctx, received.query_message_type_id().is_local());
+    TEST_EXPECT(ctx, received.query_async_slot() == 33);
+
+    memory::CMemoryContext application_transport_context(
+        allocator, system_ids::application);
+    threading::transports::CErasedOwnerMsgTransport cross_component(
+        module_ids::application, &application_transport_context);
+    TEST_EXPECT(ctx, cross_component.initialise(32u));
+
+    threading::CErasedOwnerMsg rejected_local;
+    rejected_local.set_message_type<host::CHost>();
+    rejected_local.set_async_slot(34);
+    TEST_EXPECT(ctx, !cross_component.post(std::move(rejected_local)));
+    TEST_EXPECT(ctx, rejected_local.is_message_a<host::CHost>());
+    TEST_EXPECT(ctx, rejected_local.query_async_slot() == 34);
+
+    threading::CErasedOwnerMsg admitted_system;
+    admitted_system.set_message_type<FileLoadResult>();
+    admitted_system.set_async_slot(35);
+    TEST_EXPECT(ctx, cross_component.post(std::move(admitted_system)));
+    TEST_EXPECT(ctx, cross_component.read(received));
+    TEST_EXPECT(ctx, received.is_message_a<FileLoadResult>());
+    TEST_EXPECT(ctx, received.query_async_slot() == 35);
+    cross_component.deallocate();
 
     transport.deallocate();
     TEST_EXPECT(ctx, transport_context.get_live_allocation_count() == 0u);

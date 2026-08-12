@@ -24,7 +24,7 @@ namespace threading
 
 struct alignas(16) SErasedMsgHeader
 {
-    system_type_id message_type_id{ system_type_ids::undefined };
+    type_id message_type_id{ type_ids::undefined };
     std::int32_t async_slot{ 0 };
     std::uint64_t reserved{ 0u };
 };

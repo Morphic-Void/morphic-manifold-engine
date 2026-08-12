@@ -38,7 +38,7 @@ bool CErasedOwnerMsgTransport::post(threading::CErasedOwnerMsg&& msg) noexcept
 {
     if (!posting_is_valid() || (writable_count() == 0u) || !msg.has_message_type() ||
         !erased_transport_admission::is_admissible(
-            type_id{ msg.query_message_type_id() }, m_destination_module_id))
+            msg.query_message_type_id(), m_destination_module_id))
     {
         return false;
     }
@@ -48,7 +48,7 @@ bool CErasedOwnerMsgTransport::post(threading::CErasedOwnerMsg&& msg) noexcept
     if (owner.is_ready())
     {
         if (!erased_transport_admission::is_admissible(
-            type_id{ owner.query_type_id() }, m_destination_module_id))
+            owner.query_type_id(), m_destination_module_id))
         {
             return false;
         }

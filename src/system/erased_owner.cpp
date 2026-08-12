@@ -47,17 +47,17 @@ void CErasedOwner::destroy() noexcept
         MV_CRITICAL_ASSERT(payload != nullptr);
         if (payload != nullptr)
         {
-            switch (m_type_id)
+            switch (m_type_id.raw_value())
             {
-                case k_system_type_id_v<LoadedFile>:
+                case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
                     static_cast<LoadedFile*>(payload)->~LoadedFile();
                     break;
 
-                case k_system_type_id_v<EncodedTga>:
+                case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
                     static_cast<EncodedTga*>(payload)->~EncodedTga();
                     break;
 
-                case k_system_type_id_v<DecodedTga>:
+                case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
                     static_cast<DecodedTga*>(payload)->~DecodedTga();
                     break;
 
@@ -154,19 +154,19 @@ bool CErasedOwner::memory_source_context(memory::CMemoryContext*& source) const 
     }
 
     memory::CMemoryContext* payload_source = nullptr;
-    switch (m_type_id)
+    switch (m_type_id.raw_value())
     {
-        case k_system_type_id_v<LoadedFile>:
+        case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
             payload_source =
                 static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_source_context();
             break;
 
-        case k_system_type_id_v<EncodedTga>:
+        case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
             payload_source =
                 static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_source_context();
             break;
 
-        case k_system_type_id_v<DecodedTga>:
+        case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
             payload_source =
                 static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_source_context();
             break;
@@ -194,15 +194,15 @@ std::uint64_t CErasedOwner::memory_allocation_size() const noexcept
 
 std::uint32_t CErasedOwner::payload_memory_allocation_count() const noexcept
 {
-    switch (m_type_id)
+    switch (m_type_id.raw_value())
     {
-        case k_system_type_id_v<LoadedFile>:
+        case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
             return static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_allocation_count();
 
-        case k_system_type_id_v<EncodedTga>:
+        case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
             return static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_allocation_count();
 
-        case k_system_type_id_v<DecodedTga>:
+        case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
             return static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_allocation_count();
 
         default:
@@ -213,15 +213,15 @@ std::uint32_t CErasedOwner::payload_memory_allocation_count() const noexcept
 
 std::uint64_t CErasedOwner::payload_memory_allocation_size() const noexcept
 {
-    switch (m_type_id)
+    switch (m_type_id.raw_value())
     {
-        case k_system_type_id_v<LoadedFile>:
+        case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
             return static_cast<const LoadedFile*>(m_storage.data())->buffer.memory_allocation_size();
 
-        case k_system_type_id_v<EncodedTga>:
+        case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
             return static_cast<const EncodedTga*>(m_storage.data())->buffer.memory_allocation_size();
 
-        case k_system_type_id_v<DecodedTga>:
+        case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
             return static_cast<const DecodedTga*>(m_storage.data())->buffer.memory_allocation_size();
 
         default:
@@ -232,15 +232,15 @@ std::uint64_t CErasedOwner::payload_memory_allocation_size() const noexcept
 
 bool CErasedOwner::payload_can_reattribute_to(memory::CMemoryContext* const target) const noexcept
 {
-    switch (m_type_id)
+    switch (m_type_id.raw_value())
     {
-        case k_system_type_id_v<LoadedFile>:
+        case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
             return static_cast<const LoadedFile*>(m_storage.data())->buffer.can_reattribute_to(target);
 
-        case k_system_type_id_v<EncodedTga>:
+        case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
             return static_cast<const EncodedTga*>(m_storage.data())->buffer.can_reattribute_to(target);
 
-        case k_system_type_id_v<DecodedTga>:
+        case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
             return static_cast<const DecodedTga*>(m_storage.data())->buffer.can_reattribute_to(target);
 
         default:
@@ -253,19 +253,19 @@ void CErasedOwner::unsafe_replace_payload_memory_context_without_accounting(
     memory::CMemoryContext* const expected_source,
     memory::CMemoryContext* const target) noexcept
 {
-    switch (m_type_id)
+    switch (m_type_id.raw_value())
     {
-        case k_system_type_id_v<LoadedFile>:
+        case type_id{ k_system_type_id_v<LoadedFile> }.raw_value():
             static_cast<LoadedFile*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
 
-        case k_system_type_id_v<EncodedTga>:
+        case type_id{ k_system_type_id_v<EncodedTga> }.raw_value():
             static_cast<EncodedTga*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
 
-        case k_system_type_id_v<DecodedTga>:
+        case type_id{ k_system_type_id_v<DecodedTga> }.raw_value():
             static_cast<DecodedTga*>(m_storage.data())->
                 buffer.unsafe_replace_memory_context_without_accounting(expected_source, target);
             break;
@@ -279,6 +279,6 @@ void CErasedOwner::unsafe_replace_payload_memory_context_without_accounting(
 void CErasedOwner::make_canonical_empty() noexcept
 {
     m_storage = memory::CMemoryToken{};
-    m_type_id = system_type_ids::undefined;
+    m_type_id = type_ids::undefined;
     m_hazards = 0u;
 }

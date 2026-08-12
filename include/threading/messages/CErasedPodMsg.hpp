@@ -15,7 +15,7 @@
 //  CErasedPodMsg is a non-owning, trivially-copyable message container
 //  intended for queue-based communication between engine threads.
 //
-//  Concrete message payloads are identified by the project type-id registry
+//  Concrete message payloads are identified by their component type registry
 //  and copied into and out of private inline storage. No typed pointer into
 //  the message payload is exposed.
 //
@@ -32,6 +32,9 @@
 //
 //  Ownership transfer must use an explicit owning transport or host-owned
 //  storage path, not CErasedPodMsg.
+//
+//  A LOCAL payload may only be admitted to a concrete transport whose source
+//  and destination are the same binary component.
 
 #pragma once
 
@@ -43,7 +46,7 @@
 #include <cstring>      //  std::memcpy, std::memset
 #include <type_traits>  //  std::is_standard_layout_v, std::is_trivially_copyable_v
 
-#include "system/system_type_registration.hpp"
+#include "system/type_registration.hpp"
 #include "threading/messages/SErasedMsgHeader.hpp"
 
 namespace threading
@@ -83,10 +86,10 @@ public:
 
     [[nodiscard]] bool has_message_type() const noexcept
     {
-        return system_type_ids::is_defined(m_storage.header.message_type_id);
+        return m_storage.header.message_type_id.is_valid();
     }
 
-    [[nodiscard]] system_type_id query_message_type_id() const noexcept
+    [[nodiscard]] type_id query_message_type_id() const noexcept
     {
         return m_storage.header.message_type_id;
     }
@@ -104,7 +107,7 @@ public:
     [[nodiscard]] bool is_payload_a() const noexcept
     {
         validate_payload_type<T>();
-        return m_storage.header.message_type_id == k_system_type_id_v<T>;
+        return m_storage.header.message_type_id == k_type_id_v<T>;
     }
 
     template<typename T>
@@ -114,7 +117,7 @@ public:
 
         std::memset(m_storage.payload, 0, k_payload_size);
         std::memcpy(m_storage.payload, &value, sizeof(T));
-        m_storage.header.message_type_id = k_system_type_id_v<T>;
+        m_storage.header.message_type_id = k_type_id_v<T>;
     }
 
     template<typename T>
@@ -122,7 +125,7 @@ public:
     {
         validate_payload_type<T>();
 
-        if (m_storage.header.message_type_id != k_system_type_id_v<T>)
+        if (m_storage.header.message_type_id != k_type_id_v<T>)
         {
             return false;
         }
@@ -134,7 +137,7 @@ private:
     template<typename T>
     static constexpr void validate_payload_type() noexcept
     {
-        static_assert(system_type_ids::is_valid_id(k_system_type_id_v<T>),
+        static_assert(k_type_id_v<T>.is_valid(),
             "CErasedPodMsg requires a valid, non-zero payload type id.");
         static_assert(is_payload_compatible_with<T>(),
             "CErasedPodMsg requires a trivially copyable, standard-layout payload that fits its fixed 48-byte, 16-byte-aligned storage.");

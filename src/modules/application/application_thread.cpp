@@ -177,9 +177,9 @@ void CApplicationThread::operate() noexcept
 
             MV_TRACE("Application: Message received");
 
-            switch (inbound_msg.query_message_type_id())
+            switch (inbound_msg.query_message_type_id().raw_value())
             {
-                case (k_system_type_id_v<TgaLoadResult>):
+                case k_type_id_v<TgaLoadResult>.raw_value():
                 {
                     MV_DETAIL("Application: TGA load result");
 
@@ -222,7 +222,7 @@ void CApplicationThread::operate() noexcept
                     }
                     break;
                 }
-                case (k_system_type_id_v<TgaSaveResult>):
+                case k_type_id_v<TgaSaveResult>.raw_value():
                 {
                     MV_DETAIL("Application: TGA save result");
 
@@ -248,10 +248,17 @@ void CApplicationThread::operate() noexcept
                 }
                 default:
                 {
-                    MV_DETAIL("Application: Unrecognised message type {}", inbound_msg.query_message_type_id());
+                    system_type_id unrecognised_id;
+                    if (!inbound_msg.query_message_type_id().try_system_type_id(
+                            unrecognised_id))
+                    {
+                        MV_DETAIL("Application: Unrecognised LOCAL message type");
+                        break;
+                    }
+                    MV_DETAIL("Application: Unrecognised message type {}", unrecognised_id);
 
                     UnrecognisedMsg unrecognised;
-                    unrecognised.msg_id = inbound_msg.query_message_type_id();
+                    unrecognised.msg_id = unrecognised_id;
                     threading::CErasedPodMsg outbound_msg;
                     outbound_msg.set_async_slot(inbound_msg.query_async_slot());
                     outbound_msg.assign_payload(unrecognised);

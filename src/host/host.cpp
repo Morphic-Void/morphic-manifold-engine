@@ -293,9 +293,9 @@ void CHost::run() noexcept
             {
                 MV_TRACE("Host: Recieved a message");
 
-                switch (inbound_msg.query_message_type_id())
+                switch (inbound_msg.query_message_type_id().raw_value())
                 {
-                    case (k_system_type_id_v<FileSaveResult>):
+                    case k_type_id_v<FileSaveResult>.raw_value():
                     {
                         FileSaveResult result;
                         (void)inbound_msg.copy_payload_to(result);
@@ -313,7 +313,7 @@ void CHost::run() noexcept
                         (void)async_states.release(async_slot);
                         break;
                     }
-                    case (k_system_type_id_v<TgaLoadRequest>):
+                    case k_type_id_v<TgaLoadRequest>.raw_value():
                     {
                         MV_DETAIL("Host: Recieved a TGA load request");
 
@@ -345,7 +345,7 @@ void CHost::run() noexcept
                         }
                         break;
                     }
-                    case (k_system_type_id_v<TgaSaveRequest>):
+                    case k_type_id_v<TgaSaveRequest>.raw_value():
                     {
                         MV_DETAIL("Host: Recieved a TGA save request");
 
@@ -389,7 +389,7 @@ void CHost::run() noexcept
                         }
                         break;
                     }
-                    case (k_system_type_id_v<UnrecognisedMsg>):
+                    case k_type_id_v<UnrecognisedMsg>.raw_value():
                     {
                         UnrecognisedMsg unrecognised;
                         (void)inbound_msg.copy_payload_to(unrecognised);
@@ -399,7 +399,17 @@ void CHost::run() noexcept
                     }
                     default:
                     {
-                        MV_DETAIL("Host: Recieved an unrecognised message type {}", inbound_msg.query_message_type_id());
+                        system_type_id unrecognised_id;
+                        if (inbound_msg.query_message_type_id().try_system_type_id(
+                                unrecognised_id))
+                        {
+                            MV_DETAIL("Host: Recieved an unrecognised message type {}",
+                                unrecognised_id);
+                        }
+                        else
+                        {
+                            MV_DETAIL("Host: Recieved an unrecognised LOCAL message type");
+                        }
                         break;
                     }
                 }
@@ -411,9 +421,9 @@ void CHost::run() noexcept
 
                 const std::int32_t async_slot = inbound_owned_msg.query_async_slot();
                 CErasedOwner content = inbound_owned_msg.take_owner();
-                switch (inbound_owned_msg.query_message_type_id())
+                switch (inbound_owned_msg.query_message_type_id().raw_value())
                 {
-                    case (k_system_type_id_v<FileLoadResult>):
+                    case k_type_id_v<FileLoadResult>.raw_value():
                     {
                         MV_DETAIL("Host: Took ownership of a loaded file buffer");
 
@@ -463,7 +473,7 @@ void CHost::run() noexcept
                         }
                         break;
                     }
-                    case (k_system_type_id_v<TgaEncodeResult>):
+                    case k_type_id_v<TgaEncodeResult>.raw_value():
                     {
                         MV_DETAIL("Host: Took ownership of an encoded TGA file buffer");
 
@@ -513,7 +523,7 @@ void CHost::run() noexcept
                         }
                         break;
                     }
-                    case (k_system_type_id_v<TgaDecodeResult>):
+                    case k_type_id_v<TgaDecodeResult>.raw_value():
                     {
                         MV_DETAIL("Host: Took ownership of a decoded TGA image buffer");
 
@@ -542,8 +552,19 @@ void CHost::run() noexcept
                     }
                     default:
                     {
-                        MV_CRITICAL_EVENT("Host: Recieved an unknown owning message type {}",
-                            inbound_owned_msg.query_message_type_id());
+                        system_type_id unrecognised_id;
+                        if (inbound_owned_msg.query_message_type_id().try_system_type_id(
+                                unrecognised_id))
+                        {
+                            MV_CRITICAL_EVENT(
+                                "Host: Recieved an unknown owning message type {}",
+                                unrecognised_id);
+                        }
+                        else
+                        {
+                            MV_CRITICAL_EVENT(
+                                "Host: Recieved an unknown LOCAL owning message type");
+                        }
                         break;
                     }
                 }

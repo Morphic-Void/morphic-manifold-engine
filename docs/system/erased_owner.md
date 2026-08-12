@@ -28,6 +28,11 @@ remains outside the allocation it may release.
 System payload identity is declared in `system/system_type_ids.def` and associated
 with a C++ type through `MV_REGISTER_SYSTEM_TYPE`.
 
+The owner stores and exposes the category-bearing `type_id`, matching other
+erased carriers. Its creation, typed payload access, closed-world destruction,
+and memory re-attribution hooks remain restricted to explicitly registered
+SYSTEM payload types.
+
 Owning-erasure eligibility is a separate explicit trait declared with
 `MV_REGISTER_ERASED_OWNER_PAYLOAD`. A type ID does not by itself permit a type
 to be carried by `CErasedOwner`.

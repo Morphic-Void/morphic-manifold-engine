@@ -39,7 +39,7 @@ bool CErasedOwnerTransport::post(CErasedOwner&& owner) noexcept
 {
     if (!posting_is_valid() || (writable_count() == 0u) || !owner.is_ready() ||
         !erased_transport_admission::is_admissible(
-            type_id{ owner.query_type_id() }, m_destination_module_id))
+            owner.query_type_id(), m_destination_module_id))
     {
         return false;
     }

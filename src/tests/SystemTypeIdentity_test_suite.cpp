@@ -180,6 +180,11 @@ void test_erased_transport_admission(TTestContext& ctx)
     TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
         type_id{ local_type_ids::encode_id(host_local_type_ids::k_count) },
         module_ids::executable));
+    type_id corrupt_identity;
+    const std::uint32_t corrupt_raw_value = 0x00000002u;
+    std::memcpy(&corrupt_identity, &corrupt_raw_value, sizeof(corrupt_identity));
+    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
+        corrupt_identity, module_ids::executable));
     TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
         type_id{ system_type_ids::byte_buffer }, module_ids::id_type{}));
 

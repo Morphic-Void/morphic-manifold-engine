@@ -200,6 +200,8 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
 {
     using threading::CErasedPodMsg;
 
+    static_assert(std::is_same_v<
+        decltype(CErasedPodMsg{}.query_message_type_id()), type_id>);
     static_assert(std::is_trivially_copyable_v<CErasedPodMsg>);
     static_assert(std::is_standard_layout_v<CErasedPodMsg>);
     static_assert(CErasedPodMsg::is_payload_compatible_with<FileSaveResult>());
@@ -219,7 +221,7 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
     const unsigned char zero_message[sizeof(CErasedPodMsg)]{};
     TEST_EXPECT(ctx, std::memcmp(&message, zero_message, sizeof(message)) == 0);
     TEST_EXPECT(ctx, !message.has_message_type());
-    TEST_EXPECT(ctx, message.query_message_type_id() == system_type_ids::undefined);
+    TEST_EXPECT(ctx, message.query_message_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, message.query_async_slot() == 0);
 
     message.set_async_slot(41);
@@ -232,7 +234,7 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
     TEST_EXPECT(ctx, message.has_message_type());
     TEST_EXPECT(ctx, message.query_async_slot() == 41);
     TEST_EXPECT(ctx, message.is_payload_a<FileSaveResult>());
-    TEST_EXPECT(ctx, message.query_message_type_id() == k_system_type_id_v<FileSaveResult>);
+    TEST_EXPECT(ctx, message.query_message_type_id() == k_type_id_v<FileSaveResult>);
 
     FileSaveResult copied{ false };
     TEST_EXPECT(ctx, message.copy_payload_to(copied));
@@ -245,6 +247,24 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
     UnrecognisedMsg mismatch{ system_type_ids::tga_save_request };
     TEST_EXPECT(ctx, !message.copy_payload_to(mismatch));
     TEST_EXPECT(ctx, mismatch.msg_id == system_type_ids::tga_save_request);
+}
+
+void test_local_thread_message_carrier(TTestContext& ctx)
+{
+    using local_type = erased_pod_test_types::SLocalPod;
+
+    threading::CErasedPodMsg message;
+    message.set_async_slot(42);
+    message.assign_payload(local_type{ 91u });
+
+    TEST_EXPECT(ctx, message.has_message_type());
+    TEST_EXPECT(ctx, message.query_message_type_id() == k_type_id_v<local_type>);
+    TEST_EXPECT(ctx, message.query_message_type_id().is_local());
+    TEST_EXPECT(ctx, message.is_payload_a<local_type>());
+    local_type copied{};
+    TEST_EXPECT(ctx, message.copy_payload_to(copied));
+    TEST_EXPECT(ctx, copied.value == 91u);
+    TEST_EXPECT(ctx, message.query_async_slot() == 42);
 }
 
 void test_thread_message_clears_previous_representation(TTestContext& ctx)
@@ -312,6 +332,7 @@ int run_erased_pod_tests()
     test_erased_pod_clears_complete_storage_extent(ctx);
     test_erased_pod_header_and_extended_alignment(ctx);
     test_thread_message_copy_boundary(ctx);
+    test_local_thread_message_carrier(ctx);
     test_thread_message_clears_previous_representation(ctx);
     test_concrete_erased_pod_transport_admission(ctx);
 

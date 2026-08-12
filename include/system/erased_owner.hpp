@@ -6,7 +6,9 @@
 //  Author: Ritchie Brannan
 //  Date:   26 Jul 26
 //
-//  Move-only ownership for one registered, type-erased system payload.
+//  Move-only ownership for one registered, type-erased SYSTEM payload.
+//  The stored identity uses the category-bearing erased-carrier representation;
+//  construction and destruction remain closed over SYSTEM payload definitions.
 
 #pragma once
 
@@ -33,11 +35,11 @@ public:
     CErasedOwner& operator=(CErasedOwner&& other) noexcept;
     ~CErasedOwner() noexcept;
 
-    [[nodiscard]] bool is_empty() const noexcept { return m_type_id == system_type_ids::undefined; }
+    [[nodiscard]] bool is_empty() const noexcept { return !m_type_id.is_valid(); }
     [[nodiscard]] bool is_ready() const noexcept { return !is_empty() && (m_storage.data() != nullptr); }
     [[nodiscard]] explicit operator bool() const noexcept { return is_ready(); }
 
-    [[nodiscard]] system_type_id query_type_id() const noexcept { return m_type_id; }
+    [[nodiscard]] type_id query_type_id() const noexcept { return m_type_id; }
 
     template<typename T>
     [[nodiscard]] static CErasedOwner create(memory::CMemoryContext* context = nullptr) noexcept;
@@ -73,7 +75,7 @@ private:
     void make_canonical_empty() noexcept;
 
     memory::CMemoryToken m_storage;
-    system_type_id    m_type_id{ system_type_ids::undefined };
+    type_id              m_type_id{ type_ids::undefined };
     std::uint32_t        m_hazards{ 0u };
 };
 
@@ -114,7 +116,7 @@ inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) 
     {
         ::new (storage.data()) T();
         owner.m_storage = std::move(storage);
-        owner.m_type_id = k_system_type_id_v<T>;
+        owner.m_type_id = type_id{ k_system_type_id_v<T> };
     }
     return owner;
 }
@@ -124,7 +126,7 @@ inline T* CErasedOwner::payload() noexcept
 {
     static_assert(k_is_erased_owner_payload_v<T>,
         "CErasedOwner may only access explicitly registered erased-owner payloads.");
-    return (m_type_id == k_system_type_id_v<T>) ? static_cast<T*>(m_storage.data()) : nullptr;
+    return (m_type_id == type_id{ k_system_type_id_v<T> }) ? static_cast<T*>(m_storage.data()) : nullptr;
 }
 
 template<typename T>
@@ -132,7 +134,7 @@ inline const T* CErasedOwner::payload() const noexcept
 {
     static_assert(k_is_erased_owner_payload_v<T>,
         "CErasedOwner may only access explicitly registered erased-owner payloads.");
-    return (m_type_id == k_system_type_id_v<T>) ? static_cast<const T*>(m_storage.data()) : nullptr;
+    return (m_type_id == type_id{ k_system_type_id_v<T> }) ? static_cast<const T*>(m_storage.data()) : nullptr;
 }
 
 #endif  //  #ifndef ERASED_OWNER_HPP_INCLUDED
