@@ -12,6 +12,7 @@
 #include <cstring>      //  std::strcmp
 
 #include "modules/application/application_thread.hpp"
+#include "modules/application/application_local_type_registry.hpp"
 #include "modules/module_binding_context.hpp"
 
 #include "debug/macros.hpp"
@@ -27,14 +28,6 @@ namespace application
 
 struct SApplicationTgaLoadState { std::uint32_t reserved; };
 struct SApplicationTgaSaveState { CAssetId source; };
-
-}   //  namespace application
-
-MV_REGISTER_SYSTEM_TYPE(application::SApplicationTgaLoadState, system_type_ids::application_tga_load_state);
-MV_REGISTER_SYSTEM_TYPE(application::SApplicationTgaSaveState, system_type_ids::application_tga_save_state);
-
-namespace application
-{
 
 class CApplicationThread
 {

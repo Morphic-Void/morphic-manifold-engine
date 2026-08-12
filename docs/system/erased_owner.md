@@ -12,7 +12,8 @@ Date:   26 Jul 2026
 `CErasedOwner` is the move-only system carrier for one registered payload whose
 concrete type is known to the closed executable and module set. It is intended
 for non-POD payload ownership and is distinct from `TErasedPod`, which stores
-bounded trivially copyable message data inline.
+bounded trivially copyable data inline and may use either SYSTEM or LOCAL
+identity when confined to one component.
 
 The carrier owns direct payload storage through `CMemoryToken`. It contains no
 virtual interface, destructor pointer, or other executable address that could

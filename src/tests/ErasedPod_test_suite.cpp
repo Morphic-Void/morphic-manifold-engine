@@ -14,6 +14,15 @@
 #include "tests/ErasedPod_test_suite.hpp"
 #include "threading/messages/CErasedPodMsg.hpp"
 
+namespace erased_pod_test_types
+{
+struct SLocalPod { std::uint32_t value; };
+}
+
+MV_REGISTER_LOCAL_TYPE(
+    erased_pod_test_types::SLocalPod,
+    local_type_ids::encode_id(local_type_ids::encode_index(1234u)));
+
 namespace
 {
 
@@ -82,7 +91,7 @@ void test_erased_pod_redefinition_and_access(TTestContext& ctx)
     static_assert(!storage_type::is_compatible_with<CNonTriviallyCopyable>());
 
     storage_type storage;
-    TEST_EXPECT(ctx, storage.query_type_id() == system_type_ids::undefined);
+    TEST_EXPECT(ctx, storage.query_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, storage.query_tag() == 0u);
     TEST_EXPECT(ctx, storage.payload<UnrecognisedMsg>() == nullptr);
 
@@ -90,7 +99,7 @@ void test_erased_pod_redefinition_and_access(TTestContext& ctx)
     UnrecognisedMsg& unrecognised = storage.redefine<UnrecognisedMsg>();
     unrecognised.msg_id = system_type_ids::file_load_request;
 
-    TEST_EXPECT(ctx, storage.query_type_id() == k_system_type_id_v<UnrecognisedMsg>);
+    TEST_EXPECT(ctx, storage.query_type_id() == k_type_id_v<UnrecognisedMsg>);
     TEST_EXPECT(ctx, storage.query_tag() == 41u);
     TEST_EXPECT(ctx, storage.is_a<UnrecognisedMsg>());
     TEST_EXPECT(ctx, storage.payload<UnrecognisedMsg>() == &unrecognised);
@@ -104,10 +113,26 @@ void test_erased_pod_redefinition_and_access(TTestContext& ctx)
     TEST_EXPECT(ctx, storage.query_tag() == 41u);
     result.success = true;
 
-    TEST_EXPECT(ctx, storage.query_type_id() == k_system_type_id_v<FileSaveResult>);
+    TEST_EXPECT(ctx, storage.query_type_id() == k_type_id_v<FileSaveResult>);
     TEST_EXPECT(ctx, storage.payload<UnrecognisedMsg>() == nullptr);
     TEST_EXPECT(ctx, storage.payload<FileSaveResult>() == &result);
     TEST_EXPECT(ctx, storage.payload<FileSaveResult>()->success);
+}
+
+void test_local_erased_pod(TTestContext& ctx)
+{
+    using local_type = erased_pod_test_types::SLocalPod;
+    TErasedPod<16u> storage;
+    local_type& payload = storage.redefine<local_type>();
+    payload.value = 73u;
+
+    TEST_EXPECT(ctx, storage.query_type_id() == k_type_id_v<local_type>);
+    TEST_EXPECT(ctx, storage.query_type_id().is_local());
+    TEST_EXPECT(ctx, !storage.query_type_id().is_system());
+    TEST_EXPECT(ctx, storage.is_a<local_type>());
+    TEST_EXPECT(ctx, storage.payload<local_type>() != nullptr);
+    TEST_EXPECT(ctx, storage.payload<local_type>()->value == 73u);
+    TEST_EXPECT(ctx, storage.payload<FileSaveResult>() == nullptr);
 }
 
 void test_erased_pod_clears_complete_storage_extent(TTestContext& ctx)
@@ -243,6 +268,7 @@ int run_erased_pod_tests()
 {
     TTestContext ctx;
     test_erased_pod_redefinition_and_access(ctx);
+    test_local_erased_pod(ctx);
     test_erased_pod_clears_complete_storage_extent(ctx);
     test_erased_pod_header_and_extended_alignment(ctx);
     test_thread_message_copy_boundary(ctx);

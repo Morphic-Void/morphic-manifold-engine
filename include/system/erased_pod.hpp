@@ -22,8 +22,8 @@
 //  ownership. The tag belongs to the carrier and is preserved when the payload
 //  is redefined.
 //
-//  The shared type-to-id binding is provided by
-//  system/system_type_registration.hpp.
+//  The category-bearing type-to-id binding is provided by
+//  system/type_registration.hpp.
 
 #pragma once
 
@@ -36,7 +36,7 @@
 #include <new>          //  placement new, std::launder
 #include <type_traits>  //  payload compatibility traits
 
-#include "system/system_type_registration.hpp"
+#include "system/type_registration.hpp"
 
 //==============================================================================
 //  TErasedPod
@@ -53,7 +53,7 @@ private:
 
     struct SHeader
     {
-        system_type_id type_id{ system_type_ids::undefined };
+        ::type_id type_id{ type_ids::undefined };
         std::uint32_t tag{ 0u };
         std::uint64_t reserved{ 0u };
     };
@@ -71,7 +71,7 @@ public:
     TErasedPod& operator=(const TErasedPod&) noexcept = default;
     ~TErasedPod() noexcept = default;
 
-    [[nodiscard]] system_type_id query_type_id() const noexcept;
+    [[nodiscard]] type_id query_type_id() const noexcept;
     [[nodiscard]] std::uint32_t query_tag() const noexcept;
     void set_tag(std::uint32_t tag) noexcept;
 
@@ -108,7 +108,7 @@ using TErasedPodFor = TErasedPod<sizeof(TPayloadShape), alignof(TPayloadShape)>;
 //==============================================================================
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
-system_type_id TErasedPod<PayloadSize, PayloadAlign>::query_type_id() const noexcept
+type_id TErasedPod<PayloadSize, PayloadAlign>::query_type_id() const noexcept
 {
     return m_header.type_id;
 }
@@ -142,7 +142,7 @@ template<typename T>
 bool TErasedPod<PayloadSize, PayloadAlign>::is_a() const noexcept
 {
     validate_payload_type<T>();
-    return m_header.type_id == k_system_type_id_v<T>;
+    return m_header.type_id == k_type_id_v<T>;
 }
 
 template<std::size_t PayloadSize, std::size_t PayloadAlign>
@@ -156,7 +156,7 @@ T& TErasedPod<PayloadSize, PayloadAlign>::redefine() noexcept
         clear_begin, 0,
         sizeof(TErasedPod<PayloadSize, PayloadAlign>) - sizeof(m_header));
     T* const value = ::new (static_cast<void*>(m_payload)) T{};
-    m_header.type_id = k_system_type_id_v<T>;
+    m_header.type_id = k_type_id_v<T>;
     return *value;
 }
 
@@ -180,7 +180,7 @@ template<std::size_t PayloadSize, std::size_t PayloadAlign>
 template<typename T>
 constexpr void TErasedPod<PayloadSize, PayloadAlign>::validate_payload_type() noexcept
 {
-    static_assert(system_type_ids::is_valid_id(k_system_type_id_v<T>), "TErasedPod requires a valid, non-zero payload type id.");
+    static_assert(type_ids::is_valid_id(k_type_id_v<T>), "TErasedPod requires a valid, non-zero payload type id.");
     static_assert(std::is_trivially_copyable_v<T>, "TErasedPod requires trivially copyable payloads.");
     static_assert(std::is_standard_layout_v<T>, "TErasedPod requires standard-layout payloads.");
     static_assert(std::is_trivially_destructible_v<T>, "TErasedPod requires trivially destructible payloads.");

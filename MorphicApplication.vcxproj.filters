@@ -65,6 +65,7 @@
     <ClInclude Include="include\system\local_type_registration.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\local_type_registry.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\type_id_binding_category.hpp"><Filter>include\system</Filter></ClInclude>
+    <ClInclude Include="include\system\type_registration.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\system_type_registration.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\transported_types.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\threading\CCountingSemaphore.hpp"><Filter>include\threading</Filter></ClInclude>

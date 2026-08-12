@@ -8,7 +8,8 @@ License: MIT (see LICENSE file in repository root)
 System type identities are the deliberate cross-component identity category.
 Any C++ type used by a shared ABI, function query, erased payload, owner,
 message, transport, or another component boundary requires a host-authored
-system ID. `system/system_type_ids.def` is the sole canonical definition list.
+system ID. Component-confined erased storage may instead use local identity.
+`system/system_type_ids.def` is the sole canonical system definition list.
 `MV_REGISTER_SYSTEM_TYPE` binds a C++ type to an existing system ID; it does
 not author an ID or a name.
 
@@ -50,8 +51,22 @@ after validating the category. `encode_id` accepts the resulting tagged index;
 `decode_id` returns it. This makes the former `0xfffe`/`0xffff` edge explicit:
 `0xfffe` is the last valid system index and `0xffff` is invalid.
 
-`system_type_id` and `local_type_ids::id_type` are distinct strong C++
-types. Their validators also reject raw encodings from the other category.
+`system_type_id` and `local_type_id` are distinct strong C++ types. Their
+validators also reject raw encodings from the other category.
+
+`type_id` is a third four-byte strong type which preserves either category.
+Its constructors from `system_type_id` and `local_type_id` are explicit and
+canonicalise invalid or category-mismatched strong values to undefined.
+`try_system_type_id()` and `try_local_type_id()` explicitly extract a category
+and clear their output on mismatch. No implicit conversion exists among the
+three strong types. All three have identical four-byte size and alignment on
+x64 and x86, while remaining distinct C++ types.
+
+`TSystemTypeId<T>` and `k_system_type_id_v<T>` expose an explicitly SYSTEM
+binding. `TLocalTypeId<T>` and `k_local_type_id_v<T>` expose an explicitly
+LOCAL binding. `TTypeId<T>` and `k_type_id_v<T>` select the registered category
+and produce the category-bearing `type_id`; an unregistered type has no valid
+selector.
 
 ## Local Definitions
 
@@ -71,6 +86,13 @@ bootstrap. Lookup revalidates category, decoded ordinal, range, exact entry
 identity, termination, and zero fill. Missing, fabricated, corrupt, and
 unavailable registrations resolve to failure without allocation or dynamic
 registration.
+
+The host TGA continuation states and application TGA continuation states are
+stored only in their component-owned `CASyncStates`. They therefore belong to
+their respective local tables rather than the system table. `TErasedPod` and
+`CASyncState` carry `type_id`, retain their existing fixed layouts, and accept
+either registered binding category. Shared erased messages remain SYSTEM-only
+until their concrete transports enforce destination-aware admission.
 
 ## System Name Authority
 

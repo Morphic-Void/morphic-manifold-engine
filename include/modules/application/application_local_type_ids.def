@@ -2,3 +2,5 @@
 //  Include with MV_LOCAL_TYPE(name, cpp_type).
 
 MV_LOCAL_TYPE(application, application::CApplicationModuleTag)
+MV_LOCAL_TYPE(tga_load_state, application::SApplicationTgaLoadState)
+MV_LOCAL_TYPE(tga_save_state, application::SApplicationTgaSaveState)

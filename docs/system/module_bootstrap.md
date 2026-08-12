@@ -1,11 +1,12 @@
 Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 License: MIT (see LICENSE file in repository root)
 
-# Module Bootstrap ABI Version 2
+# Module Bootstrap ABI Version 3
 
-The registry-authority transition changes the unsized `SCoreFunctions`
-structure and therefore defines a new DLL ABI. The exported entry point is
-`morphic_module_bootstrap_v2`. Host and module exchange the same
+The category-bearing type-identity transition removes component-confined
+continuation types from the system identity table. Later system ordinals
+therefore change and define a new DLL ABI. The exported entry point is
+`morphic_module_bootstrap_v3`. Host and module exchange the same
 `SAdvertisedIdentity` representation: claimed module ID, version, and inclusive
 functional-major range. No version-1 compatibility structure or adapter is
 retained because the DLL ABI is new and all components are rebuilt together.
@@ -18,11 +19,11 @@ The functional-major range describes the shared bootstrap/core protocol majors
 with which each participant can interoperate. Binding requires the two ranges
 to overlap and negotiates the highest common major. That selected major governs
 the core function table and subsequent function queries. Host, module, and
-functional majors are currently all 2.
+functional majors are currently all 3.
 
 The application validates and installs its immutable local-type table before
 returning bootstrap functions. The host then exchanges numeric advertised
-identities, populates the version-2 core surface, and installs services in this
+identities, populates the version-3 core surface, and installs services in this
 order:
 
 1. host-owned system-registry view;

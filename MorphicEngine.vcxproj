@@ -357,6 +357,7 @@
     <ClInclude Include="include\system\system_context.hpp" />
     <ClInclude Include="include\system\system_type_registration.hpp" />
     <ClInclude Include="include\system\type_id_binding_category.hpp" />
+    <ClInclude Include="include\system\type_registration.hpp" />
     <ClInclude Include="include\system\transported_types.hpp" />
     <ClInclude Include="include\system\runtime_ids.def" />
     <ClInclude Include="include\system\system_ids.hpp" />

@@ -47,7 +47,7 @@ constexpr SLocalTypeName make_name(const char (&name)[N]) noexcept
 
 struct SLocalTypeRegistration
 {
-    local_type_ids::id_type id{};
+    local_type_id id{};
     local_type_ids::index_type index{ local_type_ids::k_invalid_index };
     SLocalTypeName short_name{};
 };
@@ -69,9 +69,9 @@ static_assert(sizeof(SLocalTypeRegistryView) == (sizeof(void*) * 2u));
 [[nodiscard]] bool view_is_installed() noexcept;
 [[nodiscard]] const SLocalTypeRegistryView* installed_view() noexcept;
 
-[[nodiscard]] const SLocalTypeRegistration* find_type(const SLocalTypeRegistryView* const view, const local_type_ids::id_type id) noexcept;
-[[nodiscard]] const SLocalTypeRegistration* find_type(const local_type_ids::id_type id) noexcept;
-[[nodiscard]] const SLocalTypeName* lookup_name(const local_type_ids::id_type id) noexcept;
+[[nodiscard]] const SLocalTypeRegistration* find_type(const SLocalTypeRegistryView* const view, const local_type_id id) noexcept;
+[[nodiscard]] const SLocalTypeRegistration* find_type(const local_type_id id) noexcept;
+[[nodiscard]] const SLocalTypeName* lookup_name(const local_type_id id) noexcept;
 
 }   //  namespace local_type_registry
 

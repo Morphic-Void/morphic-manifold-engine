@@ -84,7 +84,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
     <ClCompile><PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
-    <Link><AdditionalOptions>/EXPORT:morphic_module_bootstrap_v2=_morphic_module_bootstrap_v2@4 %(AdditionalOptions)</AdditionalOptions></Link>
+    <Link><AdditionalOptions>/EXPORT:morphic_module_bootstrap_v3=_morphic_module_bootstrap_v3@4 %(AdditionalOptions)</AdditionalOptions></Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\debug\event_arguments.cpp" />
@@ -153,6 +153,7 @@
     <ClInclude Include="include\system\system_id_registry.hpp" />
     <ClInclude Include="include\system\system_type_registration.hpp" />
     <ClInclude Include="include\system\type_id_binding_category.hpp" />
+    <ClInclude Include="include\system\type_registration.hpp" />
     <ClInclude Include="include\system\transported_types.hpp" />
     <ClInclude Include="include\threading\CCountingSemaphore.hpp" />
     <ClInclude Include="include\threading\CParkingGate.hpp" />

@@ -14,6 +14,8 @@
 namespace application
 {
 struct CApplicationModuleTag {};
+struct SApplicationTgaLoadState;
+struct SApplicationTgaSaveState;
 [[nodiscard]] const local_type_registry::SLocalTypeRegistryView& MV_STD_ABI_CALL local_type_registry_view() noexcept;
 }
 
@@ -32,7 +34,7 @@ static_assert(k_count <= local_type_ids::k_capacity);
 #define MV_LOCAL_TYPE(name, cpp_type) \
     inline constexpr local_type_ids::index_type name##_index = \
         local_type_ids::encode_index(name##_index_value); \
-    inline constexpr local_type_ids::id_type name = \
+    inline constexpr local_type_id name = \
         local_type_ids::encode_id(name##_index);
 #include "modules/application/application_local_type_ids.def"
 #undef MV_LOCAL_TYPE

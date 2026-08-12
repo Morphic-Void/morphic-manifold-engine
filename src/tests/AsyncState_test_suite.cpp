@@ -11,6 +11,15 @@
 #include "system/transported_types.hpp"
 #include "tests/AsyncState_test_suite.hpp"
 
+namespace async_state_test_types
+{
+struct SLocalState { std::uint32_t value; };
+}
+
+MV_REGISTER_LOCAL_TYPE(
+    async_state_test_types::SLocalState,
+    local_type_ids::encode_id(local_type_ids::encode_index(1235u)));
+
 namespace
 {
 
@@ -113,6 +122,29 @@ void test_reused_slot_is_reinitialised(TTestContext& ctx)
     TEST_EXPECT(ctx, states.payload<UnrecognisedMsg>(acquired_slot) == nullptr);
 }
 
+void test_local_async_state(TTestContext& ctx)
+{
+    using local_type = async_state_test_types::SLocalState;
+    CASyncStates states;
+    TEST_EXPECT(ctx, states.initialise(1u));
+
+    const std::int32_t slot = states.acquire<local_type>(19u);
+    TEST_EXPECT(ctx, slot >= 0);
+    TEST_EXPECT(ctx, states.resolve(slot) != nullptr);
+    TEST_EXPECT(ctx, states.resolve(slot)->query_type_id() == k_type_id_v<local_type>);
+    TEST_EXPECT(ctx, states.resolve(slot)->query_type_id().is_local());
+    TEST_EXPECT(ctx, states.payload<local_type>(slot) != nullptr);
+    states.payload<local_type>(slot)->value = 91u;
+    TEST_EXPECT(ctx, states.payload<local_type>(slot)->value == 91u);
+
+    FileSaveResult* const system_payload = states.redefine<FileSaveResult>(slot);
+    TEST_EXPECT(ctx, system_payload != nullptr);
+    TEST_EXPECT(ctx, states.resolve(slot)->query_type_id().is_system());
+    TEST_EXPECT(ctx, states.resolve(slot)->query_tag() == 19u);
+    TEST_EXPECT(ctx, states.payload<local_type>(slot) == nullptr);
+    TEST_EXPECT(ctx, states.release(slot));
+}
+
 }   //  namespace
 
 int run_async_state_tests()
@@ -121,6 +153,7 @@ int run_async_state_tests()
     test_state_shape_and_default_repository(ctx);
     test_acquisition_redefinition_and_release(ctx);
     test_reused_slot_is_reinitialised(ctx);
+    test_local_async_state(ctx);
 
     std::cout << "AsyncState: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return ctx.failed;

@@ -46,6 +46,7 @@
 #include <cstddef>      //  std::size_t
 #include <cstdint>      //  std::int32_t, std::uint32_t, std::uint64_t
 #include <limits>       //  std::numeric_limits
+#include <type_traits>  //  std::is_standard_layout_v, std::is_trivially_copyable_v
 
 #include "bit_utils/bit_ops.hpp"
 
@@ -202,11 +203,12 @@ static constexpr index_type k_tagged_index_mask = k_category_bit | k_ordinal_mas
 static constexpr index_type k_invalid_index = k_tagged_index_mask;
 }
 
+using local_type_id = system_id_util::TValue<system_id_util::CLocalTypeIdTag, std::uint32_t>;
+
 namespace local_type_ids
 {
-using id_type = system_id_util::TValue<system_id_util::CLocalTypeIdTag, std::uint32_t>;
 using index_type = std::uint32_t;
-static constexpr id_type undefined{ 0u };
+static constexpr local_type_id undefined{ 0u };
 static constexpr index_type k_ordinal_mask = system_type_ids::k_ordinal_mask;
 static constexpr index_type k_max_ordinal = system_type_ids::k_max_ordinal;
 static constexpr index_type k_capacity = system_type_ids::k_capacity;
@@ -214,6 +216,50 @@ static constexpr index_type k_invalid_index = system_type_ids::k_invalid_index;
 static constexpr index_type k_local_index_min = 0u;
 static constexpr index_type k_local_index_max = k_max_ordinal;
 }
+
+enum class ETypeIdCategory : std::uint8_t
+{
+    undefined = 0u,
+    system,
+    local
+};
+
+class type_id
+{
+public:
+    constexpr type_id() noexcept = default;
+    explicit constexpr type_id(system_type_id id) noexcept;
+    explicit constexpr type_id(local_type_id id) noexcept;
+
+    [[nodiscard]] constexpr std::uint32_t raw_value() const noexcept { return m_value; }
+    [[nodiscard]] constexpr ETypeIdCategory category() const noexcept;
+    [[nodiscard]] constexpr bool is_defined() const noexcept { return m_value != 0u; }
+    [[nodiscard]] constexpr bool is_valid() const noexcept;
+    [[nodiscard]] constexpr bool is_system() const noexcept;
+    [[nodiscard]] constexpr bool is_local() const noexcept;
+    [[nodiscard]] explicit constexpr operator bool() const noexcept { return is_valid(); }
+
+    [[nodiscard]] constexpr bool try_system_type_id(system_type_id& out) const noexcept;
+    [[nodiscard]] constexpr bool try_local_type_id(local_type_id& out) const noexcept;
+
+private:
+    std::uint32_t m_value{ 0u };
+};
+
+[[nodiscard]] constexpr bool operator==(const type_id lhs, const type_id rhs) noexcept
+{
+    return lhs.raw_value() == rhs.raw_value();
+}
+
+[[nodiscard]] constexpr bool operator!=(const type_id lhs, const type_id rhs) noexcept
+{
+    return !(lhs == rhs);
+}
+
+static_assert(sizeof(type_id) == sizeof(std::uint32_t), "type_id must occupy exactly four bytes.");
+static_assert(alignof(type_id) == alignof(std::uint32_t), "type_id must retain four-byte alignment.");
+static_assert(std::is_standard_layout_v<type_id>, "type_id must retain standard layout.");
+static_assert(std::is_trivially_copyable_v<type_id>, "type_id must remain trivially copyable.");
 
 namespace runtime_id_layout
 {
@@ -344,7 +390,7 @@ constexpr index_type decode_id(const system_type_id id) noexcept
 namespace local_type_ids
 {
 
-constexpr bool is_defined(const id_type id) noexcept
+constexpr bool is_defined(const local_type_id id) noexcept
 {
     return id != undefined;
 }
@@ -356,7 +402,7 @@ constexpr bool is_valid_index(const index_type value) noexcept
         (value <= k_max_ordinal);
 }
 
-constexpr bool is_valid_id(const id_type id) noexcept
+constexpr bool is_valid_id(const local_type_id id) noexcept
 {
     const std::uint32_t raw = id.raw_value();
     return is_defined(id) &&
@@ -375,15 +421,15 @@ constexpr index_type decode_index(const index_type value) noexcept
     return is_valid_index(value) ? value : k_invalid_index;
 }
 
-constexpr id_type encode_id(const index_type value) noexcept
+constexpr local_type_id encode_id(const index_type value) noexcept
 {
     return is_valid_index(value)
-        ? id_type(static_cast<std::uint32_t>(
+        ? local_type_id(static_cast<std::uint32_t>(
             bit_ops::spread_to_even_bits(k_ordinal_mask - decode_index(value))))
         : undefined;
 }
 
-constexpr index_type decode_id(const id_type id) noexcept
+constexpr index_type decode_id(const local_type_id id) noexcept
 {
     return is_valid_id(id)
         ? encode_index(static_cast<index_type>(k_ordinal_mask -
@@ -392,6 +438,82 @@ constexpr index_type decode_id(const id_type id) noexcept
 }
 
 }   //  namespace local_type_ids
+
+//==============================================================================
+//  Category-bearing type identity
+//==============================================================================
+
+constexpr type_id::type_id(const system_type_id id) noexcept
+    : m_value(system_type_ids::is_valid_id(id) ? id.raw_value() : 0u)
+{
+}
+
+constexpr type_id::type_id(const local_type_id id) noexcept
+    : m_value(local_type_ids::is_valid_id(id) ? id.raw_value() : 0u)
+{
+}
+
+constexpr ETypeIdCategory type_id::category() const noexcept
+{
+    if (system_type_ids::is_valid_id(system_type_id{ m_value }))
+    {
+        return ETypeIdCategory::system;
+    }
+    if (local_type_ids::is_valid_id(local_type_id{ m_value }))
+    {
+        return ETypeIdCategory::local;
+    }
+    return ETypeIdCategory::undefined;
+}
+
+constexpr bool type_id::is_valid() const noexcept
+{
+    return category() != ETypeIdCategory::undefined;
+}
+
+constexpr bool type_id::is_system() const noexcept
+{
+    return category() == ETypeIdCategory::system;
+}
+
+constexpr bool type_id::is_local() const noexcept
+{
+    return category() == ETypeIdCategory::local;
+}
+
+constexpr bool type_id::try_system_type_id(system_type_id& out) const noexcept
+{
+    out = system_type_ids::undefined;
+    if (!is_system())
+    {
+        return false;
+    }
+    out = system_type_id{ m_value };
+    return true;
+}
+
+constexpr bool type_id::try_local_type_id(local_type_id& out) const noexcept
+{
+    out = local_type_ids::undefined;
+    if (!is_local())
+    {
+        return false;
+    }
+    out = local_type_id{ m_value };
+    return true;
+}
+
+namespace type_ids
+{
+
+inline constexpr type_id undefined{};
+
+[[nodiscard]] constexpr bool is_defined(const type_id id) noexcept { return id.is_defined(); }
+[[nodiscard]] constexpr bool is_valid_id(const type_id id) noexcept { return id.is_valid(); }
+[[nodiscard]] constexpr bool is_system(const type_id id) noexcept { return id.is_system(); }
+[[nodiscard]] constexpr bool is_local(const type_id id) noexcept { return id.is_local(); }
+
+}   //  namespace type_ids
 
 //==============================================================================
 //  Mount point id helpers

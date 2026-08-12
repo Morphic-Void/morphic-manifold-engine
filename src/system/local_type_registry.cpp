@@ -90,7 +90,7 @@ const SLocalTypeRegistryView* installed_view() noexcept
 
 const SLocalTypeRegistration* find_type(
     const SLocalTypeRegistryView* const view,
-    const local_type_ids::id_type id) noexcept
+    const local_type_id id) noexcept
 {
     if ((view == nullptr) || !local_type_ids::is_valid_id(id) ||
         (view->type_count > local_type_ids::k_capacity) ||
@@ -113,12 +113,12 @@ const SLocalTypeRegistration* find_type(
         : nullptr;
 }
 
-const SLocalTypeRegistration* find_type(const local_type_ids::id_type id) noexcept
+const SLocalTypeRegistration* find_type(const local_type_id id) noexcept
 {
     return find_type(installed_view(), id);
 }
 
-const SLocalTypeName* lookup_name(const local_type_ids::id_type id) noexcept
+const SLocalTypeName* lookup_name(const local_type_id id) noexcept
 {
     const SLocalTypeRegistration* const registration = find_type(id);
     return (registration != nullptr) ? &registration->short_name : nullptr;

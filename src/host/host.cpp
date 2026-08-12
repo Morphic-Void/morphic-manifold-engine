@@ -25,6 +25,7 @@
 #include "containers/containers.hpp"
 #include "host/host.hpp"
 #include "host/host_context.hpp"
+#include "host/host_local_type_registry.hpp"
 #include "host/host_worker_thread.hpp"
 #include "host/system_id_definitions.hpp"
 #include "image/codec/tga.hpp"
@@ -38,6 +39,9 @@
 
 #include "debug/macros.hpp"
 #include "debug/service.hpp"
+
+namespace host
+{
 
 struct SHostTgaFileLoadState
 {
@@ -65,14 +69,6 @@ struct SHostTgaFileSaveState
     std::int32_t application_slot;
     CAssetId encoded_file;
 };
-
-MV_REGISTER_SYSTEM_TYPE(SHostTgaFileLoadState, system_type_ids::host_tga_file_load_state);
-MV_REGISTER_SYSTEM_TYPE(SHostTgaDecodeState, system_type_ids::host_tga_decode_state);
-MV_REGISTER_SYSTEM_TYPE(SHostTgaEncodeState, system_type_ids::host_tga_encode_state);
-MV_REGISTER_SYSTEM_TYPE(SHostTgaFileSaveState, system_type_ids::host_tga_file_save_state);
-
-namespace host
-{
 
 CHost::~CHost() noexcept
 {

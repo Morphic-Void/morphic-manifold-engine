@@ -9,10 +9,12 @@
 #include "host/host_local_type_registry.hpp"
 #include "host/system_id_definitions.hpp"
 #include "modules/module_binding.hpp"
+#include "modules/application/application_local_type_registry.hpp"
 #include "modules/module_binding.hpp"
 #include "system/local_type_registry.hpp"
 #include "system/system_id_registry.hpp"
 #include "system/transported_types.hpp"
+#include "system/type_registration.hpp"
 #include "tests/SystemTypeIdentity_test_suite.hpp"
 
 namespace
@@ -46,7 +48,7 @@ void test_encoding(TTestContext& ctx)
     static_assert(local_type_ids::k_local_index_min == 0u);
     static_assert(local_type_ids::k_local_index_max == 0x7ffeu);
     static_assert(local_type_ids::k_capacity == system_type_ids::k_capacity);
-    static_assert(!std::is_same_v<system_type_id, local_type_ids::id_type>);
+    static_assert(!std::is_same_v<system_type_id, local_type_id>);
 
     constexpr system_type_ids::index_type system_first_index = system_type_ids::encode_index(0u);
     constexpr system_type_ids::index_type system_last_index = system_type_ids::encode_index(system_type_ids::k_max_ordinal);
@@ -54,8 +56,8 @@ void test_encoding(TTestContext& ctx)
     constexpr local_type_ids::index_type local_last_index = local_type_ids::encode_index(local_type_ids::k_max_ordinal);
     constexpr system_type_id system_first = system_type_ids::encode_id(system_first_index);
     constexpr system_type_id system_last = system_type_ids::encode_id(system_last_index);
-    constexpr local_type_ids::id_type local_first = local_type_ids::encode_id(local_first_index);
-    constexpr local_type_ids::id_type local_last = local_type_ids::encode_id(local_last_index);
+    constexpr local_type_id local_first = local_type_ids::encode_id(local_first_index);
+    constexpr local_type_id local_last = local_type_ids::encode_id(local_last_index);
     static_assert(system_first.raw_value() == 0x55555555u);
     static_assert(system_last.raw_value() == 0x40000001u);
     static_assert(local_first.raw_value() == 0x15555555u);
@@ -75,9 +77,53 @@ void test_encoding(TTestContext& ctx)
     TEST_EXPECT(ctx, system_type_ids::encode_id(system_type_ids::k_invalid_index) == system_type_ids::undefined);
     TEST_EXPECT(ctx, local_type_ids::encode_id(local_type_ids::k_invalid_index) == local_type_ids::undefined);
     TEST_EXPECT(ctx, !system_type_ids::is_valid_id(system_type_id{ local_first.raw_value() }));
-    TEST_EXPECT(ctx, !local_type_ids::is_valid_id(local_type_ids::id_type{ system_first.raw_value() }));
+    TEST_EXPECT(ctx, !local_type_ids::is_valid_id(local_type_id{ system_first.raw_value() }));
     TEST_EXPECT(ctx, !system_type_ids::is_valid_id(system_type_id{ system_type_ids::k_system_type_flag }));
-    TEST_EXPECT(ctx, !local_type_ids::is_valid_id(local_type_ids::id_type{}));
+    TEST_EXPECT(ctx, !local_type_ids::is_valid_id(local_type_id{}));
+}
+
+void test_category_bearing_identity(TTestContext& ctx)
+{
+    static_assert(sizeof(type_id) == 4u);
+    static_assert(alignof(type_id) == 4u);
+    static_assert(std::is_trivially_copyable_v<type_id>);
+    static_assert(std::is_standard_layout_v<type_id>);
+    static_assert(!std::is_same_v<type_id, system_type_id>);
+    static_assert(!std::is_same_v<type_id, local_type_id>);
+    static_assert(!std::is_same_v<system_type_id, local_type_id>);
+    static_assert(std::is_constructible_v<type_id, system_type_id>);
+    static_assert(std::is_constructible_v<type_id, local_type_id>);
+    static_assert(!std::is_convertible_v<system_type_id, type_id>);
+    static_assert(!std::is_convertible_v<local_type_id, type_id>);
+    static_assert(!std::is_convertible_v<type_id, system_type_id>);
+    static_assert(!std::is_convertible_v<type_id, local_type_id>);
+
+    constexpr type_id undefined{};
+    constexpr type_id system{ system_type_ids::byte_buffer };
+    constexpr type_id local{ host_local_type_ids::host_runtime };
+    constexpr type_id malformed_system{
+        system_type_id{ host_local_type_ids::host_runtime.raw_value() } };
+    constexpr type_id malformed_local{
+        local_type_id{ system_type_ids::byte_buffer.raw_value() } };
+    static_assert(undefined.category() == ETypeIdCategory::undefined);
+    static_assert(system.category() == ETypeIdCategory::system);
+    static_assert(local.category() == ETypeIdCategory::local);
+    static_assert(!undefined.is_valid());
+    static_assert(system.is_valid() && system.is_system() && !system.is_local());
+    static_assert(local.is_valid() && local.is_local() && !local.is_system());
+    static_assert(malformed_system == type_ids::undefined);
+    static_assert(malformed_local == type_ids::undefined);
+
+    system_type_id extracted_system{ 1u };
+    local_type_id extracted_local{ 1u };
+    TEST_EXPECT(ctx, system.try_system_type_id(extracted_system));
+    TEST_EXPECT(ctx, extracted_system == system_type_ids::byte_buffer);
+    TEST_EXPECT(ctx, !system.try_local_type_id(extracted_local));
+    TEST_EXPECT(ctx, extracted_local == local_type_ids::undefined);
+    TEST_EXPECT(ctx, local.try_local_type_id(extracted_local));
+    TEST_EXPECT(ctx, extracted_local == host_local_type_ids::host_runtime);
+    TEST_EXPECT(ctx, !local.try_system_type_id(extracted_system));
+    TEST_EXPECT(ctx, extracted_system == system_type_ids::undefined);
 }
 
 void test_registration_categories(TTestContext& ctx)
@@ -90,7 +136,22 @@ void test_registration_categories(TTestContext& ctx)
     static_assert(!k_can_register_type_id_v<CByteBuffer>);
     static_assert(!k_can_register_type_id_v<host::CHost>);
     static_assert(k_can_register_type_id_v<CUnregisteredType>);
-    static_assert(!debug_system::is_supported_event_argument_v<local_type_ids::id_type>);
+    static_assert(!debug_system::is_supported_event_argument_v<local_type_id>);
+    static_assert(!debug_system::is_supported_event_argument_v<type_id>);
+    static_assert(k_type_id_v<CByteBuffer> == type_id{ k_system_type_id_v<CByteBuffer> });
+    static_assert(k_type_id_v<host::CHost> == type_id{ k_local_type_id_v<host::CHost> });
+    static_assert(k_type_id_binding_category_v<host::SHostTgaFileLoadState> == ETypeIdBindingCategory::local);
+    static_assert(k_type_id_binding_category_v<host::SHostTgaDecodeState> == ETypeIdBindingCategory::local);
+    static_assert(k_type_id_binding_category_v<host::SHostTgaEncodeState> == ETypeIdBindingCategory::local);
+    static_assert(k_type_id_binding_category_v<host::SHostTgaFileSaveState> == ETypeIdBindingCategory::local);
+    static_assert(k_type_id_v<host::SHostTgaFileLoadState> == type_id{ host_local_type_ids::tga_file_load });
+    static_assert(k_type_id_v<host::SHostTgaDecodeState> == type_id{ host_local_type_ids::tga_decode });
+    static_assert(k_type_id_v<host::SHostTgaEncodeState> == type_id{ host_local_type_ids::tga_encode });
+    static_assert(k_type_id_v<host::SHostTgaFileSaveState> == type_id{ host_local_type_ids::tga_file_save });
+    static_assert(k_type_id_binding_category_v<application::SApplicationTgaLoadState> == ETypeIdBindingCategory::local);
+    static_assert(k_type_id_binding_category_v<application::SApplicationTgaSaveState> == ETypeIdBindingCategory::local);
+    static_assert(k_type_id_v<application::SApplicationTgaLoadState> == type_id{ application_local_type_ids::tga_load_state });
+    static_assert(k_type_id_v<application::SApplicationTgaSaveState> == type_id{ application_local_type_ids::tga_save_state });
     TEST_EXPECT(ctx, system_type_ids::is_valid_id(k_system_type_id_v<CByteBuffer>));
     TEST_EXPECT(ctx, local_type_ids::is_valid_id(k_local_type_id_v<host::CHost>));
 }
@@ -135,6 +196,11 @@ void test_local_names_and_lookup(TTestContext& ctx)
     TEST_EXPECT(ctx, registration != nullptr);
     if (registration != nullptr)
         TEST_EXPECT(ctx, std::strcmp(registration->short_name.bytes, "host_runtime") == 0);
+    const local_type_registry::SLocalTypeRegistration* const state_registration =
+        local_type_registry::find_type(host_local_type_ids::tga_file_load);
+    TEST_EXPECT(ctx, state_registration != nullptr);
+    if (state_registration != nullptr)
+        TEST_EXPECT(ctx, std::strcmp(state_registration->short_name.bytes, "tga_file_load") == 0);
     TEST_EXPECT(ctx, local_type_registry::find_type(
         static_cast<const local_type_registry::SLocalTypeRegistryView*>(nullptr),
         host_local_type_ids::host_runtime) == nullptr);
@@ -186,6 +252,7 @@ int run_system_type_identity_tests()
 {
     TTestContext ctx;
     test_encoding(ctx);
+    test_category_bearing_identity(ctx);
     test_registration_categories(ctx);
     test_advertised_identity_negotiation(ctx);
     test_local_names_and_lookup(ctx);

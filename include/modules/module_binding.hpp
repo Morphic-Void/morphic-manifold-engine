@@ -38,8 +38,8 @@ class CMemoryContext;
 namespace modules
 {
 
-inline constexpr char k_bootstrap_symbol_name[]{ "morphic_module_bootstrap_v2" };
-inline constexpr std::uint32_t k_binding_abi_major = 2u;
+inline constexpr char k_bootstrap_symbol_name[]{ "morphic_module_bootstrap_v3" };
+inline constexpr std::uint32_t k_binding_abi_major = 3u;
 
 struct SVersion
 {
@@ -152,7 +152,7 @@ using FBootstrap = EBindingResult(MV_STD_ABI_CALL*)(SBootstrapFunctions* const f
 
 static_assert(std::is_standard_layout_v<SVersion> && std::is_trivially_copyable_v<SVersion>);
 static_assert(std::is_standard_layout_v<SAdvertisedIdentity> && std::is_trivially_copyable_v<SAdvertisedIdentity>);
-static_assert((sizeof(SAdvertisedIdentity) == 24u), "The version-2 advertised identity must retain its fixed ABI representation.");
+static_assert((sizeof(SAdvertisedIdentity) == 24u), "The version-3 advertised identity must retain its fixed ABI representation.");
 static_assert(std::is_standard_layout_v<SCoreFunctions> && std::is_trivially_copyable_v<SCoreFunctions>);
 static_assert(std::is_standard_layout_v<SBootstrapFunctions> && std::is_trivially_copyable_v<SBootstrapFunctions>);
 static_assert((sizeof(SCoreFunctions) == (sizeof(void*) * 8u)), "Version-2 core functions must contain exactly eight ABI function pointers.");
