@@ -17,7 +17,7 @@
 //  - 64-bit encoded runtime ids for mounting points, modules, threads,
 //    and combined systems;
 //  - explicit strong index and id wrappers for those runtime identities;
-//  - built-in registration and validation access for those runtime ids.
+//  - generated numeric constants for those runtime identities.
 //
 //  Common helper surface by domain:
 //
@@ -35,17 +35,8 @@
 //      make_system_id(module_id, thread_id), get_module_id(), get_thread_id(),
 //      get_mount_point_id(), get_mount_point_index(), is_valid_id()
 //
-//  Built-in registration access is provided through system_id_registry:
-//
-//  - mount_points(), mount_point_count()
-//  - threads(), thread_count()
-//  - modules(), module_count()
-//  - has_mount_point(), lookup_mount_point_id()
-//  - validate_mount_point_registrations(), validate_thread_registrations(),
-//    validate_module_registrations(), validate_all()
-//
 //  This file defines ids and id-handling helpers only. It does not
-//  bind ids to C++ payload types.
+//  bind ids to C++ payload types or provide system-name authority.
 
 #pragma once
 
@@ -175,7 +166,8 @@ struct TEvenMask
         (bit_ops::spread_to_even_bits(t_payload_mask) << (t_payload_offset * 2u));
 };
 
-struct CTypeIdTag {};
+struct CSystemTypeIdTag {};
+struct CLocalTypeIdTag {};
 struct CMountPointIdTag {};
 struct CMountPointIndexTag {};
 struct CModuleIdTag {};
@@ -192,14 +184,34 @@ struct CSystemIdTag {};
 
 namespace type_ids
 {
-using id_type = system_id_util::TValue<system_id_util::CTypeIdTag, std::uint32_t>;
+using id_type = system_id_util::TValue<system_id_util::CSystemTypeIdTag, std::uint32_t>;
 using index_type = std::uint32_t;
 static constexpr id_type undefined{ 0u };
-static constexpr std::uint32_t k_id_field_mask = 0x55555555u;      //  16 payload bits
-static constexpr std::uint32_t k_payload_mask = 0x0000ffffu;
+static constexpr std::uint32_t k_encoded_payload_mask = 0x15555555u; //  15 alternating payload bits
+static constexpr std::uint32_t k_system_type_flag = 0x40000000u;
+static constexpr std::uint32_t k_id_field_mask = k_encoded_payload_mask | k_system_type_flag;
 static constexpr std::uint32_t k_invalid_id_mask = ~k_id_field_mask;
-static constexpr std::int32_t k_id_field_shift = 0;
-static constexpr index_type k_invalid_index = k_payload_mask;
+static constexpr index_type k_category_bit = 0x00008000u;
+static constexpr index_type k_ordinal_mask = 0x00007fffu;
+static constexpr index_type k_max_ordinal = k_ordinal_mask - 1u;
+static constexpr index_type k_capacity = k_ordinal_mask;
+static constexpr index_type k_system_index_min = k_category_bit;
+static constexpr index_type k_system_index_max = k_category_bit | k_max_ordinal;
+static constexpr index_type k_tagged_index_mask = k_category_bit | k_ordinal_mask;
+static constexpr index_type k_invalid_index = k_tagged_index_mask;
+}
+
+namespace local_type_ids
+{
+using id_type = system_id_util::TValue<system_id_util::CLocalTypeIdTag, std::uint32_t>;
+using index_type = std::uint32_t;
+static constexpr id_type undefined{ 0u };
+static constexpr index_type k_ordinal_mask = type_ids::k_ordinal_mask;
+static constexpr index_type k_max_ordinal = type_ids::k_max_ordinal;
+static constexpr index_type k_capacity = type_ids::k_capacity;
+static constexpr index_type k_invalid_index = type_ids::k_invalid_index;
+static constexpr index_type k_local_index_min = 0u;
+static constexpr index_type k_local_index_max = k_max_ordinal;
 }
 
 namespace runtime_id_layout
@@ -265,76 +277,6 @@ static constexpr std::uint64_t k_invalid_id_mask = ~(k_module_id_mask | k_thread
 }
 
 //==============================================================================
-//  Built-in registration and validation access
-//==============================================================================
-
-namespace system_id_registry
-{
-
-struct STypeRegistration
-{
-    type_ids::id_type id{ type_ids::undefined };
-    type_ids::index_type index{ type_ids::k_invalid_index };
-    const char* name{ nullptr };
-};
-
-struct SMountPointRegistration
-{
-    mount_point_ids::id_type id{};
-    mount_point_ids::index_type index{};
-    const char* name{ nullptr };
-};
-
-struct SThreadRegistration
-{
-    thread_ids::id_type id{};
-    thread_ids::index_type index{};
-    const char* name{ nullptr };
-};
-
-struct SModuleRegistration
-{
-    module_ids::id_type id{};
-    module_ids::index_type index{};
-    mount_point_ids::id_type mount_point_id{};
-    const char* name{ nullptr };
-};
-
-[[nodiscard]] const STypeRegistration* types() noexcept;
-[[nodiscard]] std::size_t type_count() noexcept;
-[[nodiscard]] const SMountPointRegistration* mount_points() noexcept;
-[[nodiscard]] std::size_t mount_point_count() noexcept;
-[[nodiscard]] const SThreadRegistration* threads() noexcept;
-[[nodiscard]] std::size_t thread_count() noexcept;
-[[nodiscard]] const SModuleRegistration* modules() noexcept;
-[[nodiscard]] std::size_t module_count() noexcept;
-
-[[nodiscard]] const STypeRegistration* find_type(type_ids::id_type id) noexcept;
-[[nodiscard]] const SMountPointRegistration* find_mount_point(mount_point_ids::id_type id) noexcept;
-[[nodiscard]] const SThreadRegistration* find_thread(thread_ids::id_type id) noexcept;
-[[nodiscard]] const SModuleRegistration* find_module(module_ids::id_type id) noexcept;
-
-[[nodiscard]] const char* lookup_type_name(type_ids::id_type id) noexcept;
-[[nodiscard]] const char* lookup_mount_point_name(mount_point_ids::id_type id) noexcept;
-[[nodiscard]] const char* lookup_thread_name(thread_ids::id_type id) noexcept;
-[[nodiscard]] const char* lookup_module_name(module_ids::id_type id) noexcept;
-[[nodiscard]] bool format_system_name(
-    system_ids::id_type id,
-    char* destination,
-    std::size_t destination_capacity,
-    std::size_t& out_size) noexcept;
-
-[[nodiscard]] bool has_mount_point(mount_point_ids::id_type id) noexcept;
-[[nodiscard]] mount_point_ids::id_type lookup_mount_point_id(module_ids::id_type id) noexcept;
-[[nodiscard]] bool validate_type_registrations() noexcept;
-[[nodiscard]] bool validate_mount_point_registrations() noexcept;
-[[nodiscard]] bool validate_thread_registrations() noexcept;
-[[nodiscard]] bool validate_module_registrations() noexcept;
-[[nodiscard]] bool validate_all() noexcept;
-
-}   //  namespace system_id_registry
-
-//==============================================================================
 //  Type id helpers
 //==============================================================================
 
@@ -352,12 +294,74 @@ constexpr bool is_defined(const id_type id) noexcept
 
 constexpr bool is_valid_index(const index_type value) noexcept
 {
-    return value < k_payload_mask;
+    return ((value & ~k_tagged_index_mask) == 0u) &&
+        ((value & k_category_bit) != 0u) &&
+        ((value & k_ordinal_mask) <= k_max_ordinal);
 }
 
 constexpr bool is_valid_id(const id_type id) noexcept
 {
-    return is_defined(id) && ((id & k_invalid_id_mask) == 0u);
+    const std::uint32_t raw = id.raw_value();
+    return is_defined(id) &&
+        ((raw & k_invalid_id_mask) == 0u) &&
+        ((raw & k_system_type_flag) != 0u) &&
+        ((raw & k_encoded_payload_mask) != 0u);
+}
+
+constexpr index_type encode_index(const index_type value) noexcept
+{
+    return (value <= k_max_ordinal) ? (value | k_category_bit) : k_invalid_index;
+}
+
+constexpr index_type decode_index(const index_type value) noexcept
+{
+    return is_valid_index(value) ? (value & k_ordinal_mask) : k_invalid_index;
+}
+
+constexpr id_type encode_id(const index_type value) noexcept
+{
+    return is_valid_index(value)
+        ? id_type(static_cast<std::uint32_t>(
+            bit_ops::spread_to_even_bits(k_ordinal_mask - decode_index(value))) | k_system_type_flag)
+        : undefined;
+}
+
+constexpr index_type decode_id(const id_type id) noexcept
+{
+    return is_valid_id(id)
+        ? encode_index(static_cast<index_type>(k_ordinal_mask -
+            bit_ops::pack_from_even_bits(id.raw_value() & k_encoded_payload_mask)))
+        : k_invalid_index;
+}
+
+}   //  namespace type_ids
+
+//==============================================================================
+//  Local type id helpers
+//==============================================================================
+
+namespace local_type_ids
+{
+
+constexpr bool is_defined(const id_type id) noexcept
+{
+    return id != undefined;
+}
+
+constexpr bool is_valid_index(const index_type value) noexcept
+{
+    return ((value & ~type_ids::k_tagged_index_mask) == 0u) &&
+        ((value & type_ids::k_category_bit) == 0u) &&
+        (value <= k_max_ordinal);
+}
+
+constexpr bool is_valid_id(const id_type id) noexcept
+{
+    const std::uint32_t raw = id.raw_value();
+    return is_defined(id) &&
+        ((raw & type_ids::k_invalid_id_mask) == 0u) &&
+        ((raw & type_ids::k_system_type_flag) == 0u) &&
+        ((raw & type_ids::k_encoded_payload_mask) != 0u);
 }
 
 constexpr index_type encode_index(const index_type value) noexcept
@@ -365,21 +369,28 @@ constexpr index_type encode_index(const index_type value) noexcept
     return is_valid_index(value) ? value : k_invalid_index;
 }
 
+constexpr index_type decode_index(const index_type value) noexcept
+{
+    return is_valid_index(value) ? value : k_invalid_index;
+}
+
 constexpr id_type encode_id(const index_type value) noexcept
 {
     return is_valid_index(value)
-        ? static_cast<id_type>(bit_ops::spread_to_even_bits(((value + 1u) & k_payload_mask) ^ k_payload_mask) << k_id_field_shift)
+        ? id_type(static_cast<std::uint32_t>(
+            bit_ops::spread_to_even_bits(k_ordinal_mask - decode_index(value))))
         : undefined;
 }
 
 constexpr index_type decode_id(const id_type id) noexcept
 {
     return is_valid_id(id)
-        ? static_cast<index_type>(((bit_ops::pack_from_even_bits(id >> k_id_field_shift) ^ k_payload_mask) & k_payload_mask) - 1u)
+        ? encode_index(static_cast<index_type>(k_ordinal_mask -
+            bit_ops::pack_from_even_bits(id.raw_value() & type_ids::k_encoded_payload_mask)))
         : k_invalid_index;
 }
 
-}   //  namespace type_ids
+}   //  namespace local_type_ids
 
 //==============================================================================
 //  Mount point id helpers
@@ -528,6 +539,9 @@ enum : index_type
     k_count
 };
 #undef MV_SYSTEM_TYPE
+
+static_assert((k_count <= k_capacity),
+    "The system type definition count exceeds the encoded system-type capacity.");
 
 #define MV_SYSTEM_TYPE(name) \
 constexpr index_type name##_index = encode_index(name##_index_value); \

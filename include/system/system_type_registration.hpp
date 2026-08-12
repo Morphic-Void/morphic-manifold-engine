@@ -17,6 +17,7 @@
 #include <type_traits>  //  std::false_type, std::true_type
 
 #include "system/system_ids.hpp"
+#include "system/type_id_binding_category.hpp"
 
 //==============================================================================
 //  Type-to-id binding
@@ -42,19 +43,24 @@ inline constexpr bool k_is_erased_owner_payload_v = TIsErasedOwnerPayload<T>::va
 //  Registration macros
 //==============================================================================
 
-#define MV_REGISTER_SYSTEM_TYPE(T, type_id_value)                         \
-template<>                                                               \
-struct TTypeId<T>                                                        \
-{                                                                        \
-    static_assert(type_ids::is_valid_id(type_id_value),                  \
-        "MV_REGISTER_SYSTEM_TYPE requires a valid, non-zero type id.");  \
-    static constexpr type_ids::id_type value = type_id_value;            \
+#define MV_REGISTER_SYSTEM_TYPE(T, type_id_value) \
+template<> \
+struct TTypeIdBindingCategory<T> \
+{ \
+    static constexpr ETypeIdBindingCategory value = ETypeIdBindingCategory::system; \
+}; \
+template<> \
+struct TTypeId<T> \
+{ \
+    static_assert(type_ids::is_valid_id(type_id_value), \
+        "MV_REGISTER_SYSTEM_TYPE requires a valid, non-zero type id."); \
+    static constexpr type_ids::id_type value = type_id_value; \
 }
 
-#define MV_REGISTER_ERASED_OWNER_PAYLOAD(T)       \
-template<>                                        \
-struct TIsErasedOwnerPayload<T> : std::true_type  \
-{                                                 \
+#define MV_REGISTER_ERASED_OWNER_PAYLOAD(T) \
+template<> \
+struct TIsErasedOwnerPayload<T> : std::true_type \
+{ \
 }
 
 #endif  //  #ifndef SYSTEM_TYPE_REGISTRATION_HPP_INCLUDED

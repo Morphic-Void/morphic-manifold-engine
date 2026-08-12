@@ -16,6 +16,7 @@
 #include "tests/ErasedPod_test_suite.hpp"
 #include "tests/ErasedOwner_test_suite.hpp"
 #include "tests/StringBuffers_test_suite.hpp"
+#include "tests/SystemTypeIdentity_test_suite.hpp"
 #include "tests/TInstance_test_suite.hpp"
 #include "tests/TOrderedCollection_test_suite.hpp"
 #include "tests/TPodFifo_test_suite.hpp"
@@ -177,6 +178,9 @@ int run_tests(ETestRunMode mode)
 
     int debug_service_test_result = run_debug_service_tests();
     cumulative_result += debug_service_test_result;
+
+    int system_type_identity_test_result = run_system_type_identity_tests();
+    cumulative_result += system_type_identity_test_result;
 
     int pod_fifo_test_result = run_pod_fifo_tests();
     cumulative_result += pod_fifo_test_result;

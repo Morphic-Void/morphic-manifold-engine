@@ -33,7 +33,7 @@ namespace host
 {
 
 //  Installs the host context.
-void host_context_install() noexcept;
+[[nodiscard]] bool host_context_install() noexcept;
 [[nodiscard]] memory::CMemoryContext* host_memory_context() noexcept;
 
 }   //  namespace host

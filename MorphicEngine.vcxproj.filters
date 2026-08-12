@@ -273,6 +273,10 @@
     <ClInclude Include="include\system\system_ids.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
+    <ClInclude Include="include\system\system_id_registry.hpp"><Filter>include\system</Filter></ClInclude>
+    <ClInclude Include="include\system\local_type_registration.hpp"><Filter>include\system</Filter></ClInclude>
+    <ClInclude Include="include\system\local_type_registry.hpp"><Filter>include\system</Filter></ClInclude>
+    <ClInclude Include="include\system\type_id_binding_category.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\tests\run_tests.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
@@ -306,6 +310,7 @@
     <ClInclude Include="include\tests\StringBuffers_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
+    <ClInclude Include="include\tests\SystemTypeIdentity_test_suite.hpp"><Filter>include\tests</Filter></ClInclude>
     <ClInclude Include="include\tests\TInstance_test_suite.hpp">
       <Filter>include\tests</Filter>
     </ClInclude>
@@ -429,6 +434,9 @@
     <ClInclude Include="include\host\host_worker_thread.hpp">
       <Filter>include\host</Filter>
     </ClInclude>
+    <ClInclude Include="include\host\host_local_type_ids.def"><Filter>include\host</Filter></ClInclude>
+    <ClInclude Include="include\host\host_local_type_registry.hpp"><Filter>include\host</Filter></ClInclude>
+    <ClInclude Include="include\host\system_id_definitions.hpp"><Filter>include\host</Filter></ClInclude>
     <ClInclude Include="include\modules\application\application_thread.hpp">
       <Filter>include\modules\application</Filter>
     </ClInclude>
@@ -563,6 +571,7 @@
     <ClCompile Include="src\tests\StringBuffers_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
+    <ClCompile Include="src\tests\SystemTypeIdentity_test_suite.cpp"><Filter>src\tests</Filter></ClCompile>
     <ClCompile Include="src\tests\TInstance_test_suite.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
@@ -650,6 +659,8 @@
     <ClCompile Include="src\host\host_worker_thread.cpp">
       <Filter>src\host</Filter>
     </ClCompile>
+    <ClCompile Include="src\host\host_local_type_registry.cpp"><Filter>src\host</Filter></ClCompile>
+    <ClCompile Include="src\host\system_id_definitions.cpp"><Filter>src\host</Filter></ClCompile>
     <ClCompile Include="src\threading\CThreadPackage.cpp">
       <Filter>src\threading</Filter>
     </ClCompile>
@@ -668,6 +679,7 @@
     <ClCompile Include="src\system\system_ids.cpp">
       <Filter>src\system</Filter>
     </ClCompile>
+    <ClCompile Include="src\system\local_type_registry.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\host\host_context.cpp">
       <Filter>src\host</Filter>
     </ClCompile>
@@ -735,6 +747,8 @@
     <None Include="docs\system\erased_owner.md">
       <Filter>docs\system</Filter>
     </None>
+    <None Include="docs\system\module_bootstrap.md"><Filter>docs\system</Filter></None>
+    <None Include="docs\system\type_identity.md"><Filter>docs\system</Filter></None>
     <None Include="docs\origins.md">
       <Filter>docs</Filter>
     </None>

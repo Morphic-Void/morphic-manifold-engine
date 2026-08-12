@@ -9,11 +9,13 @@
 //  Application thread and the current TGA flow test.
 
 #include <cstdint>      //  std::int32_t, std::uint32_t, std::uint64_t
+#include <cstring>      //  std::strcmp
 
 #include "modules/application/application_thread.hpp"
 #include "modules/module_binding_context.hpp"
 
 #include "debug/macros.hpp"
+#include "debug/event_arguments.hpp"
 #include "image/codec/tga.hpp"
 #include "platform/system/performance_counter.hpp"
 #include "system/async_state.hpp"
@@ -108,6 +110,25 @@ bool CApplicationThread::startup() noexcept
 
 bool CApplicationThread::initialise() noexcept
 {
+    char registry_name[64]{};
+    std::size_t registry_name_size = 0u;
+    constexpr char registry_format[]{ "{}" };
+    const debug_system::SEventArguments registry_arguments =
+        debug_system::encode_event_arguments(type_ids::file_load_request);
+    if ((debug_system::format_event_text(
+            registry_name, sizeof(registry_name),
+            registry_format, (sizeof(registry_format) - 1u),
+            registry_arguments.parameter_count,
+            registry_arguments.parameter_types,
+            registry_arguments.parameters,
+            registry_name_size) != debug_system::EEventFormatResult::success) ||
+        (std::strcmp(registry_name, "file_load_request") != 0))
+    {
+        fail(1u);
+        return false;
+    }
+    MV_REPORT("Application system registry authority: %s", registry_name);
+
     if (!m_perf_counter.update() ||
         !m_context.perf_count_conversion().is_valid() ||
         !m_async_states.initialise(1u))

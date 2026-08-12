@@ -38,7 +38,11 @@ bool is_thread_context_ready(const void* const provisioning) noexcept
 
 bool CModuleBindingContext::is_ready() const noexcept
 {
-    return m_advertised_host_identity_installed &&
+    return
+        m_local_type_registry_installed &&
+        m_peer_identity_installed &&
+        m_functional_major_negotiated &&
+        m_system_registry_installed &&
         m_ambient_module_id_installed &&
         m_module_memory_context_installed &&
         m_debug_service_installed;
@@ -58,11 +62,10 @@ bool CModuleBindingContext::is_thread_context_ready(const void* const provisioni
 EBindingResult CModuleBindingContext::bootstrap(SBootstrapFunctions* const functions) noexcept
 {
     if ((functions == nullptr) || (m_config.query_function == nullptr) ||
-        !module_ids::is_valid_id(m_config.advertised_identity.advertised_module_id) ||
-        !module_ids::is_valid_id(m_config.compatible_advertised_host_id) ||
-        (m_config.advertised_identity.minimum_functional_major >
-            m_config.advertised_identity.maximum_functional_major) ||
-        (m_config.minimum_host_major > m_config.maximum_host_major))
+        (m_config.query_local_type_registry_view == nullptr) ||
+        !is_valid_advertised_identity(m_config.advertised_identity) ||
+        !module_ids::is_valid_id(m_config.compatible_advertised_peer_id) ||
+        (m_config.minimum_peer_version_major > m_config.maximum_peer_version_major))
     {
         return EBindingResult::invalid_argument;
     }
@@ -71,18 +74,30 @@ EBindingResult CModuleBindingContext::bootstrap(SBootstrapFunctions* const funct
     {
         return EBindingResult::already_installed;
     }
+    const local_type_registry::SLocalTypeRegistryView& local_view =
+        m_config.query_local_type_registry_view();
+    if (!local_type_registry::validate_view(local_view))
+    {
+        return EBindingResult::invalid_argument;
+    }
+
     s_active_binding = this;
+    if (!local_type_registry::install_view(local_view))
+    {
+        s_active_binding = nullptr;
+        return EBindingResult::already_installed;
+    }
+    m_local_type_registry_installed = true;
 
     SBootstrapFunctions populated;
-    populated.query_advertised_module_identity = &query_advertised_module_identity;
-    populated.install_advertised_host_identity = &install_advertised_host_identity;
+    populated.query_advertised_identity = &query_advertised_identity;
+    populated.install_peer_identity = &install_peer_identity;
     populated.populate_core_functions = &populate_core_functions;
     *functions = populated;
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::query_advertised_module_identity(
-    SAdvertisedModuleIdentity* const identity) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::query_advertised_identity(SAdvertisedIdentity* const identity) noexcept
 {
     if ((identity == nullptr) || (s_active_binding == nullptr))
     {
@@ -93,8 +108,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::query_advertised_module_id
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_advertised_host_identity(
-    const SAdvertisedHostIdentity* const identity) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_peer_identity(const SAdvertisedIdentity* const identity) noexcept
 {
     if ((identity == nullptr) || (s_active_binding == nullptr))
     {
@@ -102,19 +116,21 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_advertised_host_id
     }
 
     CModuleBindingContext& binding = *s_active_binding;
-    if ((identity->advertised_module_id != binding.m_config.compatible_advertised_host_id) ||
-        (identity->version.major < binding.m_config.minimum_host_major) ||
-        (identity->version.major > binding.m_config.maximum_host_major))
+    if (!is_valid_advertised_identity(*identity) ||
+        (identity->advertised_module_id != binding.m_config.compatible_advertised_peer_id) ||
+        (identity->version.major < binding.m_config.minimum_peer_version_major) ||
+        (identity->version.major > binding.m_config.maximum_peer_version_major) ||
+        !functional_ranges_overlap(binding.m_config.advertised_identity, *identity))
     {
-        return EBindingResult::incompatible_host;
+        return EBindingResult::incompatible_peer;
     }
-    if (binding.m_advertised_host_identity_installed)
+    if (binding.m_peer_identity_installed)
     {
         return EBindingResult::already_installed;
     }
 
-    binding.m_advertised_host_identity = *identity;
-    binding.m_advertised_host_identity_installed = true;
+    binding.m_peer_identity = *identity;
+    binding.m_peer_identity_installed = true;
     return EBindingResult::success;
 }
 
@@ -131,6 +147,27 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_module_id(
     return EBindingResult::success;
 }
 
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_system_registry_view(
+    const system_id_registry::SSystemRegistryView* const view) noexcept
+{
+    if ((s_active_binding == nullptr) ||
+        !s_active_binding->m_peer_identity_installed ||
+        (view == nullptr))
+    {
+        return EBindingResult::invalid_argument;
+    }
+    if (s_active_binding->m_system_registry_installed)
+    {
+        return EBindingResult::already_installed;
+    }
+    if (!system_id_registry::install_view(*view))
+    {
+        return EBindingResult::invalid_argument;
+    }
+    s_active_binding->m_system_registry_installed = true;
+    return EBindingResult::success;
+}
+
 EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_module_memory_context(
     memory::CMemoryContext* const context) noexcept
 {
@@ -144,8 +181,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_module_memory_cont
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_debug_service(
-    debug_system::CDebugServiceState* const service) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_debug_service(debug_system::CDebugServiceState* const service) noexcept
 {
     if ((s_active_binding == nullptr) || (service == nullptr))
     {
@@ -164,8 +200,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_debug_service(
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_thread_id(
-    const thread_ids::id_type thread_id) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_thread_id(const thread_ids::id_type thread_id) noexcept
 {
     if ((s_active_binding == nullptr) || !s_active_binding->is_ready() ||
         !thread_ids::is_valid_id(thread_id))
@@ -177,8 +212,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_thread_id(
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_memory_context(
-    memory::CMemoryContext* const context) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_memory_context(memory::CMemoryContext* const context) noexcept
 {
     if ((s_active_binding == nullptr) || !s_active_binding->is_ready() ||
         ((context != nullptr) && !context->is_usable()))
@@ -190,8 +224,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_memory_cont
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_provisioning(
-    void* const provisioning) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_provisioning(void* const provisioning) noexcept
 {
     if ((s_active_binding == nullptr) || !s_active_binding->is_ready() ||
         (provisioning == nullptr))
@@ -214,9 +247,8 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::query_function(
     }
 
     *function = nullptr;
-    const SAdvertisedModuleIdentity& identity = s_active_binding->m_config.advertised_identity;
-    if ((functional_major < identity.minimum_functional_major) ||
-        (functional_major > identity.maximum_functional_major))
+    if (!s_active_binding->m_functional_major_negotiated ||
+        (functional_major != s_active_binding->m_negotiated_functional_major))
     {
         return EBindingResult::unsupported_version;
     }
@@ -233,18 +265,26 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::populate_core_functions(
     }
     *functions = {};
 
-    const SAdvertisedModuleIdentity& identity = s_active_binding->m_config.advertised_identity;
+    if (!s_active_binding->m_peer_identity_installed)
+    {
+        return EBindingResult::incompatible_peer;
+    }
+
+    const SAdvertisedIdentity& identity = s_active_binding->m_config.advertised_identity;
     if ((functional_major < identity.minimum_functional_major) ||
-        (functional_major > identity.maximum_functional_major))
+        (functional_major > identity.maximum_functional_major) ||
+        (functional_major < s_active_binding->m_peer_identity.minimum_functional_major) ||
+        (functional_major > s_active_binding->m_peer_identity.maximum_functional_major))
     {
         return EBindingResult::unsupported_version;
     }
-    if (!s_active_binding->m_advertised_host_identity_installed)
+    if (s_active_binding->m_functional_major_negotiated &&
+        (functional_major != s_active_binding->m_negotiated_functional_major))
     {
-        return EBindingResult::incompatible_host;
+        return EBindingResult::already_installed;
     }
-
     SCoreFunctions populated;
+    populated.install_system_registry_view = &install_system_registry_view;
     populated.install_ambient_module_id = &install_ambient_module_id;
     populated.install_module_memory_context = &install_module_memory_context;
     populated.install_debug_service = &install_debug_service;
@@ -253,6 +293,8 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::populate_core_functions(
     populated.install_thread_provisioning = &install_thread_provisioning;
     populated.query_function = &query_function;
     *functions = populated;
+    s_active_binding->m_negotiated_functional_major = functional_major;
+    s_active_binding->m_functional_major_negotiated = true;
     return EBindingResult::success;
 }
 

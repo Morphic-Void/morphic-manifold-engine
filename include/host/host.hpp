@@ -59,6 +59,10 @@ private:
     void initialise_debug_service() noexcept;
     [[nodiscard]] bool initialise_runtime() noexcept;
     [[nodiscard]] bool bind_application_module() noexcept;
+    [[nodiscard]] bool validate_application_module_compatibility(
+        const modules::SAdvertisedIdentity& advertised_host_identity,
+        const std::uint32_t expected_module_major,
+        application::FApplicationThread& application_thread) noexcept;
     [[nodiscard]] bool start_threads() noexcept;
     void run() noexcept;
     void shutdown() noexcept;

@@ -31,36 +31,34 @@ public:
 
     [[nodiscard]] bool bind(
         const platform::path::NativePath& path,
-        module_ids::id_type expected_advertised_module_id,
-        const modules::SAdvertisedHostIdentity& advertised_host_identity,
-        std::uint32_t functional_major) noexcept;
+        const module_ids::id_type expected_advertised_module_id,
+        const modules::SAdvertisedIdentity& host_identity) noexcept;
     [[nodiscard]] bool install(
-        module_ids::id_type ambient_module_id,
-        memory::CMemoryContext* module_memory_context,
-        debug_system::CDebugServiceState* debug_service) noexcept;
+        const system_id_registry::SSystemRegistryView& system_registry,
+        const module_ids::id_type ambient_module_id,
+        memory::CMemoryContext* const module_memory_context,
+        debug_system::CDebugServiceState* const debug_service) noexcept;
     void unbind() noexcept;
 
-    [[nodiscard]] bool populate_core_functions(
-        std::uint32_t functional_major, modules::SCoreFunctions& functions) const noexcept;
-    [[nodiscard]] bool query_function(
-        type_ids::id_type function_type,
-        std::uint32_t functional_major,
-        modules::FModuleFunction& function) const noexcept;
-    [[nodiscard]] const modules::SAdvertisedModuleIdentity& advertised_identity() const noexcept { return m_advertised_identity; }
+    [[nodiscard]] modules::EBindingResult populate_core_functions(
+        const std::uint32_t functional_major, modules::SCoreFunctions& functions) const noexcept;
+    [[nodiscard]] bool query_function(const type_ids::id_type function_type, modules::FModuleFunction& function) const noexcept;
+    [[nodiscard]] const modules::SAdvertisedIdentity& advertised_host_identity() const noexcept { return m_advertised_host_identity; }
+    [[nodiscard]] const modules::SAdvertisedIdentity& advertised_module_identity() const noexcept { return m_advertised_module_identity; }
+    [[nodiscard]] std::uint32_t negotiated_functional_major() const noexcept { return m_negotiated_functional_major; }
     [[nodiscard]] bool is_ready() const noexcept { return m_installed; }
 
-    static bool MV_STD_ABI_CALL prepare_thread(
-        void* context, thread_ids::id_type thread_id, void* thread_resources) noexcept;
+    static bool MV_STD_ABI_CALL prepare_thread(void* const context, const thread_ids::id_type thread_id, void* const thread_resources) noexcept;
 
 private:
-    [[nodiscard]] static bool core_functions_are_complete(const modules::SCoreFunctions& functions) noexcept;
-    [[nodiscard]] bool prepare_thread(
-        thread_ids::id_type thread_id, void* thread_resources) noexcept;
+    [[nodiscard]] bool prepare_thread(const thread_ids::id_type thread_id, void* const thread_resources) noexcept;
 
     platform::module::CPlatformModule m_native_module;
     modules::SBootstrapFunctions m_bootstrap;
     modules::SCoreFunctions m_core;
-    modules::SAdvertisedModuleIdentity m_advertised_identity;
+    modules::SAdvertisedIdentity m_advertised_host_identity;
+    modules::SAdvertisedIdentity m_advertised_module_identity;
+    std::uint32_t m_negotiated_functional_major{ 0u };
     bool m_installed{ false };
 };
 

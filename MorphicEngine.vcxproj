@@ -233,6 +233,8 @@
     <ClCompile Include="src\host\bound_module.cpp" />
     <ClCompile Include="src\host\host_context.cpp" />
     <ClCompile Include="src\host\host_worker_thread.cpp" />
+    <ClCompile Include="src\host\host_local_type_registry.cpp" />
+    <ClCompile Include="src\host\system_id_definitions.cpp" />
     <ClCompile Include="src\image\codec\tga.cpp" />
     <ClCompile Include="src\main\MorphicEngine.cpp" />
     <ClCompile Include="src\memory\memory_context.cpp" />
@@ -255,6 +257,7 @@
     <ClCompile Include="src\platform\threading\wait_word.cpp" />
     <ClCompile Include="src\system\erased_owner.cpp" />
     <ClCompile Include="src\system\erased_owner_transport.cpp" />
+    <ClCompile Include="src\system\local_type_registry.cpp" />
     <ClCompile Include="src\system\system_context.cpp" />
     <ClCompile Include="src\system\system_ids.cpp" />
     <ClCompile Include="src\tests\AssetRepository_test_suite.cpp" />
@@ -266,6 +269,7 @@
     <ClCompile Include="src\tests\ErasedPod_test_suite.cpp" />
     <ClCompile Include="src\tests\ErasedOwner_test_suite.cpp" />
     <ClCompile Include="src\tests\StringBuffers_test_suite.cpp" />
+    <ClCompile Include="src\tests\SystemTypeIdentity_test_suite.cpp" />
     <ClCompile Include="src\tests\TInstance_test_suite.cpp" />
     <ClCompile Include="src\tests\TMpmcTransport_test_suite.cpp" />
     <ClCompile Include="src\tests\TOrderedCollection_test_suite.cpp" />
@@ -312,6 +316,9 @@
     <ClInclude Include="include\host\host.hpp" />
     <ClInclude Include="include\host\host_context.hpp" />
     <ClInclude Include="include\host\host_worker_thread.hpp" />
+    <ClInclude Include="include\host\host_local_type_ids.def" />
+    <ClInclude Include="include\host\host_local_type_registry.hpp" />
+    <ClInclude Include="include\host\system_id_definitions.hpp" />
     <ClInclude Include="include\image\codec\tga.hpp" />
     <ClInclude Include="include\memory\memory_context.hpp" />
     <ClInclude Include="include\memory\memory_policies.hpp" />
@@ -345,11 +352,15 @@
     <ClInclude Include="include\system\async_state.hpp" />
     <ClInclude Include="include\system\erased_owner_transport.hpp" />
     <ClInclude Include="include\system\erased_pod.hpp" />
+    <ClInclude Include="include\system\local_type_registration.hpp" />
+    <ClInclude Include="include\system\local_type_registry.hpp" />
     <ClInclude Include="include\system\system_context.hpp" />
     <ClInclude Include="include\system\system_type_registration.hpp" />
+    <ClInclude Include="include\system\type_id_binding_category.hpp" />
     <ClInclude Include="include\system\transported_types.hpp" />
     <ClInclude Include="include\system\runtime_ids.def" />
     <ClInclude Include="include\system\system_ids.hpp" />
+    <ClInclude Include="include\system\system_id_registry.hpp" />
     <ClInclude Include="include\system\thread_ids.def" />
     <ClInclude Include="include\system\TStaticLookup.hpp" />
     <ClInclude Include="include\system\type_ids.def" />
@@ -363,6 +374,7 @@
     <ClInclude Include="include\tests\ErasedPod_test_suite.hpp" />
     <ClInclude Include="include\tests\ErasedOwner_test_suite.hpp" />
     <ClInclude Include="include\tests\StringBuffers_test_suite.hpp" />
+    <ClInclude Include="include\tests\SystemTypeIdentity_test_suite.hpp" />
     <ClInclude Include="include\tests\TInstance_test_suite.hpp" />
     <ClInclude Include="include\tests\TMpmcTransport_test_suite.hpp" />
     <ClInclude Include="include\tests\TOrderedCollection_test_suite.hpp" />
@@ -419,6 +431,8 @@
     <None Include="docs\project\completed_milestones.md" />
     <None Include="docs\project\future_work_notes.md" />
     <None Include="docs\system\erased_owner.md" />
+    <None Include="docs\system\module_bootstrap.md" />
+    <None Include="docs\system\type_identity.md" />
     <None Include="docs\origins.md" />
     <None Include="docs\threading\job_framework_milestone.md" />
     <None Include="docs\threading\transports\TMpmcTransport.md" />

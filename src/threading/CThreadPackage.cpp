@@ -16,6 +16,7 @@
 #include "debug/macros.hpp"
 #include "platform/threading/thread_naming.hpp"
 #include "system/system_context.hpp"
+#include "system/system_id_registry.hpp"
 
 namespace threading
 {

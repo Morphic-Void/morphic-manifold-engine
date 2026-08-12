@@ -19,6 +19,7 @@
 #include "platform/system/debugger.hpp"
 #include "platform/threading/thread_naming.hpp"
 #include "platform/threading/wait_word.hpp"
+#include "system/system_id_registry.hpp"
 
 namespace debug_system
 {

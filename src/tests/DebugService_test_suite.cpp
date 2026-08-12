@@ -19,6 +19,7 @@
 #include "platform/filesystem/internal/file_utils.hpp"
 #include "platform/path/native_path.hpp"
 #include "system/system_context.hpp"
+#include "system/system_id_registry.hpp"
 #include "tests/DebugService_test_suite.hpp"
 
 namespace debug_service_tests
@@ -342,7 +343,7 @@ void test_argument_formatting(TTestContext& ctx)
 
     char expected_type_output[160]{};
     const type_ids::id_type unregistered_type_id =
-        type_ids::encode_id(type_ids::k_count);
+        type_ids::encode_id(type_ids::encode_index(type_ids::k_count));
     const int expected_type_output_size = std::snprintf(
         expected_type_output,
         sizeof(expected_type_output),
@@ -777,7 +778,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             debug_system::CInlineText16{ "payload" })));
 
     const type_ids::id_type unregistered_type_id =
-        type_ids::encode_id(type_ids::k_count);
+        type_ids::encode_id(type_ids::encode_index(type_ids::k_count));
     TEST_EXPECT(ctx,
         (debug_system::process_event<
             debug_system::EEventLevel::error,

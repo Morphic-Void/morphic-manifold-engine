@@ -1,0 +1,4 @@
+//  Host-local type identity declarations.
+//  Include with MV_LOCAL_TYPE(name, cpp_type).
+
+MV_LOCAL_TYPE(host_runtime, host::CHost)

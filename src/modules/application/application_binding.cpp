@@ -10,6 +10,7 @@
 
 #include "modules/application/application_binding.hpp"
 
+#include "modules/application/application_local_type_registry.hpp"
 #include "modules/application/application_thread.hpp"
 #include "modules/module_binding_context.hpp"
 
@@ -37,18 +38,20 @@ static modules::EBindingResult MV_STD_ABI_CALL query_function(
 }
 
 constexpr modules::SModuleBindingConfig k_binding_config{
-    { module_ids::application, { 1u, 1u }, 0u, 1u },
+    { module_ids::application, { modules::k_binding_abi_major, 0u },
+        modules::k_binding_abi_major, modules::k_binding_abi_major },
     module_ids::executable,
-    1u,
-    1u,
-    &query_function
+    modules::k_binding_abi_major,
+    modules::k_binding_abi_major,
+    &query_function,
+    &application::local_type_registry_view
 };
 
 modules::CModuleBindingContext s_binding{ k_binding_config };
 
 }   //  namespace application::module_binding
 
-MV_MODULE_EXPORT modules::EBindingResult MV_STD_ABI_CALL morphic_module_bootstrap(
+MV_MODULE_EXPORT modules::EBindingResult MV_STD_ABI_CALL morphic_module_bootstrap_v2(
     modules::SBootstrapFunctions* const functions) noexcept
 {
     return application::module_binding::s_binding.bootstrap(functions);

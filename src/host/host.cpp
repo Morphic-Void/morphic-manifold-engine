@@ -18,6 +18,7 @@
 //  The code is placeholder and not final.
 
 #include <cstdint>      //  std::int32_t, std::uint8_t, std::uint64_t
+#include <limits>       //  std::numeric_limits
 #include <utility>      //  std::move
 
 #include "assets/asset_repository.hpp"
@@ -25,6 +26,7 @@
 #include "host/host.hpp"
 #include "host/host_context.hpp"
 #include "host/host_worker_thread.hpp"
+#include "host/system_id_definitions.hpp"
 #include "image/codec/tga.hpp"
 #include "modules/application/application_binding.hpp"
 #include "platform/path/native_path.hpp"
@@ -104,8 +106,7 @@ bool CHost::start_threads() noexcept
     const threading::ThreadConfig thread_configs[k_thread_count]{
         {thread_ids::bg_file_io, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
         {thread_ids::bg_conditioning, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
-        {thread_ids::application, platform::threading::EThreadPriority::Normal, m_application_thread,
-            &CBoundModule::prepare_thread, &m_application_module} };
+        {thread_ids::application, platform::threading::EThreadPriority::Normal, m_application_thread, &CBoundModule::prepare_thread, &m_application_module} };
 
     for (std::size_t thread_index = 0u; thread_index < k_thread_count; ++thread_index)
     {
@@ -126,28 +127,40 @@ bool CHost::start_threads() noexcept
 
 bool CHost::bind_application_module() noexcept
 {
-    constexpr modules::SAdvertisedHostIdentity advertised_host_identity{ module_ids::executable, { 1u, 1u } };
-    constexpr std::uint32_t expected_module_major = 1u;
-    constexpr std::uint32_t functional_major = 1u;
+    constexpr modules::SAdvertisedIdentity advertised_host_identity{
+        module_ids::executable, { modules::k_binding_abi_major, 0u },
+        modules::k_binding_abi_major, modules::k_binding_abi_major };
+    constexpr std::uint32_t expected_module_major = modules::k_binding_abi_major;
 
-    const platform::path::NativePath module_path =
-        platform::path::makeNativePath("MorphicApplication.dll");
+    const platform::path::NativePath module_path = platform::path::makeNativePath("MorphicApplication.dll");
     if (!module_path.is_ready() ||
-        !m_application_module.bind(
-            module_path, module_ids::application, advertised_host_identity, functional_major) ||
-        !m_application_module.install(module_ids::application, host_memory_context(), m_debug_service))
+        !m_application_module.bind(module_path, module_ids::application, advertised_host_identity) ||
+        !m_application_module.install(system_registry_view(), module_ids::application, host_memory_context(), m_debug_service))
     {
         MV_ERROR("Host failed to bind and install the application module");
         return false;
     }
 
-    const modules::SAdvertisedModuleIdentity& module_identity = m_application_module.advertised_identity();
-    modules::SCoreFunctions version_zero_core;
-    modules::SCoreFunctions unsupported_core;
-    modules::FModuleFunction version_zero_thread = nullptr;
-    modules::FModuleFunction application_thread = nullptr;
-    modules::FModuleFunction unsupported_thread = nullptr;
-    modules::FModuleFunction unknown_thread = nullptr;
+    application::FApplicationThread application_thread = nullptr;
+    if (!validate_application_module_compatibility(advertised_host_identity, expected_module_major, application_thread))
+    {
+        MV_ERROR("Host failed the application module compatibility checks");
+        return false;
+    }
+
+    m_application_thread = application_thread;
+    return true;
+}
+
+bool CHost::validate_application_module_compatibility(
+    const modules::SAdvertisedIdentity& advertised_host_identity,
+    const std::uint32_t expected_module_major,
+    application::FApplicationThread& application_thread) noexcept
+{
+    application_thread = nullptr;
+
+    const modules::SAdvertisedIdentity& module_identity = m_application_module.advertised_module_identity();
+    const std::uint32_t functional_major = m_application_module.negotiated_functional_major();
     MV_INFO("Application module version {}.{} supports functional majors [{},{}]",
         module_identity.version.major,
         module_identity.version.minor,
@@ -155,39 +168,40 @@ bool CHost::bind_application_module() noexcept
         module_identity.maximum_functional_major);
 
     if ((module_identity.version.major != expected_module_major) ||
-        (module_identity.minimum_functional_major != 0u) ||
-        (module_identity.maximum_functional_major != 1u) ||
-        !m_application_module.populate_core_functions(0u, version_zero_core) ||
-        m_application_module.populate_core_functions(2u, unsupported_core) ||
-        (unsupported_core.install_ambient_module_id != nullptr) ||
-        (unsupported_core.install_module_memory_context != nullptr) ||
-        (unsupported_core.install_debug_service != nullptr) ||
-        (unsupported_core.install_ambient_thread_id != nullptr) ||
-        (unsupported_core.install_thread_memory_context != nullptr) ||
-        (unsupported_core.install_thread_provisioning != nullptr) ||
-        (unsupported_core.query_function != nullptr) ||
-        !m_application_module.query_function(
-            type_ids::application_thread_function, 0u, version_zero_thread) ||
-        !m_application_module.query_function(
-            type_ids::application_thread_function, functional_major, application_thread) ||
-        m_application_module.query_function(
-            type_ids::application_thread_function, 2u, unsupported_thread) ||
-        m_application_module.query_function(type_ids::undefined, 1u, unknown_thread) ||
-        (version_zero_thread == nullptr) ||
-        (unsupported_thread != nullptr) ||
-        (unknown_thread != nullptr))
+        (functional_major != modules::highest_common_functional_major(advertised_host_identity, module_identity)))
     {
-        MV_ERROR("Host failed the application module compatibility checks");
         return false;
     }
 
-    m_application_thread = reinterpret_cast<application::FApplicationThread>(application_thread);
-    return m_application_thread != nullptr;
+    // The next representable major cannot belong to the negotiated range.
+    if (functional_major != std::numeric_limits<std::uint32_t>::max())
+    {
+        modules::SCoreFunctions unsupported_core;
+        const modules::EBindingResult unsupported_result = m_application_module.populate_core_functions((functional_major + 1u), unsupported_core);
+
+        // Rejection must be explicit and must not expose callable functions.
+        if ((unsupported_result != modules::EBindingResult::unsupported_version) || !unsupported_core.is_empty())
+        {
+            return false;
+        }
+    }
+
+    modules::FModuleFunction raw_application_thread = nullptr;
+    modules::FModuleFunction unknown_thread = nullptr;
+    if (!m_application_module.query_function(type_ids::application_thread_function, raw_application_thread) ||
+        m_application_module.query_function(type_ids::undefined, unknown_thread) || (unknown_thread != nullptr))
+    {
+        return false;
+    }
+
+    application_thread = reinterpret_cast<application::FApplicationThread>(raw_application_thread);
+    return application_thread != nullptr;
 }
 
 bool CHost::initialise_runtime() noexcept
 {
-    return m_perf_count_conversion.init() &&
+    return
+        m_perf_count_conversion.init() &&
         m_thread_packages.initialise() &&
         m_assets.initialise() &&
         m_async_states.initialise() &&
@@ -322,8 +336,7 @@ void CHost::run() noexcept
                         state->file = tga_load_request.file;
                         state->vflip = tga_load_request.vflip;
 
-                        threading::CThreadPackage& outbound_package =
-                            *thread_package(EWorkerThreadID::bg_file_io);
+                        threading::CThreadPackage& outbound_package = *thread_package(EWorkerThreadID::bg_file_io);
                         FileLoadRequest file_load_request;
                         file_load_request.file = state->file;
                         threading::CErasedPodMsg outbound_msg;
@@ -427,8 +440,7 @@ void CHost::run() noexcept
 
                         const CAssetId loaded_file = assets.insert(std::move(content));
                         const CAssetRecord* const loaded_record = assets.resolve(loaded_file);
-                        const LoadedFile* const loaded =
-                            (loaded_record != nullptr) ? loaded_record->payload<LoadedFile>() : nullptr;
+                        const LoadedFile* const loaded = (loaded_record != nullptr) ? loaded_record->payload<LoadedFile>() : nullptr;
                         if (loaded == nullptr)
                         {
                             (void)post_tga_load_result(application_slot, CAssetId{}, image::codec::tga::decoded_image_desc::RGBA, false);

@@ -20,11 +20,14 @@
 #include <new>          //  std::nothrow, aligned operator new[]/delete[]
 
 #include "host/host_context.hpp"
+#include "host/host_local_type_registry.hpp"
+#include "host/system_id_definitions.hpp"
 #include "platform/platform_defines.hpp"
 #include "memory/memory_policies.hpp"
 #include "memory/memory_context.hpp"
 #include "platform/threading/thread_naming.hpp"
 #include "system/system_context.hpp"
+#include "system/system_id_registry.hpp"
 #include "system/system_ids.hpp"
 
 namespace host
@@ -69,8 +72,14 @@ static memory::CMemoryContext s_host_memory_context(s_host_memory_allocator, sys
 //  Host context installation
 //==============================================================================
 
-void host_context_install() noexcept
+bool host_context_install() noexcept
 {
+    if (!system_id_registry::install_view(system_registry_view()) ||
+        !local_type_registry::install_view(local_type_registry_view()))
+    {
+        return false;
+    }
+
     (void)system_context::set_ambient_module_id(module_ids::executable);
     (void)system_context::set_ambient_thread_id(thread_ids::host);
     const char* const thread_name = system_id_registry::lookup_thread_name(thread_ids::host);
@@ -79,6 +88,7 @@ void host_context_install() noexcept
         (void)platform::threading::set_current_thread_name(thread_name);
     }
     (void)memory::set_module_memory_context(&s_host_memory_context);
+    return memory::get_ambient_memory_context() == &s_host_memory_context;
 }
 
 memory::CMemoryContext* host_memory_context() noexcept

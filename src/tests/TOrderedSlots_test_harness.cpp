@@ -1640,7 +1640,10 @@ int run_all_tests(const TOrderedConfig& cfg_in)
 {
     TOrderedConfig cfg = cfg_in;
 
-    host::host_context_install();
+    if (!host::host_context_install())
+    {
+        return 1;
+    }
 
     TestLogger log;
     log.stop_on_fail = cfg.stop_on_fail;

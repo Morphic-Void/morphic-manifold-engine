@@ -258,8 +258,10 @@ including a guaranteed terminator, and therefore carries at most 15 text
 characters. `type_ids::id_type` consumes four payload bytes and formats as a
 registered symbolic name when one exists, otherwise as an explicit
 `unregistered-type:0x...` or `invalid-type:0x...` diagnostic. The two named
-local-ID representations reserve namespace for a later phase and are rejected
-by phase-one validation; they do not change current ID semantics.
+local-type representations reserve namespace for a later transport phase and
+remain rejected by validation. System type names are resolved through the
+installed immutable host-owned registry view on both queued and synchronous
+module paths. Local type IDs themselves remain unsupported event arguments.
 
 Unsupported C++ argument types, more than eight arguments, and any value larger
 than one 16-byte slot are compile-time errors. Pointers, references as

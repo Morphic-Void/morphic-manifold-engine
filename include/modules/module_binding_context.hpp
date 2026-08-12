@@ -14,17 +14,21 @@
 #define MODULE_BINDING_CONTEXT_HPP_INCLUDED
 
 #include "modules/module_binding.hpp"
+#include "system/local_type_registry.hpp"
 
 namespace modules
 {
 
 struct SModuleBindingConfig
 {
-    SAdvertisedModuleIdentity advertised_identity{};
-    module_ids::id_type compatible_advertised_host_id{};
-    std::uint32_t minimum_host_major{ 0u };
-    std::uint32_t maximum_host_major{ 0u };
+    using FQueryLocalTypeRegistryView = const local_type_registry::SLocalTypeRegistryView&(MV_STD_ABI_CALL*)() noexcept;
+
+    SAdvertisedIdentity advertised_identity{};
+    module_ids::id_type compatible_advertised_peer_id{};
+    std::uint32_t minimum_peer_version_major{ 0u };
+    std::uint32_t maximum_peer_version_major{ 0u };
     FQueryFunction query_function{ nullptr };
+    FQueryLocalTypeRegistryView query_local_type_registry_view{ nullptr };
 };
 
 class CModuleBindingContext
@@ -38,36 +42,42 @@ public:
     CModuleBindingContext(CModuleBindingContext&&) = delete;
     CModuleBindingContext& operator=(CModuleBindingContext&&) = delete;
 
-    EBindingResult bootstrap(SBootstrapFunctions* functions) noexcept;
+    EBindingResult bootstrap(SBootstrapFunctions* const functions) noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
-    [[nodiscard]] bool is_thread_context_ready(const void* provisioning) const noexcept;
+    [[nodiscard]] bool is_thread_context_ready(const void* const provisioning) const noexcept;
 
 private:
-    static EBindingResult MV_STD_ABI_CALL query_advertised_module_identity(SAdvertisedModuleIdentity* identity) noexcept;
-    static EBindingResult MV_STD_ABI_CALL install_advertised_host_identity(const SAdvertisedHostIdentity* identity) noexcept;
+    static EBindingResult MV_STD_ABI_CALL query_advertised_identity(SAdvertisedIdentity* const identity) noexcept;
+    static EBindingResult MV_STD_ABI_CALL install_peer_identity(const SAdvertisedIdentity* const identity) noexcept;
     static EBindingResult MV_STD_ABI_CALL populate_core_functions(
-        std::uint32_t functional_major, SCoreFunctions* functions) noexcept;
+        const std::uint32_t functional_major,
+        SCoreFunctions* const functions) noexcept;
 
-    static EBindingResult MV_STD_ABI_CALL install_ambient_module_id(module_ids::id_type module_id) noexcept;
-    static EBindingResult MV_STD_ABI_CALL install_module_memory_context(memory::CMemoryContext* context) noexcept;
-    static EBindingResult MV_STD_ABI_CALL install_debug_service(debug_system::CDebugServiceState* service) noexcept;
-    static EBindingResult MV_STD_ABI_CALL install_ambient_thread_id(thread_ids::id_type thread_id) noexcept;
-    static EBindingResult MV_STD_ABI_CALL install_thread_memory_context(memory::CMemoryContext* context) noexcept;
-    static EBindingResult MV_STD_ABI_CALL install_thread_provisioning(void* provisioning) noexcept;
+    static EBindingResult MV_STD_ABI_CALL install_ambient_module_id(const module_ids::id_type module_id) noexcept;
+    static EBindingResult MV_STD_ABI_CALL install_system_registry_view(const system_id_registry::SSystemRegistryView* const view) noexcept;
+    static EBindingResult MV_STD_ABI_CALL install_module_memory_context(memory::CMemoryContext* const context) noexcept;
+    static EBindingResult MV_STD_ABI_CALL install_debug_service(debug_system::CDebugServiceState* const service) noexcept;
+    static EBindingResult MV_STD_ABI_CALL install_ambient_thread_id(const thread_ids::id_type thread_id) noexcept;
+    static EBindingResult MV_STD_ABI_CALL install_thread_memory_context(memory::CMemoryContext* const context) noexcept;
+    static EBindingResult MV_STD_ABI_CALL install_thread_provisioning(void* const provisioning) noexcept;
     static EBindingResult MV_STD_ABI_CALL query_function(
-        type_ids::id_type function_type,
-        std::uint32_t functional_major,
-        FModuleFunction* function) noexcept;
+        const type_ids::id_type function_type,
+        const std::uint32_t functional_major,
+        FModuleFunction* const function) noexcept;
 
     SModuleBindingConfig m_config;
-    SAdvertisedHostIdentity m_advertised_host_identity;
-    bool m_advertised_host_identity_installed{ false };
+    SAdvertisedIdentity m_peer_identity;
+    bool m_peer_identity_installed{ false };
+    std::uint32_t m_negotiated_functional_major{ 0u };
+    bool m_functional_major_negotiated{ false };
+    bool m_local_type_registry_installed{ false };
+    bool m_system_registry_installed{ false };
     bool m_ambient_module_id_installed{ false };
     bool m_module_memory_context_installed{ false };
     bool m_debug_service_installed{ false };
 };
 
-[[nodiscard]] bool is_thread_context_ready(const void* provisioning) noexcept;
+[[nodiscard]] bool is_thread_context_ready(const void* const provisioning) noexcept;
 
 }   //  namespace modules
 

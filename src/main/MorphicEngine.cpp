@@ -81,7 +81,10 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    host::host_context_install();
+    if (!host::host_context_install())
+    {
+        return 1;
+    }
     host::host();
     platform::system::set_current_process_priority(platform::system::EProcessPriority::AboveNormal);
     const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();

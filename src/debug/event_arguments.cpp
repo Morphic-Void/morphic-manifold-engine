@@ -11,6 +11,8 @@
 
 #include "debug/event_arguments.hpp"
 
+#include "system/system_id_registry.hpp"
+
 #include <cstdio>
 #include <cstring>
 
@@ -164,16 +166,12 @@ template<typename T>
 
 [[nodiscard]] EEventFormatResult append_type_id(SOutput& output, const type_ids::id_type id) noexcept
 {
-    const char* const name = system_id_registry::lookup_type_name(id);
-    if (name != nullptr)
+    const system_id_registry::STypeRegistration* const registration = system_id_registry::find_type(id);
+    if (registration != nullptr)
     {
-        std::size_t name_size = 0u;
-        while (name[name_size] != 0)
-        {
-            ++name_size;
-        }
-
-        return append(output, name, name_size) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+        return append(output, registration->name, registration->name_size)
+            ? EEventFormatResult::success
+            : EEventFormatResult::output_too_small;
     }
 
     char text[64]{};
@@ -259,8 +257,7 @@ template<typename T>
     return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
 }
 
-[[nodiscard]] bool bytes_are_zero(
-    const std::byte* const bytes, const std::size_t begin) noexcept
+[[nodiscard]] bool bytes_are_zero(const std::byte* const bytes, const std::size_t begin) noexcept
 {
     for (std::size_t index = begin; index < k_event_argument_slot_size; ++index)
     {
@@ -286,23 +283,20 @@ template<typename T>
     {
         const EEventArgumentType type = parameter_types[index];
         const std::size_t size = value_size(type);
-        if ((size > k_event_argument_slot_size) ||
-            !bytes_are_zero(parameters[index].bytes, size))
+        if ((size > k_event_argument_slot_size) || !bytes_are_zero(parameters[index].bytes, size))
         {
             return EEventFormatResult::invalid_descriptor;
         }
 
         if (type == EEventArgumentType::inline_text)
         {
-            const void* const terminator = std::memchr(
-                parameters[index].bytes, 0, k_inline_text_capacity);
+            const void* const terminator = std::memchr(parameters[index].bytes, 0, k_inline_text_capacity);
             if (terminator == nullptr)
             {
                 return EEventFormatResult::invalid_descriptor;
             }
 
-            const std::size_t terminator_index =
-                static_cast<const std::byte*>(terminator) - parameters[index].bytes;
+            const std::size_t terminator_index = static_cast<const std::byte*>(terminator) - parameters[index].bytes;
             if (!bytes_are_zero(parameters[index].bytes, terminator_index + 1u))
             {
                 return EEventFormatResult::invalid_descriptor;
