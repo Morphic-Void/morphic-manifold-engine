@@ -10,15 +10,18 @@
 
 #include "debug/macros.hpp"
 #include "system/erased_owner_transport.hpp"
+#include "system/erased_transport_admission.hpp"
 
 namespace threading::transports
 {
 
 CErasedOwnerTransport::CErasedOwnerTransport(
+    const module_ids::id_type destination_module_id,
     memory::CMemoryContext* const transport_context,
     memory::CMemoryContext* const recipient_context) noexcept
     : m_transport(transport_context)
     , m_recipient_context(recipient_context)
+    , m_destination_module_id(destination_module_id)
 {
 }
 
@@ -34,7 +37,9 @@ bool CErasedOwnerTransport::posting_is_valid() const noexcept
 
 bool CErasedOwnerTransport::post(CErasedOwner&& owner) noexcept
 {
-    if (!posting_is_valid() || (writable_count() == 0u) || !owner.is_ready())
+    if (!posting_is_valid() || (writable_count() == 0u) || !owner.is_ready() ||
+        !erased_transport_admission::is_admissible(
+            type_id{ owner.query_type_id() }, m_destination_module_id))
     {
         return false;
     }
@@ -92,7 +97,14 @@ bool CErasedOwnerTransport::initialise(const std::uint32_t capacity) noexcept
 bool CErasedOwnerTransport::attribution_is_valid() const noexcept
 {
     memory::CMemoryContext* const transport_context = memory_context();
-    return (transport_context != nullptr) &&
+    memory::CMemoryContext* const destination_context =
+        (m_recipient_context != nullptr) ? m_recipient_context : transport_context;
+    return module_ids::is_valid_id(m_destination_module_id) &&
+        (transport_context != nullptr) &&
+        (destination_context != nullptr) &&
+        system_ids::is_valid_id(destination_context->get_system_id()) &&
+        (system_ids::get_module_id(destination_context->get_system_id()) ==
+            m_destination_module_id) &&
         ((m_recipient_context == nullptr) ||
             transport_context->is_compatible_with(*m_recipient_context));
 }

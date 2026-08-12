@@ -58,6 +58,7 @@
     <ClInclude Include="include\system\async_state.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\erased_owner.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\erased_owner_transport.hpp"><Filter>include\system</Filter></ClInclude>
+    <ClInclude Include="include\system\erased_transport_admission.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\erased_pod.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\system_context.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\system_ids.hpp"><Filter>include\system</Filter></ClInclude>

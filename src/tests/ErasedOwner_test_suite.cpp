@@ -291,7 +291,7 @@ void test_erased_owner_transport_attribution(TTestContext& ctx)
     memory::CMemoryContext recipient_context(allocator, system_ids::host);
 
     threading::transports::CErasedOwnerTransport transport(
-        &transport_context, &recipient_context);
+        module_ids::executable, &transport_context, &recipient_context);
     threading::transports::CErasedOwnerProducerEndpoint producer(transport);
     threading::transports::CErasedOwnerConsumerEndpoint consumer(transport);
 
@@ -338,7 +338,12 @@ void test_erased_owner_transport_rejection(TTestContext& ctx)
     memory::CMemoryContext transport_context(transport_allocator, system_ids::host);
     memory::CMemoryContext incompatible_context(incompatible_allocator, system_ids::host);
 
-    threading::transports::CErasedOwnerTransport transport(&transport_context);
+    threading::transports::CErasedOwnerTransport transport(
+        module_ids::executable, &transport_context);
+    threading::transports::CErasedOwnerTransport mismatched_destination(
+        module_ids::application, &transport_context);
+    TEST_EXPECT(ctx, !mismatched_destination.initialise(32u));
+    TEST_EXPECT(ctx, !mismatched_destination.is_valid());
     CErasedOwner unready_owner = CErasedOwner::create<LoadedFile>(&incompatible_context);
     LoadedFile* const unready_payload = unready_owner.payload<LoadedFile>();
     TEST_EXPECT(ctx, !transport.post(std::move(unready_owner)));
@@ -416,7 +421,7 @@ void test_erased_owner_message_transport(TTestContext& ctx)
     memory::CMemoryContext recipient_context(allocator, system_ids::host);
 
     threading::transports::CErasedOwnerMsgTransport transport(
-        &transport_context, &recipient_context);
+        module_ids::executable, &transport_context, &recipient_context);
     threading::transports::CErasedOwnerMsgProducerEndpoint producer(transport);
     threading::transports::CErasedOwnerMsgConsumerEndpoint consumer(transport);
     TEST_EXPECT(ctx, transport.initialise(32u));

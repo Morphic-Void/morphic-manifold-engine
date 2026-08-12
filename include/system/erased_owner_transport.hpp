@@ -27,6 +27,7 @@ class CErasedOwnerTransport
 public:
     CErasedOwnerTransport() noexcept = default;
     explicit CErasedOwnerTransport(
+        module_ids::id_type destination_module_id,
         memory::CMemoryContext* transport_context,
         memory::CMemoryContext* recipient_context = nullptr) noexcept;
     CErasedOwnerTransport(const CErasedOwnerTransport&) = delete;
@@ -57,12 +58,17 @@ public:
     {
         return m_recipient_context;
     }
+    [[nodiscard]] module_ids::id_type destination_module_id() const noexcept
+    {
+        return m_destination_module_id;
+    }
 
 private:
     [[nodiscard]] bool attribution_is_valid() const noexcept;
 
     TOwning<CErasedOwner> m_transport;
     memory::CMemoryContext* const m_recipient_context{ nullptr };
+    module_ids::id_type m_destination_module_id{};
 };
 
 class CErasedOwnerProducerEndpoint

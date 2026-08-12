@@ -12,6 +12,8 @@
 #include "modules/application/application_local_type_registry.hpp"
 #include "modules/module_binding.hpp"
 #include "system/local_type_registry.hpp"
+#include "system/erased_transport_admission.hpp"
+#include "system/system_context.hpp"
 #include "system/system_id_registry.hpp"
 #include "system/transported_types.hpp"
 #include "system/type_registration.hpp"
@@ -156,6 +158,37 @@ void test_registration_categories(TTestContext& ctx)
     TEST_EXPECT(ctx, local_type_ids::is_valid_id(k_local_type_id_v<host::CHost>));
 }
 
+void test_erased_transport_admission(TTestContext& ctx)
+{
+    const module_ids::id_type previous_module_id =
+        system_context::set_ambient_module_id(module_ids::executable);
+
+    TEST_EXPECT(ctx, erased_transport_admission::is_admissible(
+        type_id{ system_type_ids::byte_buffer }, module_ids::executable));
+    TEST_EXPECT(ctx, erased_transport_admission::is_admissible(
+        type_id{ system_type_ids::byte_buffer }, module_ids::application));
+    TEST_EXPECT(ctx, erased_transport_admission::is_admissible(
+        type_id{ host_local_type_ids::host_runtime }, module_ids::executable));
+    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
+        type_id{ host_local_type_ids::host_runtime }, module_ids::application));
+    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
+        type_ids::undefined, module_ids::executable));
+    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
+        type_id{ system_type_ids::encode_id(
+            system_type_ids::encode_index(system_type_ids::k_count)) },
+        module_ids::executable));
+    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
+        type_id{ local_type_ids::encode_id(host_local_type_ids::k_count) },
+        module_ids::executable));
+    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
+        type_id{ system_type_ids::byte_buffer }, module_ids::id_type{}));
+
+    (void)system_context::set_ambient_module_id();
+    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
+        type_id{ system_type_ids::byte_buffer }, module_ids::executable));
+    (void)system_context::set_ambient_module_id(previous_module_id);
+}
+
 void test_advertised_identity_negotiation(TTestContext& ctx)
 {
     constexpr modules::SAdvertisedIdentity host_identity{
@@ -254,6 +287,7 @@ int run_system_type_identity_tests()
     test_encoding(ctx);
     test_category_bearing_identity(ctx);
     test_registration_categories(ctx);
+    test_erased_transport_admission(ctx);
     test_advertised_identity_negotiation(ctx);
     test_local_names_and_lookup(ctx);
     test_system_authority(ctx);

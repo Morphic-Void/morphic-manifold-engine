@@ -10,8 +10,10 @@
 #include <type_traits>
 
 #include "system/erased_pod.hpp"
+#include "system/system_context.hpp"
 #include "system/transported_types.hpp"
 #include "tests/ErasedPod_test_suite.hpp"
+#include "threading/messages/CErasedMessageTransports.hpp"
 #include "threading/messages/CErasedPodMsg.hpp"
 
 namespace erased_pod_test_types
@@ -262,6 +264,44 @@ void test_thread_message_clears_previous_representation(TTestContext& ctx)
     TEST_EXPECT(ctx, std::memcmp(&reused, &fresh, sizeof(reused)) == 0);
 }
 
+void test_concrete_erased_pod_transport_admission(TTestContext& ctx)
+{
+    const module_ids::id_type previous_module_id =
+        system_context::set_ambient_module_id(module_ids::executable);
+
+    threading::CErasedPodMsg source;
+    source.set_async_slot(17);
+    source.assign_payload(FileSaveResult{ true });
+
+    threading::transports::CErasedPodMsgTransport same_component(
+        module_ids::executable);
+    TEST_EXPECT(ctx, same_component.initialise_growable(4u));
+    TEST_EXPECT(ctx, same_component.destination_module_id() == module_ids::executable);
+    TEST_EXPECT(ctx, same_component.post(source));
+
+    threading::CErasedPodMsg received;
+    TEST_EXPECT(ctx, same_component.read(received));
+    FileSaveResult result{ false };
+    TEST_EXPECT(ctx, received.copy_payload_to(result));
+    TEST_EXPECT(ctx, result.success);
+    TEST_EXPECT(ctx, received.query_async_slot() == 17);
+    same_component.deallocate();
+
+    threading::transports::CErasedPodMsgTransport cross_component(
+        module_ids::application);
+    TEST_EXPECT(ctx, cross_component.initialise_fixed(4u));
+    TEST_EXPECT(ctx, cross_component.post(source));
+    TEST_EXPECT(ctx, cross_component.read(received));
+    cross_component.deallocate();
+
+    threading::transports::CErasedPodMsgTransport invalid_destination;
+    TEST_EXPECT(ctx, !invalid_destination.initialise_growable(4u));
+    TEST_EXPECT(ctx, !invalid_destination.posting_is_valid());
+    TEST_EXPECT(ctx, !invalid_destination.reading_is_valid());
+
+    (void)system_context::set_ambient_module_id(previous_module_id);
+}
+
 }   //  namespace
 
 int run_erased_pod_tests()
@@ -273,6 +313,7 @@ int run_erased_pod_tests()
     test_erased_pod_header_and_extended_alignment(ctx);
     test_thread_message_copy_boundary(ctx);
     test_thread_message_clears_previous_representation(ctx);
+    test_concrete_erased_pod_transport_admission(ctx);
 
     std::cout << "ErasedPod: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return ctx.failed;

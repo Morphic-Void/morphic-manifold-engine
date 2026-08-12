@@ -111,6 +111,13 @@ available only to the carrier transaction.
 `CErasedOwnerTransport` is the system-specific attribution-aware composition
 over the non-reattributable `TOwning<CErasedOwner>` primitive.
 
+The wrapper stores an explicit destination module. Admission happens only on
+post, deriving the source from the ambient module and rejecting unavailable
+identity registrations or LOCAL identity intended for another component
+before ownership or attribution is mutated. The destination must agree with
+the fixed recipient context, or with the transport context when no separate
+recipient is configured.
+
 On successful post:
 
 - readiness, writable capacity, and source compatibility are checked before
@@ -123,6 +130,9 @@ On successful read:
 - ownership first moves out of the underlying transport;
 - attribution then moves to the optional fixed recipient context;
 - without a recipient context, transport attribution is retained.
+
+Identity is not revalidated on read. The owning read side exists to perform
+the required memory re-attribution as ownership exits the transport.
 
 Transport and recipient allocator compatibility is validated before
 initialisation and ordinary operation. A read-time accounting failure still

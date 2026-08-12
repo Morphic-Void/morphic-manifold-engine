@@ -100,9 +100,9 @@ void CHost::initialise_debug_service() noexcept
 bool CHost::start_threads() noexcept
 {
     const threading::ThreadConfig thread_configs[k_thread_count]{
-        {thread_ids::bg_file_io, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
-        {thread_ids::bg_conditioning, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
-        {thread_ids::application, platform::threading::EThreadPriority::Normal, m_application_thread, &CBoundModule::prepare_thread, &m_application_module} };
+        {thread_ids::bg_file_io, module_ids::executable, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
+        {thread_ids::bg_conditioning, module_ids::executable, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
+        {thread_ids::application, module_ids::application, platform::threading::EThreadPriority::Normal, m_application_thread, &CBoundModule::prepare_thread, &m_application_module} };
 
     for (std::size_t thread_index = 0u; thread_index < k_thread_count; ++thread_index)
     {

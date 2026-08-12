@@ -267,6 +267,9 @@
     <ClInclude Include="include\system\erased_owner_transport.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
+    <ClInclude Include="include\system\erased_transport_admission.hpp">
+      <Filter>include\system</Filter>
+    </ClInclude>
     <ClInclude Include="include\system\erased_pod.hpp">
       <Filter>include\system</Filter>
     </ClInclude>

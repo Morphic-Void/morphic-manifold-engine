@@ -92,7 +92,21 @@ stored only in their component-owned `CASyncStates`. They therefore belong to
 their respective local tables rather than the system table. `TErasedPod` and
 `CASyncState` carry `type_id`, retain their existing fixed layouts, and accept
 either registered binding category. Shared erased messages remain SYSTEM-only
-until their concrete transports enforce destination-aware admission.
+until their category-bearing migration.
+
+Destination-aware admission belongs to the concrete erased-message and
+erased-owner wrappers, not the generic queue and owning transport templates.
+Each concrete wrapper stores its destination module. On `post()`, the source
+is the ambient module: a registered SYSTEM identity may be admitted to any
+valid destination, while a registered LOCAL identity requires source and
+destination to be the same module. Undefined, malformed, unavailable, and
+unregistered identities are rejected before copying, moving ownership, or
+changing memory attribution. Retrieval does not revalidate identity; owning
+retrieval only performs its required exit-side memory re-attribution.
+
+Owning wrappers additionally require the declared destination to match the
+module represented by the recipient context, or by the transport context when
+there is no distinct recipient.
 
 ## System Name Authority
 

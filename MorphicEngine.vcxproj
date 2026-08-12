@@ -351,6 +351,7 @@
     <ClInclude Include="include\system\erased_owner.hpp" />
     <ClInclude Include="include\system\async_state.hpp" />
     <ClInclude Include="include\system\erased_owner_transport.hpp" />
+    <ClInclude Include="include\system\erased_transport_admission.hpp" />
     <ClInclude Include="include\system\erased_pod.hpp" />
     <ClInclude Include="include\system\local_type_registration.hpp" />
     <ClInclude Include="include\system\local_type_registry.hpp" />

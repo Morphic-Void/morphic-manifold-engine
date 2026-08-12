@@ -38,6 +38,7 @@ using FThreadPrepare = bool(MV_STD_ABI_CALL*)(void* context, thread_ids::id_type
 struct ThreadConfig
 {
     thread_ids::id_type thread_id{};
+    module_ids::id_type worker_module_id{};
     platform::threading::EThreadPriority priority{ platform::threading::EThreadPriority::Normal };
     platform::threading::FThreadEntry entry_point{ nullptr };
     FThreadPrepare prepare{ nullptr };
@@ -52,6 +53,9 @@ public:
         const platform::system::CPerfCountConversion& perf_count_conversion) noexcept
         : config{ thread_config }
         , perf_count_conversion{ perf_count_conversion }
+        , host_to_worker_msgs{ thread_config.worker_module_id }
+        , worker_to_host_msgs{ module_ids::executable }
+        , worker_to_host_owned_msgs{ module_ids::executable, nullptr }
     {
     }
     ~CThreadResources() noexcept = default;
