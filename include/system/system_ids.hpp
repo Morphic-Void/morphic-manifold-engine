@@ -69,10 +69,9 @@ public:
     [[nodiscard]] constexpr Repr raw_value() const noexcept { return m_value; }
     [[nodiscard]] constexpr bool is_valid() const noexcept { return m_value != Repr{ 0 }; }
     explicit constexpr operator bool() const noexcept { return is_valid(); }
-    constexpr operator Repr() const noexcept { return m_value; }
 
 private:
-    Repr m_value;
+    Repr m_value{ 0 };
 };
 
 template<typename Tag, typename Repr>
@@ -125,6 +124,7 @@ struct TEncodedField
 
     static constexpr Repr k_id_field_mask = t_encoded_field_mask;
     static constexpr Repr k_payload_mask = (Repr{ 1 } << bit_ops::count_set_bits(k_id_field_mask)) - 1u;
+    static constexpr Repr k_capacity = k_payload_mask;
     static constexpr Repr k_invalid_id_mask = ~k_id_field_mask;
     static constexpr std::int32_t k_id_field_shift = bit_ops::lo_bit_index(k_id_field_mask);
 
@@ -147,7 +147,7 @@ struct TEncodedField
     {
         return is_valid_index(index)
             ? id_type(static_cast<Repr>(
-                bit_ops::spread_to_even_bits(((index.raw_value() + 1u) & k_payload_mask) ^ k_payload_mask) << k_id_field_shift))
+                bit_ops::spread_to_even_bits(k_payload_mask - index.raw_value()) << k_id_field_shift))
             : id_type{ Repr{ 0 } };
     }
 
@@ -155,7 +155,7 @@ struct TEncodedField
     {
         return is_valid_id(id)
             ? index_type(static_cast<Repr>(
-                (((bit_ops::pack_from_even_bits(id.raw_value() >> k_id_field_shift) ^ k_payload_mask) & k_payload_mask) - 1u)))
+                (k_payload_mask - bit_ops::pack_from_even_bits(id.raw_value() >> k_id_field_shift))))
             : index_type{};
     }
 };
@@ -288,6 +288,7 @@ using field = system_id_util::TEncodedField<
     runtime_id_layout::k_mount_point_field_mask>;
 using id_type = field::id_type;
 using index_type = field::index_type;
+static constexpr std::uint64_t k_capacity = field::k_capacity;
 }
 
 namespace thread_ids
@@ -299,6 +300,7 @@ using field = system_id_util::TEncodedField<
     runtime_id_layout::k_thread_field_mask>;
 using id_type = field::id_type;
 using index_type = field::index_type;
+static constexpr std::uint64_t k_capacity = field::k_capacity;
 }
 
 namespace module_ids
@@ -311,6 +313,7 @@ static constexpr std::uint64_t k_module_id_mask = runtime_id_layout::k_module_fi
 static constexpr std::uint64_t k_id_field_mask = k_mount_point_id_mask | k_module_id_mask;
 static constexpr std::uint64_t k_invalid_id_mask = ~k_id_field_mask;
 static constexpr std::uint64_t k_payload_mask = (std::uint64_t{ 1 } << runtime_id_layout::k_module_payload_bits) - 1u;
+static constexpr std::uint64_t k_capacity = k_payload_mask;
 static constexpr std::int32_t k_id_field_shift = bit_ops::lo_bit_index(k_module_id_mask);
 }
 
@@ -574,7 +577,7 @@ constexpr id_type make_id(const mount_point_ids::id_type mount_point_id, const i
 {
     return (mount_point_ids::is_valid_id(mount_point_id) && is_valid_index(module_index))
         ? id_type(mount_point_id.raw_value()
-            | (bit_ops::spread_to_even_bits(((module_index.raw_value() + 1u) & k_payload_mask) ^ k_payload_mask) << k_id_field_shift))
+            | (bit_ops::spread_to_even_bits(k_payload_mask - module_index.raw_value()) << k_id_field_shift))
         : id_type{ 0u };
 }
 
@@ -582,7 +585,7 @@ constexpr index_type decode_id(const id_type id) noexcept
 {
     return is_valid_id(id)
         ? index_type(static_cast<std::uint64_t>(
-            (((bit_ops::pack_from_even_bits(id.raw_value() >> k_id_field_shift) ^ k_payload_mask) & k_payload_mask) - 1u)))
+            (k_payload_mask - bit_ops::pack_from_even_bits(id.raw_value() >> k_id_field_shift))))
         : index_type{};
 }
 
@@ -691,6 +694,9 @@ enum : index_type::repr_type
 #undef MV_SYSTEM_MODULE
 #undef MV_SYSTEM_MOUNT_POINT
 
+static_assert((k_count <= k_capacity),
+    "The mount-point definition count exceeds the encoded mount-point capacity.");
+
 #define MV_SYSTEM_MOUNT_POINT(name) \
 constexpr index_type name##_index = make_index(name##_index_value); \
 constexpr id_type name = make_id(name##_index);
@@ -718,6 +724,9 @@ enum : index_type::repr_type
 #undef MV_SYSTEM_MODULE
 #undef MV_SYSTEM_MOUNT_POINT
 
+static_assert((k_count <= k_capacity),
+    "The module definition count exceeds the encoded module capacity.");
+
 #define MV_SYSTEM_MOUNT_POINT(name)
 #define MV_SYSTEM_MODULE(name, mount_point_name) \
 constexpr index_type name##_index = make_index(name##_index_value); \
@@ -742,6 +751,9 @@ enum : index_type::repr_type
     k_count
 };
 #undef MV_SYSTEM_THREAD
+
+static_assert((k_count <= k_capacity),
+    "The thread definition count exceeds the encoded thread capacity.");
 
 #define MV_SYSTEM_THREAD(name) \
 constexpr index_type name##_index = make_index(name##_index_value); \

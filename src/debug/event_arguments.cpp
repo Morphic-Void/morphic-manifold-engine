@@ -195,7 +195,7 @@ template<typename T>
     const bool valid = system_type_ids::is_valid_id(id);
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-type:0x%08x" : "invalid-type:0x%08x",
-        static_cast<unsigned int>(id));
+        static_cast<unsigned int>(id.raw_value()));
 
     return append(output, text, static_cast<std::size_t>(size));
 }

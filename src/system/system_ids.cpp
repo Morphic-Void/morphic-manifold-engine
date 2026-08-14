@@ -36,7 +36,10 @@ bool validate_view(const SSystemRegistryView& view) noexcept
         !table_shape_is_valid(view.mount_points, view.mount_point_count) ||
         !table_shape_is_valid(view.threads, view.thread_count) ||
         !table_shape_is_valid(view.modules, view.module_count) ||
-        (view.type_count > system_type_ids::k_capacity))
+        (view.type_count > system_type_ids::k_capacity) ||
+        (view.mount_point_count > mount_point_ids::k_capacity) ||
+        (view.thread_count > thread_ids::k_capacity) ||
+        (view.module_count > module_ids::k_capacity))
     {
         return false;
     }
@@ -112,15 +115,6 @@ bool install_view(const SSystemRegistryView& view) noexcept
 bool view_is_installed() noexcept { return s_view_installed; }
 const SSystemRegistryView* installed_view() noexcept { return s_view_installed ? &s_installed_view : nullptr; }
 
-const STypeRegistration* types() noexcept { return s_view_installed ? s_installed_view.types : nullptr; }
-std::uint32_t type_count() noexcept { return s_view_installed ? s_installed_view.type_count : 0u; }
-const SMountPointRegistration* mount_points() noexcept { return s_view_installed ? s_installed_view.mount_points : nullptr; }
-std::uint32_t mount_point_count() noexcept { return s_view_installed ? s_installed_view.mount_point_count : 0u; }
-const SThreadRegistration* threads() noexcept { return s_view_installed ? s_installed_view.threads : nullptr; }
-std::uint32_t thread_count() noexcept { return s_view_installed ? s_installed_view.thread_count : 0u; }
-const SModuleRegistration* modules() noexcept { return s_view_installed ? s_installed_view.modules : nullptr; }
-std::uint32_t module_count() noexcept { return s_view_installed ? s_installed_view.module_count : 0u; }
-
 const STypeRegistration* find_type(const SSystemRegistryView* const view, const system_type_id id) noexcept
 {
     if ((view == nullptr) || !system_type_ids::is_valid_id(id) ||
@@ -142,7 +136,9 @@ const STypeRegistration* find_type(const SSystemRegistryView* const view, const 
 
 const SMountPointRegistration* find_mount_point(const SSystemRegistryView* const view, const mount_point_ids::id_type id) noexcept
 {
-    if ((view == nullptr) || !mount_point_ids::is_valid_id(id) || !table_shape_is_valid(view->mount_points, view->mount_point_count))
+    if ((view == nullptr) || !mount_point_ids::is_valid_id(id) ||
+        (view->mount_point_count > mount_point_ids::k_capacity) ||
+        !table_shape_is_valid(view->mount_points, view->mount_point_count))
     {
         return nullptr;
     }
@@ -158,7 +154,9 @@ const SMountPointRegistration* find_mount_point(const SSystemRegistryView* const
 
 const SThreadRegistration* find_thread(const SSystemRegistryView* const view, const thread_ids::id_type id) noexcept
 {
-    if ((view == nullptr) || !thread_ids::is_valid_id(id) || !table_shape_is_valid(view->threads, view->thread_count))
+    if ((view == nullptr) || !thread_ids::is_valid_id(id) ||
+        (view->thread_count > thread_ids::k_capacity) ||
+        !table_shape_is_valid(view->threads, view->thread_count))
     {
         return nullptr;
     }
@@ -174,7 +172,9 @@ const SThreadRegistration* find_thread(const SSystemRegistryView* const view, co
 
 const SModuleRegistration* find_module(const SSystemRegistryView* const view, const module_ids::id_type id) noexcept
 {
-    if ((view == nullptr) || !module_ids::is_valid_id(id) || !table_shape_is_valid(view->modules, view->module_count))
+    if ((view == nullptr) || !module_ids::is_valid_id(id) ||
+        (view->module_count > module_ids::k_capacity) ||
+        !table_shape_is_valid(view->modules, view->module_count))
     {
         return nullptr;
     }
@@ -251,50 +251,6 @@ bool format_system_name(
     std::memcpy((destination + module->name_size + 1u), thread->name, thread->name_size);
     destination[required_size] = 0;
     out_size = required_size;
-    return true;
-}
-
-bool has_mount_point(const mount_point_ids::id_type id) noexcept { return find_mount_point(id) != nullptr; }
-
-mount_point_ids::id_type lookup_mount_point_id(const module_ids::id_type id) noexcept
-{
-    const SModuleRegistration* const registration = find_module(id);
-    return (registration != nullptr) ? registration->mount_point_id : mount_point_ids::id_type{};
-}
-
-bool validate_type_registrations() noexcept
-{
-    const SSystemRegistryView* const view = installed_view();
-    if (view == nullptr) return false;
-    for (std::uint32_t i = 0u; i < view->type_count; ++i)
-        if (find_type(view, view->types[i].id) != &view->types[i]) return false;
-    return true;
-}
-
-bool validate_mount_point_registrations() noexcept
-{
-    const SSystemRegistryView* const view = installed_view();
-    if (view == nullptr) return false;
-    for (std::uint32_t i = 0u; i < view->mount_point_count; ++i)
-        if (find_mount_point(view, view->mount_points[i].id) != &view->mount_points[i]) return false;
-    return true;
-}
-
-bool validate_thread_registrations() noexcept
-{
-    const SSystemRegistryView* const view = installed_view();
-    if (view == nullptr) return false;
-    for (std::uint32_t i = 0u; i < view->thread_count; ++i)
-        if (find_thread(view, view->threads[i].id) != &view->threads[i]) return false;
-    return true;
-}
-
-bool validate_module_registrations() noexcept
-{
-    const SSystemRegistryView* const view = installed_view();
-    if (view == nullptr) return false;
-    for (std::uint32_t i = 0u; i < view->module_count; ++i)
-        if (find_module(view, view->modules[i].id) != &view->modules[i]) return false;
     return true;
 }
 

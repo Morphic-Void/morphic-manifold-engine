@@ -56,6 +56,37 @@ void test_encoding(TTestContext& ctx)
     static_assert(local_type_ids::k_local_index_max == 0x7ffeu);
     static_assert(local_type_ids::k_capacity == system_type_ids::k_capacity);
     static_assert(!std::is_same_v<system_type_id, local_type_id>);
+    static_assert(!std::is_convertible_v<system_type_id, std::uint32_t>);
+    static_assert(!std::is_convertible_v<local_type_id, std::uint32_t>);
+    static_assert(!std::is_convertible_v<module_ids::id_type, std::uint64_t>);
+    static_assert(system_type_id{}.raw_value() == 0u);
+    static_assert(local_type_id{}.raw_value() == 0u);
+    static_assert(mount_point_ids::id_type{}.raw_value() == 0u);
+    static_assert(thread_ids::id_type{}.raw_value() == 0u);
+    static_assert(module_ids::id_type{}.raw_value() == 0u);
+    static_assert(system_ids::id_type{}.raw_value() == 0u);
+
+    constexpr mount_point_ids::index_type last_mount_point_index =
+        mount_point_ids::make_index(mount_point_ids::k_capacity - 1u);
+    constexpr thread_ids::index_type last_thread_index =
+        thread_ids::make_index(thread_ids::k_capacity - 1u);
+    constexpr module_ids::index_type last_module_index =
+        module_ids::make_index(module_ids::k_capacity - 1u);
+    constexpr mount_point_ids::id_type last_mount_point =
+        mount_point_ids::make_id(last_mount_point_index);
+    constexpr thread_ids::id_type last_thread = thread_ids::make_id(last_thread_index);
+    constexpr module_ids::id_type last_module =
+        module_ids::make_id(last_mount_point, last_module_index);
+    static_assert(mount_point_ids::is_valid_id(last_mount_point));
+    static_assert(thread_ids::is_valid_id(last_thread));
+    static_assert(module_ids::is_valid_id(last_module));
+    static_assert(mount_point_ids::decode_id(last_mount_point) == last_mount_point_index);
+    static_assert(thread_ids::decode_id(last_thread) == last_thread_index);
+    static_assert(module_ids::decode_id(last_module) == last_module_index);
+    static_assert(mount_point_ids::make_id(mount_point_ids::make_index(0u)).raw_value() ==
+        mount_point_ids::field::k_id_field_mask);
+    static_assert(thread_ids::make_id(thread_ids::make_index(0u)).raw_value() ==
+        thread_ids::field::k_id_field_mask);
 
     constexpr system_type_ids::index_type system_first_index = system_type_ids::encode_index(0u);
     constexpr system_type_ids::index_type system_last_index = system_type_ids::encode_index(system_type_ids::k_max_ordinal);
@@ -266,7 +297,9 @@ void test_system_authority(TTestContext& ctx)
 {
     TEST_EXPECT(ctx, system_id_registry::view_is_installed());
     TEST_EXPECT(ctx, system_id_registry::validate_all());
-    TEST_EXPECT(ctx, system_id_registry::installed_view() != nullptr);
+    const system_id_registry::SSystemRegistryView* const installed_view =
+        system_id_registry::installed_view();
+    TEST_EXPECT(ctx, installed_view != nullptr);
     TEST_EXPECT(ctx, !system_id_registry::install_view(host::system_registry_view()));
     TEST_EXPECT(ctx, system_id_registry::find_type(
         static_cast<const system_id_registry::SSystemRegistryView*>(nullptr),
@@ -288,6 +321,16 @@ void test_system_authority(TTestContext& ctx)
     const system_id_registry::SSystemRegistryView corrupt_view{ &corrupt, 1u };
     TEST_EXPECT(ctx, !system_id_registry::validate_view(corrupt_view));
     TEST_EXPECT(ctx, system_id_registry::find_type(&corrupt_view, corrupt.id) == nullptr);
+
+    system_id_registry::SSystemRegistryView oversized_view = *installed_view;
+    oversized_view.mount_point_count = static_cast<std::uint32_t>(mount_point_ids::k_capacity + 1u);
+    TEST_EXPECT(ctx, !system_id_registry::validate_view(oversized_view));
+    oversized_view = *installed_view;
+    oversized_view.thread_count = static_cast<std::uint32_t>(thread_ids::k_capacity + 1u);
+    TEST_EXPECT(ctx, !system_id_registry::validate_view(oversized_view));
+    oversized_view = *installed_view;
+    oversized_view.module_count = static_cast<std::uint32_t>(module_ids::k_capacity + 1u);
+    TEST_EXPECT(ctx, !system_id_registry::validate_view(oversized_view));
 }
 }   //  namespace identity_tests
 

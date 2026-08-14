@@ -1,7 +1,7 @@
 Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 License: MIT (see LICENSE file in repository root)
 
-# System And Local Type Identity
+# System And Local Identity
 
 ## Categories
 
@@ -68,6 +68,30 @@ LOCAL binding. `TTypeId<T>` and `k_type_id_v<T>` select the registered category
 and produce the category-bearing `type_id`; an unregistered type has no valid
 selector.
 
+All strong ID wrappers default to their canonical undefined value. Conversion
+to the underlying integer representation is deliberately unavailable; ABI,
+serialization, formatting, and dispatch code must request `raw_value()`
+explicitly.
+
+## Runtime Identity
+
+Runtime identity uses one 64-bit alternating-bit layout with independent
+fields for thread, mount-point, and module ordinals. A module ID combines a
+mount-point field with a module field, and a system ID combines a module ID
+with a thread field. The fields contain 16, 6, and 10 payload bits respectively.
+
+Each field reserves zero as undefined and maps ordinal `n` to
+`spread_to_even_bits(payload_mask - n)` at its field offset. Consequently every
+ordinary ordinal from zero through `payload_mask - 1` has a distinct nonzero
+encoding, and decoding every valid field reproduces its original ordinal.
+Generated mount-point, module, and thread definition counts are checked against
+those capacities at compile time.
+
+Structural validity means that an ID is nonzero, contains no bits outside its
+declared fields, and has every required constituent field. Registration is a
+separate stronger property established by lookup in the installed system
+registry.
+
 ## Local Definitions
 
 Each binary owns an immutable local definition table. The current physical
@@ -127,6 +151,11 @@ The host installs an immutable view containing host-lifetime pointers and
 fixed-width counts. Shared lookup code is compiled into each component and
 operates over its component-local copy of that view. Before installation,
 lookups safely return unresolved. Global names have no local short-name limit.
+View validation checks table shape and encoded capacity before traversal, then
+requires each entry to match its ordinal, encoded ID, relationship fields, and
+name. The public installed-registry surface exposes the immutable view,
+validated lookup and formatting, and one complete `validate_all()` diagnostic;
+it does not duplicate raw table access or per-table validation APIs.
 
 The debug argument codes reserved for local-type text and local-type failure
 remain unsupported. Activating them and copying validated local names into

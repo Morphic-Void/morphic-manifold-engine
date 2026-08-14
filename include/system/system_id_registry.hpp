@@ -77,15 +77,6 @@ static_assert(sizeof(SSystemRegistryView) == (sizeof(void*) * 8u));
 [[nodiscard]] bool view_is_installed() noexcept;
 [[nodiscard]] const SSystemRegistryView* installed_view() noexcept;
 
-[[nodiscard]] const STypeRegistration* types() noexcept;
-[[nodiscard]] std::uint32_t type_count() noexcept;
-[[nodiscard]] const SMountPointRegistration* mount_points() noexcept;
-[[nodiscard]] std::uint32_t mount_point_count() noexcept;
-[[nodiscard]] const SThreadRegistration* threads() noexcept;
-[[nodiscard]] std::uint32_t thread_count() noexcept;
-[[nodiscard]] const SModuleRegistration* modules() noexcept;
-[[nodiscard]] std::uint32_t module_count() noexcept;
-
 [[nodiscard]] const STypeRegistration* find_type(const SSystemRegistryView* const view, const system_type_id id) noexcept;
 [[nodiscard]] const SMountPointRegistration* find_mount_point(const SSystemRegistryView* const view, const mount_point_ids::id_type id) noexcept;
 [[nodiscard]] const SThreadRegistration* find_thread(const SSystemRegistryView* const view, const thread_ids::id_type id) noexcept;
@@ -107,12 +98,6 @@ static_assert(sizeof(SSystemRegistryView) == (sizeof(void*) * 8u));
     const std::size_t destination_capacity,
     std::size_t& out_size) noexcept;
 
-[[nodiscard]] bool has_mount_point(const mount_point_ids::id_type id) noexcept;
-[[nodiscard]] mount_point_ids::id_type lookup_mount_point_id(const module_ids::id_type id) noexcept;
-[[nodiscard]] bool validate_type_registrations() noexcept;
-[[nodiscard]] bool validate_mount_point_registrations() noexcept;
-[[nodiscard]] bool validate_thread_registrations() noexcept;
-[[nodiscard]] bool validate_module_registrations() noexcept;
 [[nodiscard]] bool validate_all() noexcept;
 
 }   //  namespace system_id_registry

@@ -463,7 +463,7 @@ void test_argument_formatting(TTestContext& ctx)
         expected_type_output,
         sizeof(expected_type_output),
         "file_load_request | unregistered-type:0x%08x | invalid-type:0x%08x",
-        static_cast<unsigned int>(unregistered_type_id),
+        static_cast<unsigned int>(unregistered_type_id.raw_value()),
         0x00000002u);
     TEST_EXPECT(ctx, expected_type_output_size > 0);
     TEST_EXPECT(ctx,
@@ -733,16 +733,13 @@ void test_system_id_name_registry(TTestContext& ctx)
     static_assert(system_type_ids::is_defined(system_type_ids::byte_buffer));
     static_assert(system_type_ids::is_valid_id(system_type_ids::byte_buffer));
 
-    TEST_EXPECT(ctx, system_id_registry::type_count() == system_type_ids::k_count);
-    TEST_EXPECT(ctx,
-        system_id_registry::mount_point_count() ==
-        mount_point_ids::k_count);
-    TEST_EXPECT(ctx, system_id_registry::thread_count() == thread_ids::k_count);
-    TEST_EXPECT(ctx, system_id_registry::module_count() == module_ids::k_count);
-    TEST_EXPECT(ctx, system_id_registry::validate_type_registrations());
-    TEST_EXPECT(ctx, system_id_registry::validate_mount_point_registrations());
-    TEST_EXPECT(ctx, system_id_registry::validate_thread_registrations());
-    TEST_EXPECT(ctx, system_id_registry::validate_module_registrations());
+    const system_id_registry::SSystemRegistryView* const registry =
+        system_id_registry::installed_view();
+    TEST_EXPECT(ctx, registry != nullptr);
+    TEST_EXPECT(ctx, registry->type_count == system_type_ids::k_count);
+    TEST_EXPECT(ctx, registry->mount_point_count == mount_point_ids::k_count);
+    TEST_EXPECT(ctx, registry->thread_count == thread_ids::k_count);
+    TEST_EXPECT(ctx, registry->module_count == module_ids::k_count);
     TEST_EXPECT(ctx, system_id_registry::validate_all());
 
     const system_id_registry::STypeRegistration* const type_registration =
@@ -1173,7 +1170,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
         "unregistered-local-type:0x%08x invalid-local-type:0x%08x",
         source_suffix,
         source_line + 1u,
-        static_cast<unsigned int>(unregistered_type_id),
+        static_cast<unsigned int>(unregistered_type_id.raw_value()),
         0x00000002u,
         static_cast<unsigned int>(unresolved_local.raw_value()),
         0x00000002u);
