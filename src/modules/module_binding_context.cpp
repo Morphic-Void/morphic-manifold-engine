@@ -54,6 +54,7 @@ EBindingResult CModuleBindingContext::bootstrap(SBootstrapFunctions* const funct
 {
     if ((functions == nullptr) || (m_config.query_function == nullptr) ||
         (m_config.query_local_type_registry_view == nullptr) ||
+        (m_config.query_local_erased_owner_operations_view == nullptr) ||
         !is_valid_advertised_identity(m_config.advertised_identity) ||
         !module_ids::is_valid_id(m_config.compatible_advertised_peer_id) ||
         (m_config.minimum_peer_version_major > m_config.maximum_peer_version_major))
@@ -66,7 +67,9 @@ EBindingResult CModuleBindingContext::bootstrap(SBootstrapFunctions* const funct
         return EBindingResult::already_installed;
     }
     const local_type_registry::SLocalTypeRegistryView& local_view = m_config.query_local_type_registry_view();
-    const erased_owner_operations::SRegistryView owner_operations{ erased_owner_operations::system_operations_view(), {} };
+    const erased_owner_operations::SRegistryView owner_operations{
+        erased_owner_operations::system_operations_view(),
+        m_config.query_local_erased_owner_operations_view() };
     if (!local_type_registry::validate_view(local_view) || !erased_owner_operations::validate_view(owner_operations))
     {
         return EBindingResult::invalid_argument;

@@ -232,6 +232,7 @@
     <ClCompile Include="src\host\host.cpp" />
     <ClCompile Include="src\host\bound_module.cpp" />
     <ClCompile Include="src\host\host_context.cpp" />
+    <ClCompile Include="src\host\host_erased_owner_operations.cpp" />
     <ClCompile Include="src\host\host_worker_thread.cpp" />
     <ClCompile Include="src\host\host_local_type_registry.cpp" />
     <ClCompile Include="src\host\system_id_definitions.cpp" />
@@ -315,7 +316,9 @@
     <ClInclude Include="include\debug\service.hpp" />
     <ClInclude Include="include\host\bound_module.hpp" />
     <ClInclude Include="include\host\host.hpp" />
+    <ClInclude Include="include\host\host_erased_owner_payloads.def" />
     <ClInclude Include="include\host\host_context.hpp" />
+    <ClInclude Include="include\host\host_local_types.hpp" />
     <ClInclude Include="include\host\host_worker_thread.hpp" />
     <ClInclude Include="include\host\host_local_type_ids.def" />
     <ClInclude Include="include\host\host_local_type_registry.hpp" />

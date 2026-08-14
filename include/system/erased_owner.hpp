@@ -6,9 +6,9 @@
 //  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    26 Jul 26
 //
-//  Move-only ownership for one registered, type-erased SYSTEM payload.
-//  The stored identity uses the category-bearing erased-carrier representation;
-//  construction and destruction remain closed over SYSTEM payload definitions.
+//  Move-only ownership for one explicitly eligible, registered type-erased
+//  payload. SYSTEM payloads may cross component boundaries; LOCAL payloads
+//  remain within the component whose operation authority defines them.
 
 #pragma once
 
@@ -25,7 +25,6 @@
 #include "memory/memory_token.hpp"
 #include "system/erased_owner_operations.hpp"
 #include "system/erased_owner_registration.hpp"
-#include "system/system_id_registry.hpp"
 #include "system/type_registration.hpp"
 
 class CErasedOwner
@@ -77,6 +76,8 @@ private:
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
     [[nodiscard]] const erased_owner_operations::SRegistration* operations() const noexcept;
+    [[nodiscard]] static bool identity_is_registered(type_id identity) noexcept;
+    [[nodiscard]] static bool memory_context_belongs_to_current_component(memory::CMemoryContext* context) noexcept;
     void make_canonical_empty() noexcept;
 
     template<typename T>
@@ -120,7 +121,7 @@ template<typename T>
 inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) noexcept
 {
     static_assert(k_is_erased_owner_payload_v<T>, "CErasedOwner may only create explicitly registered erased-owner payloads.");
-    static_assert(system_type_ids::is_valid_id(k_system_type_id_v<T>), "CErasedOwner payload registration must provide a valid type id.");
+    static_assert(k_type_id_v<T>.is_valid(), "CErasedOwner payload registration must provide a valid type id.");
     static_assert(std::is_nothrow_default_constructible_v<T>, "CErasedOwner payloads must be nothrow default constructible.");
     static_assert(std::is_nothrow_move_constructible_v<T>, "CErasedOwner payloads must be nothrow move constructible.");
     static_assert(std::is_nothrow_move_assignable_v<T>, "CErasedOwner payloads must be nothrow move assignable.");
@@ -128,17 +129,21 @@ inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) 
     static_assert((sizeof(T) <= 0xffffu), "CErasedOwner payload size exceeds the memory-token stride field.");
 
     CErasedOwner owner;
-    constexpr type_id identity{ k_system_type_id_v<T> };
-    const bool registered =
-        (system_id_registry::find_type(k_system_type_id_v<T>) != nullptr) &&
-        (erased_owner_operations::find(identity) != nullptr);
-    MV_CRITICAL_ASSERT(registered);
-    if (!registered)
+    constexpr type_id identity = k_type_id_v<T>;
+    const bool authority_available = identity_is_registered(identity) && (erased_owner_operations::find(identity) != nullptr);
+    MV_CRITICAL_ASSERT(authority_available);
+    if (!authority_available)
     {
         return owner;
     }
 
-    memory::CMemoryToken storage{ sizeof(T), alignof(T), context };
+    memory::CMemoryContext* const resolved_context = (context != nullptr) ? context : memory::get_ambient_memory_context();
+    if (identity.is_local() && !memory_context_belongs_to_current_component(resolved_context))
+    {
+        return owner;
+    }
+
+    memory::CMemoryToken storage{ sizeof(T), alignof(T), resolved_context };
     const bool allocated = storage.allocate(1u, false);
     MV_ASSERT(allocated);
     if (allocated)
@@ -154,14 +159,14 @@ template<typename T>
 inline T* CErasedOwner::payload() noexcept
 {
     static_assert(k_is_erased_owner_payload_v<T>, "CErasedOwner may only access explicitly registered erased-owner payloads.");
-    return (m_type_id == type_id{ k_system_type_id_v<T> }) ? static_cast<T*>(m_storage.data()) : nullptr;
+    return (m_type_id == k_type_id_v<T>) ? static_cast<T*>(m_storage.data()) : nullptr;
 }
 
 template<typename T>
 inline const T* CErasedOwner::payload() const noexcept
 {
     static_assert(k_is_erased_owner_payload_v<T>, "CErasedOwner may only access explicitly registered erased-owner payloads.");
-    return (m_type_id == type_id{ k_system_type_id_v<T> }) ? static_cast<const T*>(m_storage.data()) : nullptr;
+    return (m_type_id == k_type_id_v<T>) ? static_cast<const T*>(m_storage.data()) : nullptr;
 }
 
 template<typename T>

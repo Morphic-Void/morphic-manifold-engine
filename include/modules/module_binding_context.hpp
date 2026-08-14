@@ -14,6 +14,7 @@
 #define MODULE_BINDING_CONTEXT_HPP_INCLUDED
 
 #include "modules/module_binding.hpp"
+#include "system/erased_owner_operations.hpp"
 #include "system/local_type_registry.hpp"
 
 namespace modules
@@ -22,6 +23,7 @@ namespace modules
 struct SModuleBindingConfig
 {
     using FQueryLocalTypeRegistryView = const local_type_registry::SLocalTypeRegistryView&(MV_STD_ABI_CALL*)() noexcept;
+    using FQueryLocalErasedOwnerOperationsView = const erased_owner_operations::SCategoryView&(MV_STD_ABI_CALL*)() noexcept;
 
     SAdvertisedIdentity advertised_identity{};
     module_ids::id_type compatible_advertised_peer_id{};
@@ -29,6 +31,7 @@ struct SModuleBindingConfig
     std::uint32_t maximum_peer_version_major{ 0u };
     FQueryFunction query_function{ nullptr };
     FQueryLocalTypeRegistryView query_local_type_registry_view{ nullptr };
+    FQueryLocalErasedOwnerOperationsView query_local_erased_owner_operations_view{ nullptr };
 };
 
 class CModuleBindingContext

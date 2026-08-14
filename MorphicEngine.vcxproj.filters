@@ -438,6 +438,8 @@
     <ClInclude Include="include\host\host.hpp">
       <Filter>include\host</Filter>
     </ClInclude>
+    <ClInclude Include="include\host\host_erased_owner_payloads.def"><Filter>include\host</Filter></ClInclude>
+    <ClInclude Include="include\host\host_local_types.hpp"><Filter>include\host</Filter></ClInclude>
     <ClInclude Include="include\host\bound_module.hpp">
       <Filter>include\host</Filter>
     </ClInclude>
@@ -699,6 +701,7 @@
     <ClCompile Include="src\host\host_context.cpp">
       <Filter>src\host</Filter>
     </ClCompile>
+    <ClCompile Include="src\host\host_erased_owner_operations.cpp"><Filter>src\host</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="docs\containers\ByteBuffers.md">

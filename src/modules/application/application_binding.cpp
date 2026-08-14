@@ -44,7 +44,8 @@ constexpr modules::SModuleBindingConfig k_binding_config{
     modules::k_binding_abi_major,
     modules::k_binding_abi_major,
     &query_function,
-    &application::local_type_registry_view
+    &application::local_type_registry_view,
+    &application::local_erased_owner_operations_view
 };
 
 modules::CModuleBindingContext s_binding{ k_binding_config };

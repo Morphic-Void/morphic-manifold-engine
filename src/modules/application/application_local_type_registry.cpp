@@ -22,11 +22,17 @@ constexpr local_type_registry::SLocalTypeRegistration s_types[] =
 };
 
 constexpr local_type_registry::SLocalTypeRegistryView s_view{ s_types, static_cast<std::uint32_t>(application_local_type_ids::k_count) };
+constexpr erased_owner_operations::SCategoryView s_erased_owner_operations_view{};
 }   //  namespace local_types
 
 const local_type_registry::SLocalTypeRegistryView& MV_STD_ABI_CALL local_type_registry_view() noexcept
 {
     return local_types::s_view;
+}
+
+const erased_owner_operations::SCategoryView& MV_STD_ABI_CALL local_erased_owner_operations_view() noexcept
+{
+    return local_types::s_erased_owner_operations_view;
 }
 
 }   //  namespace application

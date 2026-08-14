@@ -93,6 +93,26 @@ private:
     memory::CMemoryContext* m_previous;
 };
 
+class TModuleIdScope
+{
+public:
+    explicit TModuleIdScope(const module_ids::id_type module_id) noexcept
+        : m_previous(system_context::set_ambient_module_id(module_id))
+    {
+    }
+
+    TModuleIdScope(const TModuleIdScope&) = delete;
+    TModuleIdScope& operator=(const TModuleIdScope&) = delete;
+
+    ~TModuleIdScope() noexcept
+    {
+        (void)system_context::set_ambient_module_id(m_previous);
+    }
+
+private:
+    module_ids::id_type m_previous;
+};
+
 void test_registration_and_empty_state(TTestContext& ctx)
 {
     static_assert(k_system_type_id_v<CByteBuffer> == system_type_ids::byte_buffer);
@@ -101,7 +121,14 @@ void test_registration_and_empty_state(TTestContext& ctx)
     static_assert(k_system_type_id_v<CStringBuffer> == system_type_ids::string_buffer);
     static_assert(k_system_type_id_v<CStableStrings> == system_type_ids::stable_strings);
     static_assert(k_is_erased_owner_payload_v<LoadedFile>);
+    static_assert(k_is_erased_owner_payload_v<host::SHostTgaFileLoadState>);
     static_assert(!k_is_erased_owner_payload_v<FileLoadRequest>);
+    static_assert(k_type_id_v<host::SHostTgaFileLoadState>.is_local());
+    static_assert(k_type_id_v<host::SHostTgaFileLoadState>.is_valid());
+    static_assert(std::is_nothrow_default_constructible_v<host::SHostTgaFileLoadState>);
+    static_assert(std::is_nothrow_move_constructible_v<host::SHostTgaFileLoadState>);
+    static_assert(std::is_nothrow_move_assignable_v<host::SHostTgaFileLoadState>);
+    static_assert(std::is_nothrow_destructible_v<host::SHostTgaFileLoadState>);
     static_assert(std::is_same_v<decltype(CErasedOwner{}.query_type_id()), type_id>);
 
     CErasedOwner owner;
@@ -123,7 +150,8 @@ void test_registration_and_empty_state(TTestContext& ctx)
 void test_operation_registry(TTestContext& ctx)
 {
     const erased_owner_operations::SRegistryView expected_view{
-        erased_owner_operations::system_operations_view(), {}
+        erased_owner_operations::system_operations_view(),
+        host::local_erased_owner_operations_view()
     };
     TEST_EXPECT(ctx, erased_owner_operations::validate_view(expected_view));
     TEST_EXPECT(ctx, erased_owner_operations::view_is_installed());
@@ -136,18 +164,127 @@ void test_operation_registry(TTestContext& ctx)
         erased_owner_operations::find(k_type_id_v<EncodedTga>);
     const erased_owner_operations::SRegistration* const decoded_tga =
         erased_owner_operations::find(k_type_id_v<DecodedTga>);
+    const erased_owner_operations::SRegistration* const host_file_load =
+        erased_owner_operations::find(k_type_id_v<host::SHostTgaFileLoadState>);
     TEST_EXPECT(ctx, (loaded_file != nullptr) &&
         loaded_file->operations.is_complete());
     TEST_EXPECT(ctx, (encoded_tga != nullptr) &&
         encoded_tga->operations.is_complete());
     TEST_EXPECT(ctx, (decoded_tga != nullptr) &&
         decoded_tga->operations.is_complete());
+    TEST_EXPECT(ctx, (host_file_load != nullptr) &&
+        host_file_load->operations.is_complete());
     TEST_EXPECT(ctx,
         erased_owner_operations::find(k_type_id_v<FileLoadRequest>) == nullptr);
     TEST_EXPECT(ctx,
         erased_owner_operations::find(k_type_id_v<host::CHost>) == nullptr);
     TEST_EXPECT(ctx,
         erased_owner_operations::find(type_ids::undefined) == nullptr);
+}
+
+void test_local_creation_moves_and_destruction(TTestContext& ctx)
+{
+    TAllocatorState state;
+    memory::CMemoryAllocator allocator(
+        &state, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext context(allocator, system_ids::host);
+    const TModuleIdScope module_scope(module_ids::executable);
+    const TMemoryContextScope context_scope(&context);
+
+    {
+        CErasedOwner source =
+            CErasedOwner::create<host::SHostTgaFileLoadState>();
+        host::SHostTgaFileLoadState* const payload =
+            source.payload<host::SHostTgaFileLoadState>();
+        TEST_EXPECT(ctx, source.is_ready());
+        TEST_EXPECT(ctx, source.query_type_id() ==
+            k_type_id_v<host::SHostTgaFileLoadState>);
+        TEST_EXPECT(ctx, payload != nullptr);
+        TEST_EXPECT(ctx, source.payload<LoadedFile>() == nullptr);
+        TEST_EXPECT(ctx, context.get_live_allocation_count() == 1u);
+
+        payload->application_slot = 41;
+        payload->file = "local-owner.tga";
+        payload->vflip = true;
+        source.add_hazard(mount_point_ids::asset);
+
+        CErasedOwner moved{ std::move(source) };
+        TEST_EXPECT(ctx, source.is_empty());
+        TEST_EXPECT(ctx, moved.payload<host::SHostTgaFileLoadState>() == payload);
+        TEST_EXPECT(ctx, moved.has_hazard(mount_point_ids::asset));
+
+        CErasedOwner destination =
+            CErasedOwner::create<host::SHostTgaFileLoadState>();
+        TEST_EXPECT(ctx, context.get_live_allocation_count() == 2u);
+        destination = std::move(moved);
+        TEST_EXPECT(ctx, moved.is_empty());
+        TEST_EXPECT(ctx, destination.payload<host::SHostTgaFileLoadState>() == payload);
+        const CErasedOwner& const_destination = destination;
+        const host::SHostTgaFileLoadState* const const_payload =
+            const_destination.payload<host::SHostTgaFileLoadState>();
+        TEST_EXPECT(ctx, const_payload != nullptr);
+        TEST_EXPECT(ctx, const_payload->application_slot == 41);
+        TEST_EXPECT(ctx, const_payload->file == payload->file);
+        TEST_EXPECT(ctx, const_payload->vflip);
+        TEST_EXPECT(ctx, context.get_live_allocation_count() == 1u);
+    }
+
+    TEST_EXPECT(ctx, context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, context.get_live_allocated_bytes() == 0u);
+}
+
+void test_local_context_boundaries(TTestContext& ctx)
+{
+    TAllocatorState state;
+    memory::CMemoryAllocator allocator(
+        &state, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext source_context(allocator, system_ids::host);
+    memory::CMemoryContext target_context(allocator, system_ids::host);
+    memory::CMemoryContext application_context(allocator, system_ids::application);
+    const TModuleIdScope module_scope(module_ids::executable);
+    const TMemoryContextScope context_scope(&source_context);
+
+    CErasedOwner owner = CErasedOwner::create<host::SHostTgaFileLoadState>();
+    host::SHostTgaFileLoadState* const payload =
+        owner.payload<host::SHostTgaFileLoadState>();
+    payload->application_slot = 72;
+    payload->file = "reattribute-local.tga";
+    payload->vflip = false;
+    owner.add_hazard(mount_point_ids::conditioning);
+
+    const std::uint32_t source_count = source_context.get_live_allocation_count();
+    const std::uint64_t source_bytes = source_context.get_live_allocated_bytes();
+    TEST_EXPECT(ctx, owner.can_reattribute_to(&target_context));
+    TEST_EXPECT(ctx, owner.reattribute(&target_context));
+    TEST_EXPECT(ctx, owner.memory_context() == &target_context);
+    TEST_EXPECT(ctx, owner.payload<host::SHostTgaFileLoadState>() == payload);
+    TEST_EXPECT(ctx, source_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, target_context.get_live_allocation_count() == source_count);
+    TEST_EXPECT(ctx, target_context.get_live_allocated_bytes() == source_bytes);
+
+    const std::uint32_t target_count = target_context.get_live_allocation_count();
+    const std::uint64_t target_bytes = target_context.get_live_allocated_bytes();
+    TEST_EXPECT(ctx, !owner.can_reattribute_to(&application_context));
+    TEST_EXPECT(ctx, !owner.reattribute(&application_context));
+    TEST_EXPECT(ctx, owner.is_ready());
+    TEST_EXPECT(ctx, owner.memory_context() == &target_context);
+    TEST_EXPECT(ctx, owner.payload<host::SHostTgaFileLoadState>() == payload);
+    TEST_EXPECT(ctx, payload->application_slot == 72);
+    TEST_EXPECT(ctx, payload->vflip == false);
+    TEST_EXPECT(ctx, owner.has_hazard(mount_point_ids::conditioning));
+    TEST_EXPECT(ctx, target_context.get_live_allocation_count() == target_count);
+    TEST_EXPECT(ctx, target_context.get_live_allocated_bytes() == target_bytes);
+    TEST_EXPECT(ctx, application_context.get_live_allocation_count() == 0u);
+
+    CErasedOwner wrong_component =
+        CErasedOwner::create<host::SHostTgaFileLoadState>(&application_context);
+    TEST_EXPECT(ctx, wrong_component.is_empty());
+    TEST_EXPECT(ctx, wrong_component.query_type_id() == type_ids::undefined);
+    TEST_EXPECT(ctx, application_context.get_live_allocation_count() == 0u);
+
+    owner.destroy();
+    TEST_EXPECT(ctx, target_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, target_context.get_live_allocated_bytes() == 0u);
 }
 
 void test_creation_accounting_and_destruction(TTestContext& ctx)
@@ -409,6 +546,73 @@ void test_erased_owner_transport_rejection(TTestContext& ctx)
     TEST_EXPECT(ctx, transport_context.get_live_allocation_count() == 0u);
 }
 
+void test_local_erased_owner_transport_boundaries(TTestContext& ctx)
+{
+    TAllocatorState state;
+    memory::CMemoryAllocator allocator(
+        &state, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext producer_context(allocator, system_ids::host);
+    memory::CMemoryContext transport_context(allocator, system_ids::host);
+    memory::CMemoryContext recipient_context(allocator, system_ids::host);
+    memory::CMemoryContext application_context(allocator, system_ids::application);
+    const TModuleIdScope module_scope(module_ids::executable);
+    const TMemoryContextScope context_scope(&producer_context);
+
+    threading::transports::CErasedOwnerTransport same_component(
+        module_ids::executable, &transport_context, &recipient_context);
+    TEST_EXPECT(ctx, same_component.initialise(4u));
+
+    CErasedOwner posted = CErasedOwner::create<host::SHostTgaFileLoadState>();
+    host::SHostTgaFileLoadState* const payload =
+        posted.payload<host::SHostTgaFileLoadState>();
+    payload->application_slot = 91;
+    payload->file = "same-component.tga";
+    payload->vflip = true;
+    posted.add_hazard(mount_point_ids::render);
+
+    TEST_EXPECT(ctx, same_component.post(std::move(posted)));
+    TEST_EXPECT(ctx, posted.is_empty());
+    CErasedOwner received;
+    TEST_EXPECT(ctx, same_component.read(received));
+    TEST_EXPECT(ctx, received.payload<host::SHostTgaFileLoadState>() == payload);
+    TEST_EXPECT(ctx, received.memory_context() == &recipient_context);
+    TEST_EXPECT(ctx, payload->application_slot == 91);
+    TEST_EXPECT(ctx, payload->vflip);
+    TEST_EXPECT(ctx, received.has_hazard(mount_point_ids::render));
+    received.destroy();
+    same_component.deallocate();
+
+    threading::transports::CErasedOwnerTransport cross_component(
+        module_ids::application, &application_context);
+    TEST_EXPECT(ctx, cross_component.initialise(4u));
+    CErasedOwner rejected = CErasedOwner::create<host::SHostTgaFileLoadState>();
+    host::SHostTgaFileLoadState* const rejected_payload =
+        rejected.payload<host::SHostTgaFileLoadState>();
+    rejected_payload->application_slot = 92;
+    rejected_payload->file = "cross-component.tga";
+    rejected_payload->vflip = false;
+    rejected.add_hazard(mount_point_ids::asset);
+    memory::CMemoryContext* const rejected_context = rejected.memory_context();
+    const std::uint32_t producer_count = producer_context.get_live_allocation_count();
+    const std::uint64_t producer_bytes = producer_context.get_live_allocated_bytes();
+
+    TEST_EXPECT(ctx, !cross_component.post(std::move(rejected)));
+    TEST_EXPECT(ctx, rejected.is_ready());
+    TEST_EXPECT(ctx, rejected.payload<host::SHostTgaFileLoadState>() == rejected_payload);
+    TEST_EXPECT(ctx, rejected.memory_context() == rejected_context);
+    TEST_EXPECT(ctx, rejected_payload->application_slot == 92);
+    TEST_EXPECT(ctx, rejected_payload->vflip == false);
+    TEST_EXPECT(ctx, rejected.has_hazard(mount_point_ids::asset));
+    TEST_EXPECT(ctx, producer_context.get_live_allocation_count() == producer_count);
+    TEST_EXPECT(ctx, producer_context.get_live_allocated_bytes() == producer_bytes);
+    TEST_EXPECT(ctx, application_context.get_live_allocation_count() == 1u);
+
+    rejected.destroy();
+    cross_component.deallocate();
+    TEST_EXPECT(ctx, producer_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, application_context.get_live_allocation_count() == 0u);
+}
+
 void test_erased_owner_message(TTestContext& ctx)
 {
     static_assert(std::is_same_v<
@@ -539,6 +743,8 @@ int run_erased_owner_tests()
     TTestContext ctx;
     test_registration_and_empty_state(ctx);
     test_operation_registry(ctx);
+    test_local_creation_moves_and_destruction(ctx);
+    test_local_context_boundaries(ctx);
     test_creation_accounting_and_destruction(ctx);
     test_moves_and_hazards(ctx);
     test_allocation_failure_is_canonical(ctx);
@@ -547,6 +753,7 @@ int run_erased_owner_tests()
     test_existing_owning_transport(ctx);
     test_erased_owner_transport_attribution(ctx);
     test_erased_owner_transport_rejection(ctx);
+    test_local_erased_owner_transport_boundaries(ctx);
     test_erased_owner_message(ctx);
     test_erased_owner_message_transport(ctx);
 

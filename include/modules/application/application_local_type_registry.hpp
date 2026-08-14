@@ -13,6 +13,7 @@
 
 #include "system/local_type_registration.hpp"
 #include "system/local_type_registry.hpp"
+#include "system/erased_owner_operations.hpp"
 #include "platform/platform_defines.hpp"
 
 namespace application
@@ -21,6 +22,7 @@ struct CApplicationModuleTag {};
 struct SApplicationTgaLoadState;
 struct SApplicationTgaSaveState;
 [[nodiscard]] const local_type_registry::SLocalTypeRegistryView& MV_STD_ABI_CALL local_type_registry_view() noexcept;
+[[nodiscard]] const erased_owner_operations::SCategoryView& MV_STD_ABI_CALL local_erased_owner_operations_view() noexcept;
 }
 
 namespace application_local_type_ids

@@ -11,17 +11,17 @@
 #ifndef HOST_LOCAL_TYPE_REGISTRY_HPP_INCLUDED
 #define HOST_LOCAL_TYPE_REGISTRY_HPP_INCLUDED
 
+#include "host/host_local_types.hpp"
+#include "system/erased_owner_operations.hpp"
+#include "system/erased_owner_registration.hpp"
 #include "system/local_type_registration.hpp"
 #include "system/local_type_registry.hpp"
 
 namespace host
 {
 class CHost;
-struct SHostTgaFileLoadState;
-struct SHostTgaDecodeState;
-struct SHostTgaEncodeState;
-struct SHostTgaFileSaveState;
 [[nodiscard]] const local_type_registry::SLocalTypeRegistryView& local_type_registry_view() noexcept;
+[[nodiscard]] const erased_owner_operations::SCategoryView& local_erased_owner_operations_view() noexcept;
 }
 
 namespace host_local_type_ids
@@ -49,5 +49,12 @@ static_assert(k_count <= local_type_ids::k_capacity);
     MV_REGISTER_LOCAL_TYPE(cpp_type, host_local_type_ids::name);
 #include "host/host_local_type_ids.def"
 #undef MV_LOCAL_TYPE
+
+#define MV_ERASED_OWNER_PAYLOAD(type) MV_REGISTER_ERASED_OWNER_PAYLOAD(type);
+#define MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE(type, member) \
+    MV_REGISTER_ERASED_OWNER_PAYLOAD(type);
+#include "host/host_erased_owner_payloads.def"
+#undef MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE
+#undef MV_ERASED_OWNER_PAYLOAD
 
 #endif  //  HOST_LOCAL_TYPE_REGISTRY_HPP_INCLUDED

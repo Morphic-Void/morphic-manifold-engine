@@ -12,6 +12,8 @@
 #include <utility>      //  std::move
 
 #include "system/erased_owner.hpp"
+#include "system/local_type_registry.hpp"
+#include "system/system_id_registry.hpp"
 
 CErasedOwner::CErasedOwner(CErasedOwner&& other) noexcept
     : m_storage(std::move(other.m_storage))
@@ -47,7 +49,8 @@ void CErasedOwner::destroy() noexcept
         const erased_owner_operations::SRegistration* const registration =
             operations();
         const bool can_destroy =
-            (payload != nullptr) && (registration != nullptr);
+            (payload != nullptr) && (registration != nullptr) &&
+            (!m_type_id.is_local() || memory_context_belongs_to_current_component(m_storage.context()));
         MV_CRITICAL_ASSERT(can_destroy);
         if (can_destroy)
         {
@@ -92,6 +95,9 @@ bool CErasedOwner::can_reattribute_to(memory::CMemoryContext* const target) cons
         operations();
     return is_ready() && memory_source_context(source) &&
         (registration != nullptr) &&
+        (!m_type_id.is_local() ||
+            (memory_context_belongs_to_current_component(source) &&
+                memory_context_belongs_to_current_component(resolved_target))) &&
         m_storage.can_reattribute_to(resolved_target) &&
         registration->operations.can_reattribute_to(m_storage.data(), resolved_target);
 }
@@ -182,6 +188,28 @@ std::uint64_t CErasedOwner::memory_allocation_size() const noexcept
 const erased_owner_operations::SRegistration* CErasedOwner::operations() const noexcept
 {
     return erased_owner_operations::find(m_type_id);
+}
+
+bool CErasedOwner::identity_is_registered(const type_id identity) noexcept
+{
+    system_type_id system_identity;
+    if (identity.try_system_type_id(system_identity))
+    {
+        return system_id_registry::find_type(system_identity) != nullptr;
+    }
+
+    local_type_id local_identity;
+    return identity.try_local_type_id(local_identity) &&
+        (local_type_registry::find_type(local_identity) != nullptr);
+}
+
+bool CErasedOwner::memory_context_belongs_to_current_component(memory::CMemoryContext* const context) noexcept
+{
+    const module_ids::id_type ambient_module_id = system_context::get_ambient_module_id();
+    return (context != nullptr) && context->is_usable() &&
+        module_ids::is_valid_id(ambient_module_id) &&
+        system_ids::is_valid_id(context->get_system_id()) &&
+        (system_ids::get_module_id(context->get_system_id()) == ambient_module_id);
 }
 
 bool CErasedOwner::validate_no_nested_memory_source(const void* const payload, memory::CMemoryContext* const source) noexcept

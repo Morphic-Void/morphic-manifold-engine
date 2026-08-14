@@ -43,33 +43,6 @@
 namespace host
 {
 
-struct SHostTgaFileLoadState
-{
-    std::int32_t application_slot;
-    const char* file;
-    bool vflip;
-};
-
-struct SHostTgaDecodeState
-{
-    std::int32_t application_slot;
-    CAssetId loaded_file;
-};
-
-struct SHostTgaEncodeState
-{
-    std::int32_t application_slot;
-    CAssetId source;
-    const char* file;
-    image::codec::tga::EncodeOptions options;
-};
-
-struct SHostTgaFileSaveState
-{
-    std::int32_t application_slot;
-    CAssetId encoded_file;
-};
-
 CHost::~CHost() noexcept
 {
     shutdown();
