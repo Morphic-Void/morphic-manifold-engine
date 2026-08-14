@@ -87,9 +87,10 @@ An owning token owns exactly the allocation it holds. Moving a token transfers C
 
 A view is only a reference to storage. Copying, moving, adopting, or deriving a view does not transfer allocation ownership and does not affect allocation accounting.
 
-The system-owned `CErasedOwner` carrier uses a memory token to own one payload
-allocation. Its type registration, destruction policy, and hazard semantics
-belong to the system layer rather than the memory substrate.
+The system-layer `CErasedOwner` carrier uses a memory token to own one payload
+allocation. Its SYSTEM-or-LOCAL type registration, component-local operation
+authority, destruction policy, and hazard semantics belong above the memory
+substrate.
 
 Allocator interfaces and allocation contexts are not storage owners. An allocation context routes allocations and records accounting; the allocator object referenced by the context is externally owned and must remain valid for all allocations and deallocations routed through it.
 
@@ -362,6 +363,11 @@ tokens, perform one aggregate context transaction, and only then replace every
 token context without additional accounting. Empty tokens are rebound with
 their owner after a successful transaction. Failure before commit leaves the
 object and all token contexts unchanged.
+
+A LOCAL `CErasedOwner` additionally requires both source and target contexts to
+belong to the ambient component. This provenance check precedes the aggregate
+transaction, preventing direct reattribution from becoming an accidental
+component-boundary transfer.
 
 Container reattribution covers only storage owned directly by the container. It
 does not reattribute allocations owned by contained objects.

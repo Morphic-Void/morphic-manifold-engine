@@ -92,6 +92,8 @@ static_assert(std::is_standard_layout_v<SRegistryView> && std::is_trivially_copy
 static_assert(sizeof(SRegistryView) == (sizeof(void*) * 4u));
 
 [[nodiscard]] bool validate_view(const SRegistryView& view) noexcept;
+//  Installation is one-shot. There is deliberately no uninstall operation:
+//  component-local authority remains available for the component lifetime.
 [[nodiscard]] bool install_view(const SRegistryView& view) noexcept;
 [[nodiscard]] bool view_is_installed() noexcept;
 [[nodiscard]] const SRegistryView* installed_view() noexcept;

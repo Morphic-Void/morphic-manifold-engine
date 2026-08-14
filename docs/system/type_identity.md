@@ -132,8 +132,11 @@ module represented by the recipient context, or by the transport context when
 there is no distinct recipient. `SErasedMsgHeader`, `CErasedPodMsg`,
 `CErasedOwnerMsg`, `CErasedOwner`, and `CAssetRecord` expose category-bearing
 identity without changing their established fixed layouts. `CErasedOwner`
-creation and destruction remain deliberately closed over registered SYSTEM
-payloads even though the carrier field preserves the umbrella category.
+supports explicitly eligible SYSTEM and LOCAL payloads. SYSTEM operations are
+compiled into every receiving component; LOCAL operations exist only in the
+defining component. Direct LOCAL-owner reattribution also requires source and
+target contexts to belong to that component, independently of transport
+admission.
 
 Message dispatch compares the umbrella value locally. An unrecognised value
 must be explicitly extracted as SYSTEM before it can enter the SYSTEM-only

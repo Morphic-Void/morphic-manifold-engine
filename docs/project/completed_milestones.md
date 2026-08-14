@@ -104,8 +104,10 @@ type registration.
 closed-world move-only carrier:
 
 - one registered payload is placement-constructed in token-owned storage;
-- explicit system-owned switches perform erased destruction and
-  reattribution;
+- component-local immutable tables dispatch erased destruction, accounting,
+  validation, and reattribution for eligible SYSTEM and LOCAL payloads;
+- SYSTEM operations are compiled into each receiving component while LOCAL
+  operations remain only in their defining component;
 - no vptr, callback, deleter, or executable operation pointer crosses a module
   lifetime boundary;
 - payload addresses remain stable across owner and transport movement;

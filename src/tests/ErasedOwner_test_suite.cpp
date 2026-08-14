@@ -6,6 +6,7 @@
 //  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    12 Aug 26
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -182,6 +183,41 @@ void test_operation_registry(TTestContext& ctx)
         erased_owner_operations::find(type_ids::undefined) == nullptr);
 }
 
+void test_operation_registry_failure_boundaries(TTestContext& ctx)
+{
+    std::array<erased_owner_operations::SRegistration,
+        host_local_type_ids::k_count> missing_local_operations{};
+    const erased_owner_operations::SRegistryView missing_view{
+        erased_owner_operations::system_operations_view(),
+        { missing_local_operations.data(),
+            static_cast<std::uint32_t>(missing_local_operations.size()) }
+    };
+    TEST_EXPECT(ctx, erased_owner_operations::validate_view(missing_view));
+    TEST_EXPECT(ctx, erased_owner_operations::find(
+        &missing_view, k_type_id_v<host::SHostTgaFileLoadState>) == nullptr);
+    TEST_EXPECT(ctx, erased_owner_operations::find(
+        &missing_view, k_type_id_v<LoadedFile>) != nullptr);
+
+    auto incomplete_local_operations = missing_local_operations;
+    const std::uint32_t local_index = local_type_ids::decode_index(
+        local_type_ids::decode_id(
+            k_local_type_id_v<host::SHostTgaFileLoadState>));
+    incomplete_local_operations[local_index].identity =
+        k_type_id_v<host::SHostTgaFileLoadState>;
+    const erased_owner_operations::SRegistryView incomplete_view{
+        erased_owner_operations::system_operations_view(),
+        { incomplete_local_operations.data(),
+            static_cast<std::uint32_t>(incomplete_local_operations.size()) }
+    };
+    TEST_EXPECT(ctx, !erased_owner_operations::validate_view(incomplete_view));
+    TEST_EXPECT(ctx, erased_owner_operations::find(
+        &incomplete_view, k_type_id_v<host::SHostTgaFileLoadState>) == nullptr);
+
+    TEST_EXPECT(ctx, erased_owner_operations::view_is_installed());
+    TEST_EXPECT(ctx, erased_owner_operations::find(
+        k_type_id_v<host::SHostTgaFileLoadState>) != nullptr);
+}
+
 void test_local_creation_moves_and_destruction(TTestContext& ctx)
 {
     TAllocatorState state;
@@ -347,6 +383,7 @@ void test_allocation_failure_is_canonical(TTestContext& ctx)
     memory::CMemoryAllocator allocator(
         &state, allocate_test_memory, deallocate_test_memory, system_ids::host);
     memory::CMemoryContext context(allocator, system_ids::host);
+    const TModuleIdScope module_scope(module_ids::executable);
 
     CErasedOwner owner = CErasedOwner::create<LoadedFile>(&context);
 
@@ -354,6 +391,14 @@ void test_allocation_failure_is_canonical(TTestContext& ctx)
     TEST_EXPECT(ctx, !owner.is_ready());
     TEST_EXPECT(ctx, owner.query_type_id() == type_ids::undefined);
     TEST_EXPECT(ctx, owner.hazard_mask() == 0u);
+    TEST_EXPECT(ctx, context.get_live_allocation_count() == 0u);
+
+    CErasedOwner local_owner =
+        CErasedOwner::create<host::SHostTgaFileLoadState>(&context);
+    TEST_EXPECT(ctx, local_owner.is_empty());
+    TEST_EXPECT(ctx, !local_owner.is_ready());
+    TEST_EXPECT(ctx, local_owner.query_type_id() == type_ids::undefined);
+    TEST_EXPECT(ctx, local_owner.hazard_mask() == 0u);
     TEST_EXPECT(ctx, context.get_live_allocation_count() == 0u);
 }
 
@@ -660,6 +705,7 @@ void test_erased_owner_message_transport(TTestContext& ctx)
     memory::CMemoryContext producer_context(allocator, system_ids::host);
     memory::CMemoryContext transport_context(allocator, system_ids::host);
     memory::CMemoryContext recipient_context(allocator, system_ids::host);
+    const TModuleIdScope module_scope(module_ids::executable);
 
     threading::transports::CErasedOwnerMsgTransport transport(
         module_ids::executable, &transport_context, &recipient_context);
@@ -710,6 +756,26 @@ void test_erased_owner_message_transport(TTestContext& ctx)
     TEST_EXPECT(ctx, received.query_message_type_id().is_local());
     TEST_EXPECT(ctx, received.query_async_slot() == 33);
 
+    threading::CErasedOwnerMsg local_owned_message;
+    local_owned_message.set_message_type<host::CHost>();
+    local_owned_message.set_async_slot(36);
+    CErasedOwner local_content =
+        CErasedOwner::create<host::SHostTgaFileLoadState>();
+    host::SHostTgaFileLoadState* const local_payload =
+        local_content.payload<host::SHostTgaFileLoadState>();
+    local_payload->application_slot = 36;
+    local_payload->file = "local-message-owner.tga";
+    local_payload->vflip = true;
+    local_content.add_hazard(mount_point_ids::conditioning);
+    local_owned_message.set_owner(std::move(local_content));
+    TEST_EXPECT(ctx, producer.post(std::move(local_owned_message)));
+    TEST_EXPECT(ctx, consumer.read(received));
+    TEST_EXPECT(ctx, received.is_message_a<host::CHost>());
+    TEST_EXPECT(ctx, received.query_async_slot() == 36);
+    TEST_EXPECT(ctx, received.owner().payload<host::SHostTgaFileLoadState>() == local_payload);
+    TEST_EXPECT(ctx, received.owner().memory_context() == &recipient_context);
+    TEST_EXPECT(ctx, received.owner().has_hazard(mount_point_ids::conditioning));
+
     memory::CMemoryContext application_transport_context(
         allocator, system_ids::application);
     threading::transports::CErasedOwnerMsgTransport cross_component(
@@ -723,6 +789,32 @@ void test_erased_owner_message_transport(TTestContext& ctx)
     TEST_EXPECT(ctx, rejected_local.is_message_a<host::CHost>());
     TEST_EXPECT(ctx, rejected_local.query_async_slot() == 34);
 
+    threading::CErasedOwnerMsg rejected_local_owner;
+    rejected_local_owner.set_message_type<FileLoadResult>();
+    rejected_local_owner.set_async_slot(37);
+    CErasedOwner rejected_content =
+        CErasedOwner::create<host::SHostTgaFileLoadState>();
+    host::SHostTgaFileLoadState* const rejected_payload =
+        rejected_content.payload<host::SHostTgaFileLoadState>();
+    rejected_payload->application_slot = 37;
+    rejected_payload->file = "rejected-local-message-owner.tga";
+    rejected_payload->vflip = false;
+    rejected_content.add_hazard(mount_point_ids::asset);
+    memory::CMemoryContext* const rejected_context = rejected_content.memory_context();
+    rejected_local_owner.set_owner(std::move(rejected_content));
+    const std::uint32_t producer_count = producer_context.get_live_allocation_count();
+    const std::uint64_t producer_bytes = producer_context.get_live_allocated_bytes();
+    TEST_EXPECT(ctx, !cross_component.post(std::move(rejected_local_owner)));
+    TEST_EXPECT(ctx, rejected_local_owner.is_message_a<FileLoadResult>());
+    TEST_EXPECT(ctx, rejected_local_owner.query_async_slot() == 37);
+    TEST_EXPECT(ctx, rejected_local_owner.owner().payload<host::SHostTgaFileLoadState>() == rejected_payload);
+    TEST_EXPECT(ctx, rejected_local_owner.owner().memory_context() == rejected_context);
+    TEST_EXPECT(ctx, rejected_payload->application_slot == 37);
+    TEST_EXPECT(ctx, rejected_payload->vflip == false);
+    TEST_EXPECT(ctx, rejected_local_owner.owner().has_hazard(mount_point_ids::asset));
+    TEST_EXPECT(ctx, producer_context.get_live_allocation_count() == producer_count);
+    TEST_EXPECT(ctx, producer_context.get_live_allocated_bytes() == producer_bytes);
+
     threading::CErasedOwnerMsg admitted_system;
     admitted_system.set_message_type<FileLoadResult>();
     admitted_system.set_async_slot(35);
@@ -732,8 +824,14 @@ void test_erased_owner_message_transport(TTestContext& ctx)
     TEST_EXPECT(ctx, received.query_async_slot() == 35);
     cross_component.deallocate();
 
+    rejected_local_owner.owner().destroy();
+    TEST_EXPECT(ctx, producer_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, producer_context.get_live_allocated_bytes() == 0u);
+    TEST_EXPECT(ctx, application_transport_context.get_live_allocation_count() == 0u);
+
     transport.deallocate();
     TEST_EXPECT(ctx, transport_context.get_live_allocation_count() == 0u);
+    TEST_EXPECT(ctx, recipient_context.get_live_allocation_count() == 0u);
 }
 
 }   //  namespace
@@ -743,6 +841,7 @@ int run_erased_owner_tests()
     TTestContext ctx;
     test_registration_and_empty_state(ctx);
     test_operation_registry(ctx);
+    test_operation_registry_failure_boundaries(ctx);
     test_local_creation_moves_and_destruction(ctx);
     test_local_context_boundaries(ctx);
     test_creation_accounting_and_destruction(ctx);

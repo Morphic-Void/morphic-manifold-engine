@@ -9,37 +9,47 @@ Date:   26 Jul 2026
 
 ## Purpose
 
-`CErasedOwner` is the move-only system carrier for one registered payload whose
-concrete type is known to the closed executable and module set. It is intended
-for non-POD payload ownership and is distinct from `TErasedPod`, which stores
-bounded trivially copyable data inline and may use either SYSTEM or LOCAL
-identity when confined to one component.
+`CErasedOwner` is the move-only carrier for one explicitly eligible registered
+payload. SYSTEM payloads are the deliberate cross-component representation.
+LOCAL payloads are valid while ownership remains inside the binary component
+that defines their identity and operations. The carrier is intended for
+non-POD payload ownership and is distinct from `TErasedPod`, which stores
+bounded trivially copyable data inline.
 
 The carrier owns direct payload storage through `CMemoryToken`. It contains no
-virtual interface, destructor pointer, or other executable address that could
-outlive a module. Destruction is selected in system-owned code by the generated
-type ID.
+virtual interface, destructor pointer, operation pointer, or other executable
+address that could outlive a module. The category-bearing type ID selects an
+operation from the registry installed in the component executing the action.
 
 The carrier layout is fixed at 32 bytes on x64 and 24 bytes on x86. The token
 remains outside the allocation it may release.
 
 ## Registration
 
-System payload identity is declared in `system/system_type_ids.def` and associated
-with a C++ type through `MV_REGISTER_SYSTEM_TYPE`.
+SYSTEM payload identity is declared in `system/system_type_ids.def` and
+associated with a C++ type through `MV_REGISTER_SYSTEM_TYPE`. LOCAL identity is
+declared in the defining component's local type list and associated through
+`MV_REGISTER_LOCAL_TYPE`.
 
 The owner stores and exposes the category-bearing `type_id`, matching other
-erased carriers. Its creation, typed payload access, closed-world destruction,
-and memory re-attribution hooks remain restricted to explicitly registered
-SYSTEM payload types.
+erased carriers. `create<T>()` and `payload<T>()` use `k_type_id_v<T>` and are
+neutral to the registered category.
 
 Owning-erasure eligibility is a separate explicit trait declared with
 `MV_REGISTER_ERASED_OWNER_PAYLOAD`. A type ID does not by itself permit a type
 to be carried by `CErasedOwner`.
 
-Every eligible type must have an explicit destruction case in
-`src/system/erased_owner.cpp`. Registration and lifetime handling therefore
-remain a small, auditable closed-world operation.
+Eligibility declarations also generate component-local operation entries.
+Each entry contains destruction, nested allocation accounting, memory-source
+validation, reattribution preflight, and post-accounting context replacement.
+The common factories express the no-nested-allocation case and the nested
+storage-member case without duplicating operation logic.
+
+SYSTEM operation declarations are compiled into every component that may
+receive and destroy those payloads. A component separately generates the LOCAL
+entries for its own eligible types; common core sources never reference those
+component-local C++ definitions. Valid type registration, erased-owner
+eligibility, and available runtime operations remain three distinct checks.
 
 Eligible payloads must be nothrow default constructible, move constructible,
 move assignable, and destructible. They must also fit the memory-token stride
@@ -67,11 +77,35 @@ ownership or concurrent mutation authority. The carrier contains no atomics.
 Transport and access structures provide cross-thread synchronization and
 ownership-transfer ordering.
 
-`destroy()` selects the concrete destructor by type ID, destroys the payload,
-deallocates the token, and restores canonical empty state. An unhandled nonzero
-type ID is a critical architectural contract failure.
+`destroy()` resolves the concrete destructor through the executing component's
+installed operation view, destroys the payload, deallocates the token, and
+restores canonical empty state. Missing or incomplete authority for a ready
+owner is a critical architectural contract failure. The carrier still
+deallocates its direct token and becomes canonical empty when authority is
+unexpectedly unavailable, but it cannot safely invoke a missing destructor or
+discover unknown nested ownership.
 
 `payload<T>()` returns a pointer only when the registered type ID matches.
+
+## Component Operation Authority
+
+Each binary owns one immutable registry view with separate dense SYSTEM and
+LOCAL categories. Lookup is category-directed and then indexed by the decoded
+type ordinal. Empty slots distinguish an ordinary registered type from an
+erased-owner-eligible type with complete operation authority.
+
+Installation is explicit and one-shot; there is no uninstall operation. The
+host installs its SYSTEM and host-LOCAL views before creating the host runtime.
+A DLL installs its compiled SYSTEM view and its own LOCAL view during bootstrap,
+before it can become ready or create threads. Function pointers exist only in
+these component-local static tables and never enter the carrier, an ABI
+structure exchanged with another component, or a transport.
+
+Host operation authority has executable lifetime. DLL authority remains valid
+until native module unload. Shutdown must stop and join module threads, destroy
+module-local owners and drain/deallocate their component-local transports before
+unloading the DLL. A LOCAL owner cannot be admitted to another component, so it
+cannot legitimately survive there after its defining DLL is unloaded.
 
 ## Hazards
 
@@ -111,9 +145,15 @@ Current registered owner payloads contain either `CByteBuffer` or
 `CByteRectBuffer`. Their context replacement hooks remain private and are
 available only to the carrier transaction.
 
+For LOCAL identity, both source and target memory contexts must belong to the
+currently executing component's ambient module. This is checked even for a
+direct call outside transport admission. Failure occurs before accounting or
+context mutation, leaving owner identity, payload address and contents,
+hazards, contexts, and accounting unchanged.
+
 ## Erased Owner Transport
 
-`CErasedOwnerTransport` is the system-specific attribution-aware composition
+`CErasedOwnerTransport` is the attribution-aware composition
 over the non-reattributable `TOwning<CErasedOwner>` primitive.
 
 The wrapper stores an explicit destination module. Admission happens only on
@@ -157,8 +197,9 @@ policy.
 
 Virtual classes remain valid internal implementation tools when their objects
 and executable pointers cannot cross module lifetime boundaries. The
-non-virtual design of `CErasedOwner` is specifically required because the
-carrier may outlive or cross the module that supplied a payload. It is not a
+non-virtual design of `CErasedOwner` is specifically required because a SYSTEM
+owner may cross components. A LOCAL owner may move between threads in its
+defining component but may not cross the component boundary. This is not a
 codebase-wide prohibition on virtual dispatch.
 
 The wider fence applies to any transported or retained vptr, callback,
