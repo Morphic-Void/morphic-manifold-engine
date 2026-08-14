@@ -109,6 +109,7 @@
     <ClCompile Include="src\platform\threading\wait_word_semaphore.cpp" />
     <ClCompile Include="src\system\system_context.cpp" />
     <ClCompile Include="src\system\erased_owner.cpp" />
+    <ClCompile Include="src\system\erased_owner_operations.cpp" />
     <ClCompile Include="src\system\local_type_registry.cpp" />
     <ClCompile Include="src\system\system_ids.cpp" />
     <ClCompile Include="src\threading\CCountingSemaphore.cpp" />
@@ -144,6 +145,8 @@
     <ClInclude Include="include\platform\threading\wait_word_semaphore.hpp" />
     <ClInclude Include="include\system\async_state.hpp" />
     <ClInclude Include="include\system\erased_owner.hpp" />
+    <ClInclude Include="include\system\erased_owner_operations.hpp" />
+    <ClInclude Include="include\system\erased_owner_registration.hpp" />
     <ClInclude Include="include\system\erased_owner_transport.hpp" />
     <ClInclude Include="include\system\erased_transport_admission.hpp" />
     <ClInclude Include="include\system\erased_pod.hpp" />
@@ -153,6 +156,7 @@
     <ClInclude Include="include\system\system_ids.hpp" />
     <ClInclude Include="include\system\system_id_registry.hpp" />
     <ClInclude Include="include\system\system_type_registration.hpp" />
+    <ClInclude Include="include\system\system_erased_owner_payloads.def" />
     <ClInclude Include="include\system\type_id_binding_category.hpp" />
     <ClInclude Include="include\system\type_registration.hpp" />
     <ClInclude Include="include\system\transported_types.hpp" />

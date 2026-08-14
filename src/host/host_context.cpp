@@ -26,6 +26,7 @@
 #include "memory/memory_policies.hpp"
 #include "memory/memory_context.hpp"
 #include "platform/threading/thread_naming.hpp"
+#include "system/erased_owner_operations.hpp"
 #include "system/system_context.hpp"
 #include "system/system_id_registry.hpp"
 #include "system/system_ids.hpp"
@@ -74,8 +75,12 @@ static memory::CMemoryContext s_host_memory_context(s_host_memory_allocator, sys
 
 bool host_context_install() noexcept
 {
+    const erased_owner_operations::SRegistryView owner_operations{
+        erased_owner_operations::system_operations_view(), {}
+    };
     if (!system_id_registry::install_view(system_registry_view()) ||
-        !local_type_registry::install_view(local_type_registry_view()))
+        !local_type_registry::install_view(local_type_registry_view()) ||
+        !erased_owner_operations::install_view(owner_operations))
     {
         return false;
     }

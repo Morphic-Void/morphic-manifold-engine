@@ -256,6 +256,7 @@
     <ClCompile Include="src\platform\threading\thread_priority.cpp" />
     <ClCompile Include="src\platform\threading\wait_word.cpp" />
     <ClCompile Include="src\system\erased_owner.cpp" />
+    <ClCompile Include="src\system\erased_owner_operations.cpp" />
     <ClCompile Include="src\system\erased_owner_transport.cpp" />
     <ClCompile Include="src\system\local_type_registry.cpp" />
     <ClCompile Include="src\system\system_context.cpp" />
@@ -349,6 +350,8 @@
     <ClInclude Include="include\platform\threading\wait_word.hpp" />
     <ClInclude Include="include\platform\windows_include.hpp" />
     <ClInclude Include="include\system\erased_owner.hpp" />
+    <ClInclude Include="include\system\erased_owner_operations.hpp" />
+    <ClInclude Include="include\system\erased_owner_registration.hpp" />
     <ClInclude Include="include\system\async_state.hpp" />
     <ClInclude Include="include\system\erased_owner_transport.hpp" />
     <ClInclude Include="include\system\erased_transport_admission.hpp" />
@@ -366,6 +369,7 @@
     <ClInclude Include="include\system\thread_ids.def" />
     <ClInclude Include="include\system\TStaticLookup.hpp" />
     <ClInclude Include="include\system\system_type_ids.def" />
+    <ClInclude Include="include\system\system_erased_owner_payloads.def" />
     <ClInclude Include="include\tests\AssetRepository_test_suite.hpp" />
     <ClInclude Include="include\tests\AsyncState_test_suite.hpp" />
     <ClInclude Include="include\tests\ByteBuffers_test_suite.hpp" />

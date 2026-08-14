@@ -6,15 +6,12 @@
 //  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    26 Jul 26
 //
-//  C++ type binding for generated system type ids and explicit erased-owner
-//  payload eligibility.
+//  C++ type binding for generated system type ids.
 
 #pragma once
 
 #ifndef SYSTEM_TYPE_REGISTRATION_HPP_INCLUDED
 #define SYSTEM_TYPE_REGISTRATION_HPP_INCLUDED
-
-#include <type_traits>  //  std::false_type, std::true_type
 
 #include "system/system_ids.hpp"
 #include "system/type_id_binding_category.hpp"
@@ -28,16 +25,6 @@ struct TSystemTypeId;
 
 template<typename T>
 inline constexpr system_type_id k_system_type_id_v = TSystemTypeId<T>::value;
-
-//==============================================================================
-//  Erased-owner payload eligibility
-//==============================================================================
-
-template<typename T>
-struct TIsErasedOwnerPayload : std::false_type {};
-
-template<typename T>
-inline constexpr bool k_is_erased_owner_payload_v = TIsErasedOwnerPayload<T>::value;
 
 //==============================================================================
 //  Registration macros
@@ -55,12 +42,6 @@ struct TSystemTypeId<T> \
     static_assert(system_type_ids::is_valid_id(type_id_value), \
         "MV_REGISTER_SYSTEM_TYPE requires a valid, non-zero type id."); \
     static constexpr system_type_id value = type_id_value; \
-}
-
-#define MV_REGISTER_ERASED_OWNER_PAYLOAD(T) \
-template<> \
-struct TIsErasedOwnerPayload<T> : std::true_type \
-{ \
 }
 
 #endif  //  #ifndef SYSTEM_TYPE_REGISTRATION_HPP_INCLUDED

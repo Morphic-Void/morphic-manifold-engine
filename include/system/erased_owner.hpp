@@ -23,7 +23,10 @@
 
 #include "debug/macros.hpp"
 #include "memory/memory_token.hpp"
-#include "system/system_type_registration.hpp"
+#include "system/erased_owner_operations.hpp"
+#include "system/erased_owner_registration.hpp"
+#include "system/system_id_registry.hpp"
+#include "system/type_registration.hpp"
 
 class CErasedOwner
 {
@@ -63,16 +66,42 @@ public:
     [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
+    template<typename T>
+    friend struct erased_owner_operations::TDefaultOperationsFactory;
+
+    template<typename T, auto Member>
+    friend struct erased_owner_operations::TNestedOperationsFactory;
+
     [[nodiscard]] static std::uint32_t hazard_bit(mount_point_ids::id_type mount_point_id) noexcept;
     [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] std::uint32_t payload_memory_allocation_count() const noexcept;
-    [[nodiscard]] std::uint64_t payload_memory_allocation_size() const noexcept;
-    [[nodiscard]] bool payload_can_reattribute_to(memory::CMemoryContext* const context) const noexcept;
-    void unsafe_replace_payload_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+    [[nodiscard]] const erased_owner_operations::SRegistration* operations() const noexcept;
     void make_canonical_empty() noexcept;
+
+    template<typename T>
+    static void destroy_payload(void* payload) noexcept;
+
+    [[nodiscard]] static bool validate_no_nested_memory_source(const void* payload, memory::CMemoryContext* source) noexcept;
+    [[nodiscard]] static std::uint32_t no_nested_memory_allocation_count(const void* payload) noexcept;
+    [[nodiscard]] static std::uint64_t no_nested_memory_allocation_size(const void* payload) noexcept;
+    [[nodiscard]] static bool no_nested_can_reattribute_to(const void* payload, memory::CMemoryContext* target) noexcept;
+    static void replace_no_nested_memory_context(void* payload, memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+
+    template<typename T, auto Member>
+    [[nodiscard]] static bool validate_nested_memory_source(const void* payload, memory::CMemoryContext* source) noexcept;
+
+    template<typename T, auto Member>
+    [[nodiscard]] static std::uint32_t nested_memory_allocation_count(const void* payload) noexcept;
+
+    template<typename T, auto Member>
+    [[nodiscard]] static std::uint64_t nested_memory_allocation_size(const void* payload) noexcept;
+
+    template<typename T, auto Member>
+    [[nodiscard]] static bool nested_can_reattribute_to(const void* payload, memory::CMemoryContext* target) noexcept;
+
+    template<typename T, auto Member>
+    static void replace_nested_memory_context(void* payload, memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
 
     memory::CMemoryToken m_storage;
     type_id              m_type_id{ type_ids::undefined };
@@ -99,6 +128,16 @@ inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) 
     static_assert((sizeof(T) <= 0xffffu), "CErasedOwner payload size exceeds the memory-token stride field.");
 
     CErasedOwner owner;
+    constexpr type_id identity{ k_system_type_id_v<T> };
+    const bool registered =
+        (system_id_registry::find_type(k_system_type_id_v<T>) != nullptr) &&
+        (erased_owner_operations::find(identity) != nullptr);
+    MV_CRITICAL_ASSERT(registered);
+    if (!registered)
+    {
+        return owner;
+    }
+
     memory::CMemoryToken storage{ sizeof(T), alignof(T), context };
     const bool allocated = storage.allocate(1u, false);
     MV_ASSERT(allocated);
@@ -106,7 +145,7 @@ inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) 
     {
         ::new (storage.data()) T();
         owner.m_storage = std::move(storage);
-        owner.m_type_id = type_id{ k_system_type_id_v<T> };
+        owner.m_type_id = identity;
     }
     return owner;
 }
@@ -124,5 +163,84 @@ inline const T* CErasedOwner::payload() const noexcept
     static_assert(k_is_erased_owner_payload_v<T>, "CErasedOwner may only access explicitly registered erased-owner payloads.");
     return (m_type_id == type_id{ k_system_type_id_v<T> }) ? static_cast<const T*>(m_storage.data()) : nullptr;
 }
+
+template<typename T>
+inline void CErasedOwner::destroy_payload(void* const payload) noexcept
+{
+    static_cast<T*>(payload)->~T();
+}
+
+template<typename T, auto Member>
+inline bool CErasedOwner::validate_nested_memory_source(const void* const payload, memory::CMemoryContext* const source) noexcept
+{
+    const auto& storage = static_cast<const T*>(payload)->*Member;
+    memory::CMemoryContext* const nested_source = storage.memory_source_context();
+    return (nested_source == nullptr) || (nested_source == source);
+}
+
+template<typename T, auto Member>
+inline std::uint32_t CErasedOwner::nested_memory_allocation_count(const void* const payload) noexcept
+{
+    const auto& storage = static_cast<const T*>(payload)->*Member;
+    return storage.memory_allocation_count();
+}
+
+template<typename T, auto Member>
+inline std::uint64_t CErasedOwner::nested_memory_allocation_size(const void* const payload) noexcept
+{
+    const auto& storage = static_cast<const T*>(payload)->*Member;
+    return storage.memory_allocation_size();
+}
+
+template<typename T, auto Member>
+inline bool CErasedOwner::nested_can_reattribute_to(const void* const payload, memory::CMemoryContext* const target) noexcept
+{
+    const auto& storage = static_cast<const T*>(payload)->*Member;
+    return storage.can_reattribute_to(target);
+}
+
+template<typename T, auto Member>
+inline void CErasedOwner::replace_nested_memory_context(void* const payload, memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept
+{
+    auto& storage = static_cast<T*>(payload)->*Member;
+    storage.unsafe_replace_memory_context_without_accounting(expected_source, target);
+}
+
+namespace erased_owner_operations
+{
+
+template<typename T>
+struct TDefaultOperationsFactory
+{
+    [[nodiscard]] static constexpr SOperations make() noexcept
+    {
+        return SOperations{
+            &CErasedOwner::destroy_payload<T>,
+            &CErasedOwner::validate_no_nested_memory_source,
+            &CErasedOwner::no_nested_memory_allocation_count,
+            &CErasedOwner::no_nested_memory_allocation_size,
+            &CErasedOwner::no_nested_can_reattribute_to,
+            &CErasedOwner::replace_no_nested_memory_context
+        };
+    }
+};
+
+template<typename T, auto Member>
+struct TNestedOperationsFactory
+{
+    [[nodiscard]] static constexpr SOperations make() noexcept
+    {
+        return SOperations{
+            &CErasedOwner::destroy_payload<T>,
+            &CErasedOwner::validate_nested_memory_source<T, Member>,
+            &CErasedOwner::nested_memory_allocation_count<T, Member>,
+            &CErasedOwner::nested_memory_allocation_size<T, Member>,
+            &CErasedOwner::nested_can_reattribute_to<T, Member>,
+            &CErasedOwner::replace_nested_memory_context<T, Member>
+        };
+    }
+};
+
+}   //  namespace erased_owner_operations
 
 #endif  //  #ifndef ERASED_OWNER_HPP_INCLUDED

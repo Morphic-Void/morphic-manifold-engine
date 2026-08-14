@@ -261,6 +261,12 @@
     <ClInclude Include="include\system\erased_owner.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
+    <ClInclude Include="include\system\erased_owner_operations.hpp">
+      <Filter>include\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\system\erased_owner_registration.hpp">
+      <Filter>include\system</Filter>
+    </ClInclude>
     <ClInclude Include="include\system\async_state.hpp">
       <Filter>include\system</Filter>
     </ClInclude>
@@ -501,6 +507,9 @@
     <ClInclude Include="include\system\system_type_ids.def">
       <Filter>include\system</Filter>
     </ClInclude>
+    <ClInclude Include="include\system\system_erased_owner_payloads.def">
+      <Filter>include\system</Filter>
+    </ClInclude>
     <ClInclude Include="include\bit_utils\TBitField.hpp">
       <Filter>include\bit_utils</Filter>
     </ClInclude>
@@ -672,6 +681,9 @@
       <Filter>src\threading\messages</Filter>
     </ClCompile>
     <ClCompile Include="src\system\erased_owner.cpp">
+      <Filter>src\system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\system\erased_owner_operations.cpp">
       <Filter>src\system</Filter>
     </ClCompile>
     <ClCompile Include="src\system\erased_owner_transport.cpp">

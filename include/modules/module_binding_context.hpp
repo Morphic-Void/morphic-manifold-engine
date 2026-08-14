@@ -71,6 +71,7 @@ private:
     std::uint32_t m_negotiated_functional_major{ 0u };
     bool m_functional_major_negotiated{ false };
     bool m_local_type_registry_installed{ false };
+    bool m_erased_owner_operations_installed{ false };
     bool m_system_registry_installed{ false };
     bool m_ambient_module_id_installed{ false };
     bool m_module_memory_context_installed{ false };

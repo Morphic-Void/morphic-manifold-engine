@@ -12,6 +12,7 @@
 
 #include "debug/service.hpp"
 #include "memory/memory_context.hpp"
+#include "system/erased_owner_operations.hpp"
 #include "system/system_context.hpp"
 
 namespace modules
@@ -29,6 +30,7 @@ bool CModuleBindingContext::is_ready() const noexcept
 {
     return
         m_local_type_registry_installed &&
+        m_erased_owner_operations_installed &&
         m_peer_identity_installed &&
         m_functional_major_negotiated &&
         m_system_registry_installed &&
@@ -63,9 +65,9 @@ EBindingResult CModuleBindingContext::bootstrap(SBootstrapFunctions* const funct
     {
         return EBindingResult::already_installed;
     }
-    const local_type_registry::SLocalTypeRegistryView& local_view =
-        m_config.query_local_type_registry_view();
-    if (!local_type_registry::validate_view(local_view))
+    const local_type_registry::SLocalTypeRegistryView& local_view = m_config.query_local_type_registry_view();
+    const erased_owner_operations::SRegistryView owner_operations{ erased_owner_operations::system_operations_view(), {} };
+    if (!local_type_registry::validate_view(local_view) || !erased_owner_operations::validate_view(owner_operations))
     {
         return EBindingResult::invalid_argument;
     }
@@ -77,6 +79,12 @@ EBindingResult CModuleBindingContext::bootstrap(SBootstrapFunctions* const funct
         return EBindingResult::already_installed;
     }
     m_local_type_registry_installed = true;
+    if (!erased_owner_operations::install_view(owner_operations))
+    {
+        s_active_binding = nullptr;
+        return EBindingResult::already_installed;
+    }
+    m_erased_owner_operations_installed = true;
 
     SBootstrapFunctions populated;
     populated.query_advertised_identity = &query_advertised_identity;
@@ -124,8 +132,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_peer_identity(cons
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_module_id(
-    const module_ids::id_type module_id) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_module_id(const module_ids::id_type module_id) noexcept
 {
     if ((s_active_binding == nullptr) || !module_ids::is_valid_id(module_id))
     {
@@ -137,12 +144,9 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_module_id(
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_system_registry_view(
-    const system_id_registry::SSystemRegistryView* const view) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_system_registry_view(const system_id_registry::SSystemRegistryView* const view) noexcept
 {
-    if ((s_active_binding == nullptr) ||
-        !s_active_binding->m_peer_identity_installed ||
-        (view == nullptr))
+    if ((s_active_binding == nullptr) || !s_active_binding->m_peer_identity_installed || (view == nullptr))
     {
         return EBindingResult::invalid_argument;
     }
@@ -158,8 +162,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_system_registry_vi
     return EBindingResult::success;
 }
 
-EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_module_memory_context(
-    memory::CMemoryContext* const context) noexcept
+EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_module_memory_context(memory::CMemoryContext* const context) noexcept
 {
     if ((s_active_binding == nullptr) || (context == nullptr) || !context->is_usable())
     {
@@ -204,8 +207,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_thread_id(
 
 EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_memory_context(memory::CMemoryContext* const context) noexcept
 {
-    if ((s_active_binding == nullptr) || !s_active_binding->is_ready() ||
-        ((context != nullptr) && !context->is_usable()))
+    if ((s_active_binding == nullptr) || !s_active_binding->is_ready() || ((context != nullptr) && !context->is_usable()))
     {
         return EBindingResult::invalid_argument;
     }
@@ -216,8 +218,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_memory_cont
 
 EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_provisioning(void* const provisioning) noexcept
 {
-    if ((s_active_binding == nullptr) || !s_active_binding->is_ready() ||
-        (provisioning == nullptr))
+    if ((s_active_binding == nullptr) || !s_active_binding->is_ready() || (provisioning == nullptr))
     {
         return EBindingResult::invalid_argument;
     }
@@ -270,8 +271,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::populate_core_functions(
         return EBindingResult::unsupported_version;
     }
 
-    if (s_active_binding->m_functional_major_negotiated &&
-        (functional_major != s_active_binding->m_negotiated_functional_major))
+    if (s_active_binding->m_functional_major_negotiated && (functional_major != s_active_binding->m_negotiated_functional_major))
     {
         return EBindingResult::already_installed;
     }

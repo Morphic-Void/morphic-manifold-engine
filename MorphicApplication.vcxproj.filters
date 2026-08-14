@@ -57,6 +57,8 @@
     <ClInclude Include="include\platform\threading\wait_word_semaphore.hpp"><Filter>include\platform\threading</Filter></ClInclude>
     <ClInclude Include="include\system\async_state.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\erased_owner.hpp"><Filter>include\system</Filter></ClInclude>
+    <ClInclude Include="include\system\erased_owner_operations.hpp"><Filter>include\system</Filter></ClInclude>
+    <ClInclude Include="include\system\erased_owner_registration.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\erased_owner_transport.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\erased_transport_admission.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\erased_pod.hpp"><Filter>include\system</Filter></ClInclude>
@@ -68,6 +70,7 @@
     <ClInclude Include="include\system\type_id_binding_category.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\type_registration.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\system_type_registration.hpp"><Filter>include\system</Filter></ClInclude>
+    <ClInclude Include="include\system\system_erased_owner_payloads.def"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\system\transported_types.hpp"><Filter>include\system</Filter></ClInclude>
     <ClInclude Include="include\threading\CCountingSemaphore.hpp"><Filter>include\threading</Filter></ClInclude>
     <ClInclude Include="include\threading\CParkingGate.hpp"><Filter>include\threading</Filter></ClInclude>
@@ -102,6 +105,7 @@
     <ClCompile Include="src\platform\threading\wait_word_semaphore.cpp"><Filter>src\platform\threading</Filter></ClCompile>
     <ClCompile Include="src\system\system_context.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\system\erased_owner.cpp"><Filter>src\system</Filter></ClCompile>
+    <ClCompile Include="src\system\erased_owner_operations.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\system\system_ids.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\system\local_type_registry.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\threading\CCountingSemaphore.cpp"><Filter>src\threading</Filter></ClCompile>

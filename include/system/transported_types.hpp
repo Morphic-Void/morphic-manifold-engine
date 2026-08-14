@@ -19,6 +19,7 @@
 #include "containers/ByteBuffers.hpp"
 #include "containers/StringBuffers.hpp"
 #include "image/codec/tga.hpp"
+#include "system/erased_owner_registration.hpp"
 #include "system/system_type_registration.hpp"
 
 struct UnrecognisedMsg { system_type_id msg_id; };
@@ -26,17 +27,20 @@ struct UnrecognisedMsg { system_type_id msg_id; };
 struct FileLoadRequest { const char* file; };
 struct FileSaveRequest { const char* file; CByteConstView view; };
 struct TgaLoadRequest { const char* file; bool vflip; };
+
 struct TgaSaveRequest
 {
     const char* file;
     CAssetId source;
     image::codec::tga::EncodeOptions options;
 };
+
 struct TgaEncodeRequest
 {
     CByteRectConstView view;
     image::codec::tga::EncodeOptions options;
 };
+
 struct TgaDecodeRequest { CByteConstView view; bool vflip; };
 
 struct FileLoadResult {};
@@ -73,12 +77,14 @@ MV_REGISTER_SYSTEM_TYPE(TgaEncodeResult, system_type_ids::tga_encode_result);
 MV_REGISTER_SYSTEM_TYPE(TgaDecodeResult, system_type_ids::tga_decode_result);
 
 MV_REGISTER_SYSTEM_TYPE(LoadedFile, system_type_ids::loaded_file);
-MV_REGISTER_ERASED_OWNER_PAYLOAD(LoadedFile);
-
 MV_REGISTER_SYSTEM_TYPE(EncodedTga, system_type_ids::encoded_tga);
-MV_REGISTER_ERASED_OWNER_PAYLOAD(EncodedTga);
-
 MV_REGISTER_SYSTEM_TYPE(DecodedTga, system_type_ids::decoded_tga);
-MV_REGISTER_ERASED_OWNER_PAYLOAD(DecodedTga);
+
+#define MV_ERASED_OWNER_PAYLOAD(type) MV_REGISTER_ERASED_OWNER_PAYLOAD(type);
+#define MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE(type, member) \
+    MV_REGISTER_ERASED_OWNER_PAYLOAD(type);
+#include "system/system_erased_owner_payloads.def"
+#undef MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE
+#undef MV_ERASED_OWNER_PAYLOAD
 
 #endif  //  #ifndef TRANSPORTED_TYPES_HPP_INCLUDED

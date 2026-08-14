@@ -120,6 +120,36 @@ void test_registration_and_empty_state(TTestContext& ctx)
     TEST_EXPECT(ctx, owner.is_empty());
 }
 
+void test_operation_registry(TTestContext& ctx)
+{
+    const erased_owner_operations::SRegistryView expected_view{
+        erased_owner_operations::system_operations_view(), {}
+    };
+    TEST_EXPECT(ctx, erased_owner_operations::validate_view(expected_view));
+    TEST_EXPECT(ctx, erased_owner_operations::view_is_installed());
+    TEST_EXPECT(ctx, erased_owner_operations::installed_view() != nullptr);
+    TEST_EXPECT(ctx, !erased_owner_operations::install_view(expected_view));
+
+    const erased_owner_operations::SRegistration* const loaded_file =
+        erased_owner_operations::find(k_type_id_v<LoadedFile>);
+    const erased_owner_operations::SRegistration* const encoded_tga =
+        erased_owner_operations::find(k_type_id_v<EncodedTga>);
+    const erased_owner_operations::SRegistration* const decoded_tga =
+        erased_owner_operations::find(k_type_id_v<DecodedTga>);
+    TEST_EXPECT(ctx, (loaded_file != nullptr) &&
+        loaded_file->operations.is_complete());
+    TEST_EXPECT(ctx, (encoded_tga != nullptr) &&
+        encoded_tga->operations.is_complete());
+    TEST_EXPECT(ctx, (decoded_tga != nullptr) &&
+        decoded_tga->operations.is_complete());
+    TEST_EXPECT(ctx,
+        erased_owner_operations::find(k_type_id_v<FileLoadRequest>) == nullptr);
+    TEST_EXPECT(ctx,
+        erased_owner_operations::find(k_type_id_v<host::CHost>) == nullptr);
+    TEST_EXPECT(ctx,
+        erased_owner_operations::find(type_ids::undefined) == nullptr);
+}
+
 void test_creation_accounting_and_destruction(TTestContext& ctx)
 {
     TAllocatorState state;
@@ -508,6 +538,7 @@ int run_erased_owner_tests()
 {
     TTestContext ctx;
     test_registration_and_empty_state(ctx);
+    test_operation_registry(ctx);
     test_creation_accounting_and_destruction(ctx);
     test_moves_and_hazards(ctx);
     test_allocation_failure_is_canonical(ctx);
