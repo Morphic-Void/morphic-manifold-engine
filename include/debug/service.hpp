@@ -9,9 +9,9 @@
 //
 //  Bounded executable-owned debug service substrate.
 //
-//  This service currently sits beside the placeholder debug macros. It
-//  establishes shared provisioning, transport, direct fallback, and writer
-//  lifetime without changing existing reporting usage.
+//  This service underpins the public debug macro interface. It owns shared
+//  provisioning, bounded transport, direct fallback, and writer lifetime for
+//  normal debug reporting.
 
 #pragma once
 
@@ -269,6 +269,9 @@ public:
     ~CDebugServiceState() noexcept = default;
 
     [[nodiscard]] bool configure_log_paths(const char* const event_log_path, const char* const direct_log_path) noexcept;
+    //  Optional all-or-nothing preflight for both configured paths. Failure
+    //  rolls back an event log opened by this call. If preflight is omitted,
+    //  start() and the direct write path open their respective logs lazily.
     [[nodiscard]] bool open_logs() noexcept;
 
     [[nodiscard]] bool start() noexcept;
@@ -507,15 +510,14 @@ bool CDebugServiceState::process_event(
 
 [[nodiscard]] bool submit_text(const char* const text) noexcept;
 [[nodiscard]] bool informational_event_enabled(const EEventLevel level) noexcept;
-[[nodiscard]] bool report(const char* const source_file, const std::size_t source_file_size, const std::uint32_t source_line, const char* const format, ...) noexcept;
-[[nodiscard]] bool report_immediate(const char* const source_file, const std::size_t source_file_size, const std::uint32_t source_line, const char* const format, ...) noexcept;
-[[noreturn]] void panic(const char* const source_file, const std::size_t source_file_size, const std::uint32_t source_line, const char* const format, ...) noexcept;
+[[nodiscard]] bool report(const SEventUsagePoint& usage_point, const char* const format, ...) noexcept;
+[[nodiscard]] bool report_immediate(const SEventUsagePoint& usage_point, const char* const format, ...) noexcept;
+[[noreturn]] void panic(const SEventUsagePoint& usage_point, const char* const format, ...) noexcept;
 
-template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std::size_t t_format_size, typename... Args>
-[[nodiscard]] bool submit_event(const char (&source_file)[t_source_size], const std::uint32_t source_line, const char (&format)[t_format_size], Args&&... arguments) noexcept
+template<EEventLevel t_level, EEventType t_type, std::size_t t_format_size, typename... Args>
+[[nodiscard]] bool submit_event(const SEventUsagePoint& usage_point, const char (&format)[t_format_size], Args&&... arguments) noexcept
 {
     static_assert(is_valid_event_metadata(t_level, t_type), "The debug event level/type combination is invalid.");
-    static_assert((t_source_size > 1u), "A debug event source file literal must not be empty.");
     static_assert((t_format_size > 1u), "A debug event format literal must not be empty.");
     static_assert((t_format_size <= k_event_format_capacity), "A debug event format literal exceeds its transport capacity.");
 
@@ -525,18 +527,16 @@ template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std:
         return false;
     }
 
-    const SEventUsagePoint usage_point{ source_file, (t_source_size - 1u), source_line };
     return service->submit_event<t_level, t_type>(usage_point, format, (t_format_size - 1u), std::forward<Args>(arguments)...);
 }
 
-template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std::size_t t_format_size, typename... Args>
+template<EEventLevel t_level, EEventType t_type, std::size_t t_format_size, typename... Args>
 [[nodiscard]] bool process_event(
-    const char (&source_file)[t_source_size], const std::uint32_t source_line,
+    const SEventUsagePoint& usage_point,
     EBreakpointOverride& breakpoint_override, const bool breakpoint_enabled_by_default,
     const EShutdownReason shutdown_reason, const char (&format)[t_format_size], Args&&... arguments) noexcept
 {
     static_assert(is_valid_event_metadata(t_level, t_type), "The debug event level/type combination is invalid.");
-    static_assert((t_source_size > 1u), "A debug event source file literal must not be empty.");
     static_assert((t_format_size > 1u), "A debug event format literal must not be empty.");
     static_assert((t_format_size <= k_event_format_capacity), "A debug event format literal exceeds its transport capacity.");
 
@@ -546,16 +546,15 @@ template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std:
         return false;
     }
 
-    const SEventUsagePoint usage_point{ source_file, (t_source_size - 1u), source_line };
     return service->process_event<t_level, t_type>(
         usage_point, breakpoint_override, breakpoint_enabled_by_default, shutdown_reason,
         nullptr, 0u, format, (t_format_size - 1u),
         std::forward<Args>(arguments)...);
 }
 
-template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std::size_t t_expression_size, std::size_t t_format_size, typename... Args>
+template<EEventLevel t_level, EEventType t_type, std::size_t t_expression_size, std::size_t t_format_size, typename... Args>
 [[nodiscard]] bool process_condition_event(
-    const char (&source_file)[t_source_size], const std::uint32_t source_line,
+    const SEventUsagePoint& usage_point,
     EBreakpointOverride& breakpoint_override, const bool breakpoint_enabled_by_default,
     const EShutdownReason shutdown_reason,
     const char (&expression)[t_expression_size],
@@ -563,7 +562,6 @@ template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std:
 {
     static_assert(is_valid_event_metadata(t_level, t_type), "The debug event level/type combination is invalid.");
     static_assert((t_type == EEventType::condition), "A condition event requires condition metadata.");
-    static_assert((t_source_size > 1u), "A debug event source file literal must not be empty.");
     static_assert((t_expression_size > 1u), "A condition expression literal must not be empty.");
     static_assert((t_expression_size <= k_event_expression_capacity), "A condition expression literal exceeds its transport capacity.");
     static_assert((t_format_size <= k_event_format_capacity), "A debug event format literal exceeds its transport capacity.");
@@ -574,7 +572,6 @@ template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std:
         return false;
     }
 
-    const SEventUsagePoint usage_point{ source_file, (t_source_size - 1u), source_line };
     return service->process_event<t_level, t_type>(
         usage_point, breakpoint_override, breakpoint_enabled_by_default, shutdown_reason,
         expression, (t_expression_size - 1u), format, (t_format_size - 1u),

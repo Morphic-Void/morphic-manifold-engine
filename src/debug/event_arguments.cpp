@@ -84,17 +84,17 @@ struct SOutput
     }
 }
 
-[[nodiscard]] bool append(SOutput& output, const char* const text, const std::size_t size) noexcept
+[[nodiscard]] EEventFormatResult append(SOutput& output, const char* const text, const std::size_t size) noexcept
 {
     if ((size >= output.capacity) || (output.size > (output.capacity - size - 1u)))
     {
-        return false;
+        return EEventFormatResult::output_too_small;
     }
 
     std::memcpy(output.destination + output.size, text, size);
     output.size += size;
     output.destination[output.size] = 0;
-    return true;
+    return EEventFormatResult::success;
 }
 
 template<typename T>
@@ -134,7 +134,7 @@ template<typename T>
     char text[64]{};
     const int size = std::snprintf(text, sizeof(text), format, static_cast<unsigned long long>(value));
 
-    return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+    return append(output, text, static_cast<std::size_t>(size));
 }
 
 [[nodiscard]] EEventFormatResult append_hex_argument(
@@ -188,9 +188,7 @@ template<typename T>
     const system_id_registry::STypeRegistration* const registration = system_id_registry::find_type(id);
     if (registration != nullptr)
     {
-        return append(output, registration->name, registration->name_size)
-            ? EEventFormatResult::success
-            : EEventFormatResult::output_too_small;
+        return append(output, registration->name, registration->name_size);
     }
 
     char text[64]{};
@@ -199,7 +197,7 @@ template<typename T>
         valid ? "unregistered-type:0x%08x" : "invalid-type:0x%08x",
         static_cast<unsigned int>(id));
 
-    return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+    return append(output, text, static_cast<std::size_t>(size));
 }
 
 [[nodiscard]] EEventFormatResult append_local_type_failure(SOutput& output, const std::uint32_t raw_value) noexcept
@@ -210,7 +208,7 @@ template<typename T>
         valid ? "unregistered-local-type:0x%08x" : "invalid-local-type:0x%08x",
         static_cast<unsigned int>(raw_value));
 
-    return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+    return append(output, text, static_cast<std::size_t>(size));
 }
 
 [[nodiscard]] EEventFormatResult append_system_id(
@@ -220,14 +218,14 @@ template<typename T>
     std::size_t name_size = 0u;
     if (system_id_registry::format_system_name(id, text, sizeof(text), name_size))
     {
-        return append(output, text, name_size) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+        return append(output, text, name_size);
     }
 
     const bool valid = system_ids::is_valid_id(id);
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-system:0x%016llx" : "invalid-system:0x%016llx",
         static_cast<unsigned long long>(id.raw_value()));
-    return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+    return append(output, text, static_cast<std::size_t>(size));
 }
 
 [[nodiscard]] EEventFormatResult append_module_id(SOutput& output, const module_ids::id_type id) noexcept
@@ -235,7 +233,7 @@ template<typename T>
     const char* const name = system_id_registry::lookup_module_name(id);
     if (name != nullptr)
     {
-        return append(output, name, std::strlen(name)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+        return append(output, name, std::strlen(name));
     }
 
     char text[64]{};
@@ -243,7 +241,7 @@ template<typename T>
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-module:0x%016llx" : "invalid-module:0x%016llx",
         static_cast<unsigned long long>(id.raw_value()));
-    return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+    return append(output, text, static_cast<std::size_t>(size));
 }
 
 [[nodiscard]] EEventFormatResult append_thread_id(
@@ -252,7 +250,7 @@ template<typename T>
     const char* const name = system_id_registry::lookup_thread_name(id);
     if (name != nullptr)
     {
-        return append(output, name, std::strlen(name)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+        return append(output, name, std::strlen(name));
     }
 
     char text[64]{};
@@ -260,7 +258,7 @@ template<typename T>
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-thread:0x%016llx" : "invalid-thread:0x%016llx",
         static_cast<unsigned long long>(id.raw_value()));
-    return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+    return append(output, text, static_cast<std::size_t>(size));
 }
 
 [[nodiscard]] EEventFormatResult append_argument(
@@ -276,11 +274,11 @@ template<typename T>
     {
         case EEventArgumentType::false_value:
         {
-            return append(output, "false", 5u) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+            return append(output, "false", 5u);
         }
         case EEventArgumentType::true_value:
         {
-            return append(output, "true", 4u) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+            return append(output, "true", 4u);
         }
         case EEventArgumentType::int32:
         {
@@ -322,7 +320,7 @@ template<typename T>
             }
 
             const std::size_t value_size = static_cast<const char*>(terminator) - value;
-            return append(output, value, value_size) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+            return append(output, value, value_size);
         }
         case EEventArgumentType::system_type_id:
         {
@@ -339,7 +337,7 @@ template<typename T>
             }
 
             const std::size_t name_size = static_cast<const char*>(terminator) - value;
-            return append(output, value, name_size) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+            return append(output, value, name_size);
         }
         case EEventArgumentType::local_type_id_failure:
         {
@@ -363,7 +361,7 @@ template<typename T>
         }
     }
 
-    return append(output, text, static_cast<std::size_t>(size)) ? EEventFormatResult::success : EEventFormatResult::output_too_small;
+    return append(output, text, static_cast<std::size_t>(size));
 }
 
 [[nodiscard]] bool bytes_are_zero(const std::byte* const bytes, const std::size_t begin) noexcept
@@ -451,6 +449,7 @@ EEventFormatResult format_event_text(
     event_formatting::SOutput output{ destination, destination_capacity, 0u };
     std::size_t argument_index = 0u;
     std::size_t literal_begin = 0u;
+    EEventFormatResult result;
 
     for (std::size_t index = 0u; index < format_size; ++index)
     {
@@ -483,9 +482,10 @@ EEventFormatResult format_event_text(
                 }
             }
 
-            if (!event_formatting::append(output, format + literal_begin, insertion_begin - literal_begin))
+            result = event_formatting::append(output, format + literal_begin, insertion_begin - literal_begin);
+            if (result != EEventFormatResult::success)
             {
-                return EEventFormatResult::output_too_small;
+                return result;
             }
 
             if (argument_index >= parameter_count)
@@ -494,7 +494,6 @@ EEventFormatResult format_event_text(
             }
 
             const EEventArgumentType type = parameter_types[argument_index];
-            EEventFormatResult result;
             if (insertion_begin < index)
             {
                 result = event_formatting::append_hex_argument(output, parameters, type, argument_index, format[insertion_begin]);
@@ -520,32 +519,36 @@ EEventFormatResult format_event_text(
             return EEventFormatResult::malformed_format;
         }
 
-        if (!event_formatting::append(output, format + literal_begin, index - literal_begin))
+        result = event_formatting::append(output, format + literal_begin, index - literal_begin);
+        if (result != EEventFormatResult::success)
         {
-            return EEventFormatResult::output_too_small;
+            return result;
         }
 
-        if (!event_formatting::append(output, &token, 1u))
+        result = event_formatting::append(output, &token, 1u);
+        if (result != EEventFormatResult::success)
         {
-            return EEventFormatResult::output_too_small;
+            return result;
         }
 
         ++index;
         literal_begin = index + 1u;
     }
 
-    if (!event_formatting::append(output, format + literal_begin, format_size - literal_begin))
+    result = event_formatting::append(output, format + literal_begin, format_size - literal_begin);
+    if (result == EEventFormatResult::success)
     {
-        return EEventFormatResult::output_too_small;
+        if (argument_index == parameter_count)
+        {
+            out_size = output.size;
+        }
+        else
+        {
+            result = EEventFormatResult::argument_mismatch;
+        }
     }
 
-    if (argument_index != parameter_count)
-    {
-        return EEventFormatResult::argument_mismatch;
-    }
-
-    out_size = output.size;
-    return EEventFormatResult::success;
+    return result;
 }
 
 }   //  namespace debug_system

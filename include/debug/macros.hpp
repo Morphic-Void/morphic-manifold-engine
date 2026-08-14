@@ -28,6 +28,10 @@
     #error MV_COMPILED_INFORMATION_LEVEL must be between 0 (none) and 3 (trace).
 #endif
 
+#define MV_INTERNAL_USAGE_POINT \
+    debug_system::SEventUsagePoint{ \
+        __FILE__, sizeof(__FILE__) - 1u, static_cast<std::uint32_t>(__LINE__) }
+
 #define MV_INTERNAL_PROCESS_CONDITION(level, condition_expression, breakpoint_default, shutdown_reason, expression_text, ...) \
     do \
     { \
@@ -35,7 +39,7 @@
         { \
             static debug_system::EBreakpointOverride s_breakpoint_override = debug_system::EBreakpointOverride::inherit; \
             (void)debug_system::process_condition_event<level, debug_system::EEventType::condition>( \
-                __FILE__, __LINE__, s_breakpoint_override, breakpoint_default, shutdown_reason, \
+                MV_INTERNAL_USAGE_POINT, s_breakpoint_override, breakpoint_default, shutdown_reason, \
                 expression_text, __VA_ARGS__); \
         } \
     } while (0)
@@ -45,7 +49,7 @@
     { \
         static debug_system::EBreakpointOverride s_breakpoint_override = debug_system::EBreakpointOverride::inherit; \
         (void)debug_system::process_event<level, debug_system::EEventType::event>( \
-            __FILE__, __LINE__, s_breakpoint_override, breakpoint_default, shutdown_reason, \
+            MV_INTERNAL_USAGE_POINT, s_breakpoint_override, breakpoint_default, shutdown_reason, \
             __VA_ARGS__); \
     } while (0)
 
@@ -54,7 +58,7 @@
     { \
         if (debug_system::informational_event_enabled(level)) \
         { \
-            (void)debug_system::submit_event<level, debug_system::EEventType::event>(__FILE__, __LINE__, __VA_ARGS__); \
+            (void)debug_system::submit_event<level, debug_system::EEventType::event>(MV_INTERNAL_USAGE_POINT, __VA_ARGS__); \
         } \
     } while (0)
 
@@ -129,13 +133,13 @@
 #define MV_REPORT(...) \
     do \
     { \
-        (void)debug_system::report(__FILE__, sizeof(__FILE__) - 1u, __LINE__, __VA_ARGS__); \
+        (void)debug_system::report(MV_INTERNAL_USAGE_POINT, __VA_ARGS__); \
     } while (0)
 
 #define MV_REPORT_IMMEDIATE(...) \
     do \
     { \
-        (void)debug_system::report_immediate(__FILE__, sizeof(__FILE__) - 1u, __LINE__, __VA_ARGS__); \
+        (void)debug_system::report_immediate(MV_INTERNAL_USAGE_POINT, __VA_ARGS__); \
     } while (0)
 
 #define MV_WARNING(...) \
@@ -157,7 +161,7 @@
 #define MV_PANIC(...) \
     do \
     { \
-        debug_system::panic(__FILE__, sizeof(__FILE__) - 1u, __LINE__, __VA_ARGS__); \
+        debug_system::panic(MV_INTERNAL_USAGE_POINT, __VA_ARGS__); \
     } while (0)
 
 #endif  //  #ifndef DEBUG_MACROS_HPP_INCLUDED

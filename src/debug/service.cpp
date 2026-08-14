@@ -1055,7 +1055,7 @@ bool informational_event_enabled(const EEventLevel level) noexcept
     return (service != nullptr) && service->informational_event_enabled(level);
 }
 
-bool report(const char* const source_file, const std::size_t source_file_size, const std::uint32_t source_line, const char* const format, ...) noexcept
+bool report(const SEventUsagePoint& usage_point, const char* const format, ...) noexcept
 {
     CDebugServiceState* const service = get_service();
     if (service == nullptr)
@@ -1065,16 +1065,13 @@ bool report(const char* const source_file, const std::size_t source_file_size, c
 
     std::va_list arguments;
     va_start(arguments, format);
-    const SEventUsagePoint usage_point{ source_file, source_file_size, source_line };
     const bool reported = service->report_va(usage_point, format, arguments);
     va_end(arguments);
     return reported;
 }
 
 bool report_immediate(
-    const char* const source_file,
-    const std::size_t source_file_size,
-    const std::uint32_t source_line,
+    const SEventUsagePoint& usage_point,
     const char* const format, ...) noexcept
 {
     CDebugServiceState* const service = get_service();
@@ -1085,13 +1082,12 @@ bool report_immediate(
 
     std::va_list arguments;
     va_start(arguments, format);
-    const SEventUsagePoint usage_point{ source_file, source_file_size, source_line };
     const bool reported = service->report_immediate_va(usage_point, format, arguments);
     va_end(arguments);
     return reported;
 }
 
-[[noreturn]] void panic(const char* const source_file, const std::size_t source_file_size, const std::uint32_t source_line, const char* const format, ...) noexcept
+[[noreturn]] void panic(const SEventUsagePoint& usage_point, const char* const format, ...) noexcept
 {
     constexpr char format_failure[] = "Invalid panic report";
     char text[k_format_buffer_capacity]{};
@@ -1114,7 +1110,6 @@ bool report_immediate(
     {
         service->request_shutdown(EShutdownReason::panic_incident);
         const std::uint32_t incident_id = service->allocate_incident_id();
-        const SEventUsagePoint usage_point{ source_file, source_file_size, source_line };
         (void)service->try_write_panic_record(usage_point, incident_id, panic_text, panic_text_size);
     }
 

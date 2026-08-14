@@ -16,10 +16,10 @@
 #include "modules/module_binding_context.hpp"
 
 #include "debug/macros.hpp"
-#include "debug/event_arguments.hpp"
 #include "image/codec/tga.hpp"
 #include "platform/system/performance_counter.hpp"
 #include "system/async_state.hpp"
+#include "system/system_id_registry.hpp"
 #include "system/transported_types.hpp"
 #include "threading/CThreadPackage.hpp"
 
@@ -103,17 +103,9 @@ bool CApplicationThread::startup() noexcept
 
 bool CApplicationThread::initialise() noexcept
 {
-    char registry_name[64]{};
-    std::size_t registry_name_size = 0u;
-    constexpr char registry_format[]{ "{}" };
-    const debug_system::SEventArguments registry_arguments = debug_system::encode_event_arguments(system_type_ids::file_load_request);
-    if ((debug_system::format_event_text(
-            registry_name, sizeof(registry_name),
-            registry_format, (sizeof(registry_format) - 1u),
-            registry_arguments.parameter_count,
-            registry_arguments.parameter_types,
-            registry_arguments.parameters,
-            registry_name_size) != debug_system::EEventFormatResult::success) ||
+    const char* const registry_name =
+        system_id_registry::lookup_type_name(system_type_ids::file_load_request);
+    if ((registry_name == nullptr) ||
         (std::strcmp(registry_name, "file_load_request") != 0))
     {
         fail(1u);

@@ -56,14 +56,19 @@ The payload is immovable after provisioning. Its owner must not be reset,
 re-emplaced, moved, or reattributed until producers have quiesced, the writer
 has stopped, and every module-local pointer has been removed.
 
-The host normally configures and explicitly opens both logs before publishing
-the service pointer. The writer thread exclusively writes, services, flushes,
-and closes the event log after startup. Any thread may synchronously enter the
-separately locked direct path while the service remains live.
+The host normally configures both paths and calls `open_logs()` before
+publishing the service pointer. This optional eager preflight succeeds only
+when both logs are open. If the direct log cannot be opened, an event log first
+opened by the same call is closed again; a log which was already open is left
+unchanged.
 
-Opening is not required to be eager. Both paths remain stored when opening is
-deferred. Writer startup ensures that the event log is open, and the first
-direct write opens the direct log while holding its lock.
+Eager preflight and deferred opening are distinct startup policies. When
+preflight is deliberately omitted, writer startup opens the event log and the
+first direct write opens the direct log while holding its lock. A failed
+preflight does not itself select deferred opening; the host decides whether
+and how startup proceeds. After startup, the writer thread exclusively writes,
+services, flushes, and closes the event log. Any thread may synchronously enter
+the separately locked direct path while the service remains live.
 
 Operations on service-owned state are members of `CDebugServiceState`.
 Module-pointer provisioning and the global reporting facade remain free
@@ -385,7 +390,7 @@ not part of this orderly checkpoint.
 `host.cpp` is a thin provisional lifecycle client. It:
 
 - creates the service and configures both stored log paths;
-- explicitly opens both logs before installing the service pointer;
+- requires the all-or-nothing log preflight before installing the service pointer;
 - installs the service and starts the writer before provisional worker startup;
 - checks the shutdown request in the existing host iteration;
 - stops the service after worker shutdown;
@@ -426,7 +431,7 @@ lifecycle calls rather than redesign the service.
 - report representation, length, reserved metadata, termination, and unused-byte validation;
 - 447-character transport, 448-character fallback, full-report limits, and immediate routing;
 - identical level/type reconstruction on event and direct routes;
-- explicit pre-install opening of both configured log paths;
+- all-or-nothing pre-install opening of both configured log paths;
 - deferred event-log opening by writer startup;
 - deferred direct-log opening on first direct write;
 - oversized direct fallback;

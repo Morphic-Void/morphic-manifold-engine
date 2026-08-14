@@ -275,7 +275,7 @@ The informational levels are:
 Informational levels have:
 
 - a compile-time ceiling which may omit a call entirely;
-- runtime thresholds based initially on ambient system identity.
+- a runtime threshold controlled by the installed debug-service configuration.
 
 When an informational call is omitted or rejected, its dynamic arguments are
 not evaluated. Informational filtering occurs before incident identity is
@@ -497,9 +497,11 @@ Here, per-usage-point is the only meaning of local breakpoint suppression. The
 public contract does not define lexical, dynamic-scope, or thread-local
 breakpoint suppression.
 
-The local static is read and modified only by the producing thread immediately
-before or during debugger entry. It is not exposed as a cross-thread control
-surface, transported, or retained after the breakpoint operation.
+The local static exists to carry per-usage-point breakpoint policy when the
+corresponding control surface is available. In the current implementation it is
+consulted only on the producing thread immediately before debugger entry. It is
+not exposed as a cross-thread control surface, transported, or retained after
+the breakpoint operation.
 
 Template specialisations and separately loaded modules may own separate local
 states for the same textual macro expansion. This is acceptable: the initial

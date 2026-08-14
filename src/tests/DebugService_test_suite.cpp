@@ -606,6 +606,17 @@ void test_argument_formatting(TTestContext& ctx)
             output_size) ==
         debug_system::EEventFormatResult::output_too_small);
 
+    output_size = sizeof(output);
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            4u,
+            "tail",
+            debug_system::encode_event_arguments(),
+            output_size) ==
+        debug_system::EEventFormatResult::output_too_small);
+    TEST_EXPECT(ctx, output_size == 0u);
+
     debug_system::SEventArguments malformed =
         debug_system::encode_event_arguments(std::uint32_t{ 1u });
     malformed.parameters[0u].bytes[4u] = std::byte{ 1u };
@@ -989,8 +1000,8 @@ void test_writer_and_direct_paths(TTestContext& ctx)
         (debug_system::process_event<
             debug_system::EEventLevel::error,
             debug_system::EEventType::event>(
-            source_file,
-            source_line,
+            debug_system::SEventUsagePoint{
+                source_file, sizeof(source_file) - 1u, source_line },
             breakpoint_override,
             true,
             debug_system::EShutdownReason::none,
@@ -1010,8 +1021,8 @@ void test_writer_and_direct_paths(TTestContext& ctx)
         (debug_system::process_event<
             debug_system::EEventLevel::error,
             debug_system::EEventType::event>(
-            source_file,
-            source_line + 1u,
+            debug_system::SEventUsagePoint{
+                source_file, sizeof(source_file) - 1u, source_line + 1u },
             breakpoint_override,
             true,
             debug_system::EShutdownReason::none,
@@ -1033,7 +1044,8 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     report447[0u] = 'A';
     report447[sizeof(report447) - 2u] = 'Z';
     TEST_EXPECT(ctx, debug_system::report(
-        source_file, sizeof(source_file) - 1u, source_line + 2u,
+        debug_system::SEventUsagePoint{
+            source_file, sizeof(source_file) - 1u, source_line + 2u },
         "%s", report447));
 
     char report448[debug_system::k_event_report_capacity + 1u]{};
@@ -1041,7 +1053,8 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     report448[0u] = 'B';
     report448[sizeof(report448) - 2u] = 'Y';
     TEST_EXPECT(ctx, debug_system::report(
-        source_file, sizeof(source_file) - 1u, source_line + 3u,
+        debug_system::SEventUsagePoint{
+            source_file, sizeof(source_file) - 1u, source_line + 3u },
         "%s", report448));
 
     MV_REPORT_IMMEDIATE("immediate %s %u", "report", 17u);
@@ -1051,13 +1064,15 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     maximum_report[0u] = 'C';
     maximum_report[sizeof(maximum_report) - 2u] = 'X';
     TEST_EXPECT(ctx, debug_system::report(
-        source_file, sizeof(source_file) - 1u, source_line + 4u,
+        debug_system::SEventUsagePoint{
+            source_file, sizeof(source_file) - 1u, source_line + 4u },
         "%s", maximum_report));
 
     char oversized_report[debug_system::k_format_buffer_capacity + 1u]{};
     std::memset(oversized_report, 'o', sizeof(oversized_report) - 1u);
     TEST_EXPECT(ctx, !debug_system::report(
-        source_file, sizeof(source_file) - 1u, source_line + 5u,
+        debug_system::SEventUsagePoint{
+            source_file, sizeof(source_file) - 1u, source_line + 5u },
         "%s", oversized_report));
 
     const std::uint32_t panic_incident_id = service->allocate_incident_id();
@@ -1418,7 +1433,8 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
             module_ids::executable,
             thread_ids::host)));
     TEST_EXPECT(ctx, debug_system::report(
-        source_file, sizeof(source_file) - 1u, 778u,
+        debug_system::SEventUsagePoint{
+            source_file, sizeof(source_file) - 1u, 778u },
         "full %s", "report fallback"));
     TEST_EXPECT(ctx, service->start());
     TEST_EXPECT(ctx, service->stop());
@@ -1434,7 +1450,8 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
     TEST_EXPECT(ctx, file_contains(direct_path,
         "[DebugService_test_suite.cpp:778] full report fallback"));
     TEST_EXPECT(ctx, debug_system::report(
-        source_file, sizeof(source_file) - 1u, 779u,
+        debug_system::SEventUsagePoint{
+            source_file, sizeof(source_file) - 1u, 779u },
         "closed %s", "report fallback"));
     TEST_EXPECT(ctx, debug_system::uninstall_service(service));
     owner.reset();
