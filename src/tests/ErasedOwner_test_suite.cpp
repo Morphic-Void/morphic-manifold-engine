@@ -14,9 +14,15 @@
 #include <type_traits>
 #include <utility>
 
+#include "containers/TInstance.hpp"
 #include "debug/macros.hpp"
+#include "debug/service.hpp"
+#include "host/bound_module.hpp"
+#include "host/host_context.hpp"
 #include "host/host_local_type_registry.hpp"
+#include "host/system_id_definitions.hpp"
 #include "memory/memory_context.hpp"
+#include "platform/path/native_path.hpp"
 #include "system/erased_owner.hpp"
 #include "system/erased_owner_transport.hpp"
 #include "system/transported_types.hpp"
@@ -216,6 +222,71 @@ void test_operation_registry_failure_boundaries(TTestContext& ctx)
     TEST_EXPECT(ctx, erased_owner_operations::view_is_installed());
     TEST_EXPECT(ctx, erased_owner_operations::find(
         k_type_id_v<host::SHostTgaFileLoadState>) != nullptr);
+}
+
+void test_application_context_and_module_unload_gate(TTestContext& ctx)
+{
+    memory::CMemoryContext* const host_context = host::host_memory_context();
+    memory::CMemoryContext* const application_context =
+        host::application_memory_context();
+    TEST_EXPECT(ctx, host_context != nullptr);
+    TEST_EXPECT(ctx, application_context != nullptr);
+    TEST_EXPECT(ctx, application_context != host_context);
+    TEST_EXPECT(ctx, host_context->get_system_id() == system_ids::host);
+    TEST_EXPECT(ctx,
+        application_context->get_system_id() == system_ids::application);
+    TEST_EXPECT(ctx, host_context->is_compatible_with(*application_context));
+    TEST_EXPECT(ctx, host_context->belongs_to_module(module_ids::executable));
+    TEST_EXPECT(ctx, !host_context->belongs_to_module(module_ids::application));
+    TEST_EXPECT(ctx, application_context->belongs_to_module(module_ids::application));
+    TEST_EXPECT(ctx, !application_context->belongs_to_module(module_ids::executable));
+    TEST_EXPECT(ctx, application_context->is_attribution_empty());
+
+    TInstance<debug_system::CDebugServiceState> debug_service =
+        TInstance<debug_system::CDebugServiceState>::create();
+    TEST_EXPECT(ctx, debug_service.is_ready());
+
+    constexpr modules::SAdvertisedIdentity host_identity{
+        module_ids::executable,
+        { modules::k_binding_abi_major, 0u },
+        modules::k_binding_abi_major,
+        modules::k_binding_abi_major
+    };
+    const platform::path::NativePath module_path =
+        platform::path::makeNativePath("MorphicApplication.dll");
+    host::CBoundModule module;
+    const bool bound = module_path.is_ready() && module.bind(
+        module_path, module_ids::application, host_identity);
+    TEST_EXPECT(ctx, bound);
+    if (!bound || !debug_service)
+    {
+        return;
+    }
+
+    TEST_EXPECT(ctx, !module.install(
+        host::system_registry_view(), module_ids::application,
+        host_context, debug_service.operator->()));
+    TEST_EXPECT(ctx, module.install(
+        host::system_registry_view(), module_ids::application,
+        application_context, debug_service.operator->()));
+    TEST_EXPECT(ctx, module.is_ready());
+
+    constexpr std::size_t allocation_alignment = alignof(std::max_align_t);
+    constexpr std::size_t allocation_size = 64u;
+    void* const allocation = application_context->allocate(
+        allocation_alignment, allocation_size);
+    TEST_EXPECT(ctx, allocation != nullptr);
+    TEST_EXPECT(ctx, application_context->get_live_allocation_count() == 1u);
+    TEST_EXPECT(ctx, application_context->get_live_allocated_bytes() != 0u);
+    TEST_EXPECT(ctx, !application_context->is_attribution_empty());
+    TEST_EXPECT(ctx, !module.unbind());
+    TEST_EXPECT(ctx, module.is_ready());
+
+    application_context->deallocate(
+        allocation_alignment, allocation_size, allocation);
+    TEST_EXPECT(ctx, application_context->is_attribution_empty());
+    TEST_EXPECT(ctx, module.unbind());
+    TEST_EXPECT(ctx, !module.is_ready());
 }
 
 void test_local_creation_moves_and_destruction(TTestContext& ctx)
@@ -842,6 +913,7 @@ int run_erased_owner_tests()
     test_registration_and_empty_state(ctx);
     test_operation_registry(ctx);
     test_operation_registry_failure_boundaries(ctx);
+    test_application_context_and_module_unload_gate(ctx);
     test_local_creation_moves_and_destruction(ctx);
     test_local_context_boundaries(ctx);
     test_creation_accounting_and_destruction(ctx);

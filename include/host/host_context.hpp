@@ -6,7 +6,7 @@
 //  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    13 July 26
 //
-//  Installs the host context including the host memory context.
+//  Installs the host context and owns component memory contexts.
 // 
 //  This file should not be included in modules/DLLs.
 //
@@ -35,6 +35,7 @@ namespace host
 //  Installs the host context.
 [[nodiscard]] bool host_context_install() noexcept;
 [[nodiscard]] memory::CMemoryContext* host_memory_context() noexcept;
+[[nodiscard]] memory::CMemoryContext* application_memory_context() noexcept;
 
 }   //  namespace host
 

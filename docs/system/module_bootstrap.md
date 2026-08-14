@@ -33,6 +33,11 @@ order:
 3. module memory context;
 4. debug service.
 
+The module memory context is component-specific: its system identity must belong
+to the installed ambient module. The host and application contexts may share an
+allocator, but they remain distinct attribution authorities with independent
+live-allocation and byte counters. A context must be empty when installed.
+
 Only after all four services, the advertised peer identity, negotiated
 functional major, local type table, and erased-owner operation authority are
 installed is the module ready for function queries or thread setup.
@@ -47,8 +52,11 @@ Operation authority is installed once and has no uninstall path. Its function
 pointers remain in component-local static storage and are not part of the
 bootstrap ABI exchanged with the host. Shutdown first stops and joins all
 module threads, which destroys module-local runtime state and deallocates their
-transports, then unloads the module. Consequently all LOCAL owners are gone
-before their defining DLL and operation authority become unavailable.
+transports. The host then requires the module context's allocation count and
+attributed bytes both to be zero before native unload. A failed audit leaves the
+DLL loaded, preserving its code and component-local operation authority.
+Consequently all LOCAL owners are gone before their defining DLL and operation
+authority become unavailable.
 The system registry view points to immutable host static storage and remains
 valid for host lifetime, including while queued host-owned debug records drain.
 No local identity is transported in this phase.

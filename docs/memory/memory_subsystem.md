@@ -164,6 +164,19 @@ This layer difference is intentional:
 
 Allocation accounting is attributed to the allocation context that records the allocation.
 
+Each loaded component has its own module memory context. The host and application
+contexts use distinct system identities and independent counters even though they
+currently share the host allocator. Sharing an allocator makes reattribution
+compatible; it does not merge component attribution or make the application
+context a reference to the host context.
+
+The context installed in a module must carry that module's system identity and
+must be empty at installation. Before native module unload, the host stops and
+joins the module threads and verifies that both the context's live-allocation
+count and attributed-byte total are zero. A failed audit prevents unload, so
+allocator-backed storage cannot remain live after the component code responsible
+for it has disappeared.
+
 A move of an owning token transfers both storage ownership and the source
 token's existing attribution. It does not select a new accounting context.
 
@@ -192,6 +205,9 @@ race live use.
 `CMemoryContext` allocation count and allocated-byte counters are relaxed
 atomics. They provide audit telemetry and accounting integrity checks, not a
 general synchronization mechanism for the objects stored through a context.
+`belongs_to_module()` validates the component encoded in the context's system
+identity. `is_attribution_empty()` requires both accounting counters to be zero
+and is intended for quiescent installation and teardown boundaries.
 
 ## Raw storage ownership
 

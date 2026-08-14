@@ -167,7 +167,13 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_system_registry_vi
 
 EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_module_memory_context(memory::CMemoryContext* const context) noexcept
 {
-    if ((s_active_binding == nullptr) || (context == nullptr) || !context->is_usable())
+    const module_ids::id_type ambient_module_id = system_context::get_ambient_module_id();
+    if ((s_active_binding == nullptr) ||
+        s_active_binding->m_module_memory_context_installed ||
+        (context == nullptr) || !context->is_usable() ||
+        !module_ids::is_valid_id(ambient_module_id) ||
+        !context->belongs_to_module(ambient_module_id) ||
+        !context->is_attribution_empty())
     {
         return EBindingResult::invalid_argument;
     }
@@ -210,7 +216,12 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_thread_id(
 
 EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_memory_context(memory::CMemoryContext* const context) noexcept
 {
-    if ((s_active_binding == nullptr) || !s_active_binding->is_ready() || ((context != nullptr) && !context->is_usable()))
+    const module_ids::id_type ambient_module_id = system_context::get_ambient_module_id();
+    if ((s_active_binding == nullptr) || !s_active_binding->is_ready() ||
+        ((context != nullptr) &&
+            (!context->is_usable() ||
+                !module_ids::is_valid_id(ambient_module_id) ||
+                !context->belongs_to_module(ambient_module_id))))
     {
         return EBindingResult::invalid_argument;
     }

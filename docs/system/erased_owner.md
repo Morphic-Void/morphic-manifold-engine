@@ -104,8 +104,10 @@ structure exchanged with another component, or a transport.
 Host operation authority has executable lifetime. DLL authority remains valid
 until native module unload. Shutdown must stop and join module threads, destroy
 module-local owners and drain/deallocate their component-local transports before
-unloading the DLL. A LOCAL owner cannot be admitted to another component, so it
-cannot legitimately survive there after its defining DLL is unloaded.
+unloading the DLL. The component-specific memory context provides the final
+host-visible audit: its allocation count and attributed bytes must both be zero,
+or the DLL remains loaded. A LOCAL owner cannot be admitted to another component,
+so it cannot legitimately survive there after its defining DLL is unloaded.
 
 ## Hazards
 

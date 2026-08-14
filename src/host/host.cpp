@@ -45,7 +45,7 @@ namespace host
 
 CHost::~CHost() noexcept
 {
-    shutdown();
+    (void)shutdown();
 }
 
 void CHost::initialise_debug_service() noexcept
@@ -104,7 +104,7 @@ bool CHost::bind_application_module() noexcept
     const platform::path::NativePath module_path = platform::path::makeNativePath("MorphicApplication.dll");
     if (!module_path.is_ready() ||
         !m_application_module.bind(module_path, module_ids::application, advertised_host_identity) ||
-        !m_application_module.install(system_registry_view(), module_ids::application, host_memory_context(), m_debug_service))
+        !m_application_module.install(system_registry_view(), module_ids::application, application_memory_context(), m_debug_service))
     {
         MV_ERROR("Host failed to bind and install the application module");
         return false;
@@ -198,8 +198,8 @@ int CHost::execute() noexcept
     {
         run();
     }
-    shutdown();
-    return initialised ? 0 : 1;
+    const bool shutdown_clean = shutdown();
+    return (initialised && shutdown_clean) ? 0 : 1;
 }
 
 void CHost::run() noexcept
@@ -585,15 +585,24 @@ void CHost::shutdown_debug_service() noexcept
     m_debug_service_owner.reset();
 }
 
-void CHost::shutdown() noexcept
+bool CHost::shutdown() noexcept
 {
     shutdown_threads();
     m_application_thread = nullptr;
-    m_application_module.unbind();
+    const bool application_unloaded = m_application_module.unbind();
+    if (!application_unloaded)
+    {
+        memory::CMemoryContext* const context = application_memory_context();
+        MV_CRITICAL_EVENT(
+            "Application module safe unload failed with {} live allocations and {} attributed bytes",
+            context->get_live_allocation_count(),
+            context->get_live_allocated_bytes());
+    }
     m_async_states.deallocate();
     m_assets.deallocate();
     m_thread_packages.deallocate();
     shutdown_debug_service();
+    return application_unloaded;
 }
 
 int host() noexcept

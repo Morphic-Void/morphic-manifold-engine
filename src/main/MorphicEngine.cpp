@@ -85,11 +85,12 @@ int main(int argc, char** argv)
     {
         return 1;
     }
-    host::host();
+    const int host_result = host::host();
     platform::system::set_current_process_priority(platform::system::EProcessPriority::AboveNormal);
     const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();
     (void)hw_threads_supported;
 
     const ETestRunMode test_run_mode = parse_test_run_mode(argc, argv);
-    return run_tests(test_run_mode);
+    const int test_result = run_tests(test_run_mode);
+    return (host_result != 0) ? host_result : test_result;
 }

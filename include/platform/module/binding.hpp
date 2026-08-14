@@ -48,6 +48,8 @@ public:
     //  Binding
     [[nodiscard]] bool bind(const platform::path::NativePath& path) noexcept;
     [[nodiscard]] bool unbind() noexcept;
+    //  Relinquishes handle ownership without unloading the native module.
+    [[nodiscard]] void* release_without_unload() noexcept;
 
     //  Queries
     [[nodiscard]] bool is_bound() const noexcept;

@@ -6,7 +6,7 @@
 //  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    13 July 26
 //
-//  Installs the host context including the host memory context.
+//  Installs the host context and owns component memory contexts.
 // 
 //  This file should not be included in modules/DLLs.
 //
@@ -62,12 +62,13 @@ static bool MV_STD_ABI_CALL host_deallocate(void* const context, const std::size
 }
 
 //==============================================================================
-//  The host memory allocator and memory context
+//  The host memory allocator and component memory contexts
 //==============================================================================
 
 static memory::CMemoryAllocator s_host_memory_allocator(nullptr, &host_allocate, &host_deallocate, system_ids::host);
 
 static memory::CMemoryContext s_host_memory_context(s_host_memory_allocator, system_ids::host);
+static memory::CMemoryContext s_application_memory_context(s_host_memory_allocator, system_ids::application);
 
 //==============================================================================
 //  Host context installation
@@ -99,6 +100,11 @@ bool host_context_install() noexcept
 memory::CMemoryContext* host_memory_context() noexcept
 {
     return &s_host_memory_context;
+}
+
+memory::CMemoryContext* application_memory_context() noexcept
+{
+    return &s_application_memory_context;
 }
 
 }   //  namespace host

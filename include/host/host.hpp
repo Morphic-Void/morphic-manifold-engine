@@ -65,7 +65,7 @@ private:
         application::FApplicationThread& application_thread) noexcept;
     [[nodiscard]] bool start_threads() noexcept;
     void run() noexcept;
-    void shutdown() noexcept;
+    [[nodiscard]] bool shutdown() noexcept;
     void shutdown_threads() noexcept;
     void shutdown_debug_service() noexcept;
 

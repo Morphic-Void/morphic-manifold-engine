@@ -11,13 +11,19 @@
 #include "host/bound_module.hpp"
 
 #include "debug/macros.hpp"
+#include "memory/memory_context.hpp"
 
 namespace host
 {
 
 CBoundModule::~CBoundModule() noexcept
 {
-    unbind();
+    if (!unbind())
+    {
+        void* const retained_module = m_native_module.release_without_unload();
+        MV_CRITICAL_EVENT("CBoundModule retained a native module after safe unload failed");
+        (void)retained_module;
+    }
 }
 
 modules::EBindingResult CBoundModule::populate_core_functions(const std::uint32_t functional_major, modules::SCoreFunctions& functions) const noexcept
@@ -53,7 +59,7 @@ bool CBoundModule::bind(
         (bootstrap_functions.install_peer_identity == nullptr) ||
         (bootstrap_functions.populate_core_functions == nullptr))
     {
-        unbind();
+        (void)unbind();
         return false;
     }
 
@@ -64,7 +70,7 @@ bool CBoundModule::bind(
         !modules::functional_ranges_overlap(host_identity, module_identity) ||
         (bootstrap_functions.install_peer_identity(&host_identity) != modules::EBindingResult::success))
     {
-        unbind();
+        (void)unbind();
         return false;
     }
 
@@ -74,7 +80,7 @@ bool CBoundModule::bind(
     if ((populate_core_functions(m_negotiated_functional_major, core_functions) != modules::EBindingResult::success) ||
         !core_functions.is_complete())
     {
-        unbind();
+        (void)unbind();
         return false;
     }
 
@@ -92,10 +98,19 @@ bool CBoundModule::install(
 {
     if (!m_native_module.is_bound() || m_installed ||
         !module_ids::is_valid_id(ambient_module_id) ||
+        (module_memory_context == nullptr) ||
+        !module_memory_context->is_usable() ||
+        !module_memory_context->belongs_to_module(ambient_module_id) ||
+        !module_memory_context->is_attribution_empty() ||
         (m_core.install_system_registry_view(&system_registry) != modules::EBindingResult::success) ||
         (m_core.install_ambient_module_id(ambient_module_id) != modules::EBindingResult::success) ||
-        (m_core.install_module_memory_context(module_memory_context) != modules::EBindingResult::success) ||
-        (m_core.install_debug_service(debug_service) != modules::EBindingResult::success))
+        (m_core.install_module_memory_context(module_memory_context) != modules::EBindingResult::success))
+    {
+        return false;
+    }
+
+    m_module_memory_context = module_memory_context;
+    if (m_core.install_debug_service(debug_service) != modules::EBindingResult::success)
     {
         return false;
     }
@@ -104,9 +119,7 @@ bool CBoundModule::install(
     return true;
 }
 
-bool CBoundModule::query_function(
-    const system_type_id function_type,
-    modules::FModuleFunction& function) const noexcept
+bool CBoundModule::query_function(const system_type_id function_type, modules::FModuleFunction& function) const noexcept
 {
     function = nullptr;
     if (!m_installed)
@@ -118,18 +131,13 @@ bool CBoundModule::query_function(
     return (result == modules::EBindingResult::success) && (function != nullptr);
 }
 
-bool MV_STD_ABI_CALL CBoundModule::prepare_thread(
-    void* const context,
-    const thread_ids::id_type thread_id,
-    void* const thread_resources) noexcept
+bool MV_STD_ABI_CALL CBoundModule::prepare_thread(void* const context, const thread_ids::id_type thread_id, void* const thread_resources) noexcept
 {
     CBoundModule* const module = static_cast<CBoundModule*>(context);
     return (module != nullptr) && module->prepare_thread(thread_id, thread_resources);
 }
 
-bool CBoundModule::prepare_thread(
-    const thread_ids::id_type thread_id,
-    void* const thread_resources) noexcept
+bool CBoundModule::prepare_thread(const thread_ids::id_type thread_id, void* const thread_resources) noexcept
 {
     return m_installed &&
         (m_core.install_ambient_thread_id(thread_id) == modules::EBindingResult::success) &&
@@ -137,15 +145,26 @@ bool CBoundModule::prepare_thread(
         (m_core.install_thread_memory_context(nullptr) == modules::EBindingResult::success);
 }
 
-void CBoundModule::unbind() noexcept
+bool CBoundModule::unbind() noexcept
 {
+    if ((m_module_memory_context != nullptr) && !m_module_memory_context->is_attribution_empty())
+    {
+        return false;
+    }
+
+    if (!m_native_module.unbind())
+    {
+        return false;
+    }
+
     m_installed = false;
+    m_module_memory_context = nullptr;
     m_negotiated_functional_major = 0u;
     m_advertised_host_identity = {};
     m_advertised_module_identity = {};
     m_core = {};
     m_bootstrap = {};
-    (void)m_native_module.unbind();
+    return true;
 }
 
 }   //  namespace host

@@ -38,7 +38,7 @@ public:
         const module_ids::id_type ambient_module_id,
         memory::CMemoryContext* const module_memory_context,
         debug_system::CDebugServiceState* const debug_service) noexcept;
-    void unbind() noexcept;
+    [[nodiscard]] bool unbind() noexcept;
 
     [[nodiscard]] modules::EBindingResult populate_core_functions(
         const std::uint32_t functional_major, modules::SCoreFunctions& functions) const noexcept;
@@ -58,6 +58,7 @@ private:
     modules::SCoreFunctions m_core;
     modules::SAdvertisedIdentity m_advertised_host_identity;
     modules::SAdvertisedIdentity m_advertised_module_identity;
+    memory::CMemoryContext* m_module_memory_context{ nullptr };
     std::uint32_t m_negotiated_functional_major{ 0u };
     bool m_installed{ false };
 };

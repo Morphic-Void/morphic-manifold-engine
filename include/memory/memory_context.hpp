@@ -93,6 +93,8 @@ public:
 
     [[nodiscard]] bool is_usable() const noexcept { return m_allocator.is_usable(); }
     [[nodiscard]] bool is_compatible_with(const CMemoryContext& other) const noexcept { return &m_allocator == &other.m_allocator; }
+    [[nodiscard]] bool belongs_to_module(module_ids::id_type module_id) const noexcept;
+    [[nodiscard]] bool is_attribution_empty() const noexcept;
     [[nodiscard]] const CMemoryAllocator& get_allocator() const noexcept { return m_allocator; }
     [[nodiscard]] system_ids::id_type get_system_id() const noexcept { return m_system_id; }
 
@@ -183,8 +185,7 @@ inline CMemoryContext::CMemoryContext(CMemoryAllocator& allocator, const system_
 
 inline CMemoryContext::~CMemoryContext() noexcept
 {
-    if ((m_live_allocations.load(std::memory_order_relaxed) != 0u) ||
-        (m_live_allocated_bytes.load(std::memory_order_relaxed) != 0u))
+    if (!is_attribution_empty())
     {
         MV_ERROR("CMemoryContext was destroyed with live allocations still recorded");
     }
@@ -198,6 +199,17 @@ inline std::uint32_t CMemoryContext::get_live_allocation_count() const noexcept
 inline std::uint64_t CMemoryContext::get_live_allocated_bytes() const noexcept
 {
     return m_live_allocated_bytes.load(std::memory_order_relaxed);
+}
+
+inline bool CMemoryContext::belongs_to_module(const module_ids::id_type module_id) const noexcept
+{
+    return module_ids::is_valid_id(module_id) && system_ids::is_valid_id(m_system_id) &&
+        (system_ids::get_module_id(m_system_id) == module_id);
+}
+
+inline bool CMemoryContext::is_attribution_empty() const noexcept
+{
+    return (get_live_allocation_count() == 0u) && (get_live_allocated_bytes() == 0u);
 }
 
 inline std::size_t CMemoryContext::condition_alignment(const std::size_t requested_alignment) const noexcept

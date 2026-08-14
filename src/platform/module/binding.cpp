@@ -109,6 +109,13 @@ bool CPlatformModule::unbind() noexcept
     return success;
 }
 
+void* CPlatformModule::release_without_unload() noexcept
+{
+    void* const native_handle = m_native_handle;
+    m_native_handle = nullptr;
+    return native_handle;
+}
+
 bool CPlatformModule::is_bound() const noexcept
 {
     return m_native_handle != nullptr;
