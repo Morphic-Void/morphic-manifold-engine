@@ -15,11 +15,26 @@
 #include "containers/TInstance.hpp"
 #include "debug/macros.hpp"
 #include "debug/service.hpp"
+#include "host/host_local_type_registry.hpp"
 #include "platform/filesystem/internal/file_utils.hpp"
 #include "platform/path/native_path.hpp"
 #include "system/system_context.hpp"
 #include "system/system_id_registry.hpp"
 #include "tests/DebugService_test_suite.hpp"
+
+namespace debug_system
+{
+
+struct SDebugServiceTestAccess
+{
+    [[nodiscard]] static bool write_event(
+        CDebugServiceState& service, const SEvent& event) noexcept
+    {
+        return service.write_event(event);
+    }
+};
+
+}   //  namespace debug_system
 
 namespace debug_service_tests
 {
@@ -67,6 +82,7 @@ void compile_public_macro_interface(const bool execute)
     MV_DETAIL("detail");
     MV_TRACE("trace");
     MV_REPORT("report %u", 3u);
+    MV_REPORT_IMMEDIATE("immediate report %u", 4u);
     MV_WARNING("warning");
     MV_ERROR("error");
     MV_CRITICAL_EVENT("critical event");
@@ -82,6 +98,11 @@ void compile_public_macro_interface(const bool execute)
 
 bool file_contains(const char* const path, const char* const expected)
 {
+    if ((path == nullptr) || (expected == nullptr) || (expected[0] == 0))
+    {
+        return false;
+    }
+
     const platform::path::NativePath native_path =
         platform::path::makeNativePath(path);
     std::FILE* const stream = platform::filesystem::openFile(
@@ -91,11 +112,38 @@ bool file_contains(const char* const path, const char* const expected)
         return false;
     }
 
-    char buffer[4096]{};
-    const std::size_t read = std::fread(buffer, 1u, sizeof(buffer) - 1u, stream);
-    std::fclose(stream);
-    buffer[read] = 0;
-    return std::strstr(buffer, expected) != nullptr;
+    constexpr std::size_t buffer_capacity = 8192u;
+    char buffer[buffer_capacity]{};
+    const std::size_t expected_size = std::strlen(expected);
+    if (expected_size >= buffer_capacity)
+    {
+        std::fclose(stream);
+        return false;
+    }
+
+    std::size_t retained = 0u;
+    for (;;)
+    {
+        const std::size_t read = std::fread(
+            buffer + retained, 1u,
+            buffer_capacity - retained - 1u, stream);
+        const std::size_t available = retained + read;
+        buffer[available] = 0;
+        if (std::strstr(buffer, expected) != nullptr)
+        {
+            std::fclose(stream);
+            return true;
+        }
+        if (read == 0u)
+        {
+            std::fclose(stream);
+            return false;
+        }
+
+        const std::size_t overlap = expected_size - 1u;
+        retained = (available < overlap) ? available : overlap;
+        std::memmove(buffer, buffer + available - retained, retained);
+    }
 }
 
 debug_system::EEventArgumentType argument_type(
@@ -137,10 +185,19 @@ void test_argument_encoding(TTestContext& ctx)
         sizeof(debug_system::SEvent) ==
         debug_system::k_event_transport_element_size);
     static_assert(alignof(debug_system::SEvent) == 64u);
+    static_assert(offsetof(debug_system::SEvent, representation) == 16u);
+    static_assert(offsetof(debug_system::SEvent, filename_size) == 19u);
+    static_assert(offsetof(debug_system::SEvent, metadata) == 20u);
     static_assert(offsetof(debug_system::SEvent, filename) == 32u);
-    static_assert(offsetof(debug_system::SEvent, expression) == 64u);
-    static_assert(offsetof(debug_system::SEvent, format) == 256u);
-    static_assert(offsetof(debug_system::SEvent, parameters) == 384u);
+    static_assert(offsetof(debug_system::SEvent, storage) == 64u);
+    static_assert(offsetof(debug_system::SReportEventMetadata, report_length) == 0u);
+    static_assert(offsetof(debug_system::SReportEventMetadata, reserved) == 2u);
+    static_assert(offsetof(debug_system::SStructuredEventMetadata, content_type) == 2u);
+    static_assert(offsetof(debug_system::SStructuredEventMetadata, parameter_count) == 3u);
+    static_assert(offsetof(debug_system::SStructuredEventMetadata, parameter_types) == 4u);
+    static_assert(offsetof(debug_system::SStructuredEventStorage, expression) == 0u);
+    static_assert(offsetof(debug_system::SStructuredEventStorage, format) == 192u);
+    static_assert(offsetof(debug_system::SStructuredEventStorage, parameters) == 320u);
     static_assert(debug_system::is_valid_event_metadata(
         debug_system::EEventLevel::info,
         debug_system::EEventType::event));
@@ -176,6 +233,14 @@ void test_argument_encoding(TTestContext& ctx)
         debug_system::is_supported_event_argument_v<
             debug_system::CInlineText16>);
     static_assert(debug_system::is_supported_event_argument_v<system_type_id>);
+    static_assert(debug_system::is_supported_event_argument_v<local_type_id>);
+    static_assert(debug_system::is_supported_event_argument_v<type_id>);
+    static_assert(
+        debug_system::is_supported_event_argument_v<system_ids::id_type>);
+    static_assert(
+        debug_system::is_supported_event_argument_v<module_ids::id_type>);
+    static_assert(
+        debug_system::is_supported_event_argument_v<thread_ids::id_type>);
     static_assert(!debug_system::is_supported_event_argument_v<const char*>);
 
     const debug_system::SEventArguments empty =
@@ -249,17 +314,68 @@ void test_argument_encoding(TTestContext& ctx)
         argument_type(inline_text, 0u) ==
         debug_system::EEventArgumentType::inline_text);
 
-    const debug_system::SEventArguments type_id =
+    const debug_system::SEventArguments system_id_arguments =
         debug_system::encode_event_arguments(system_type_ids::file_load_request);
-    TEST_EXPECT(ctx, type_id.parameter_count == 1u);
+    TEST_EXPECT(ctx, system_id_arguments.parameter_count == 1u);
     TEST_EXPECT(ctx,
-        argument_type(type_id, 0u) ==
-        debug_system::EEventArgumentType::type_id);
+        argument_type(system_id_arguments, 0u) ==
+        debug_system::EEventArgumentType::system_type_id);
+
+    const local_type_id registered_local = host_local_type_ids::host_runtime;
+    const local_type_id unresolved_local = local_type_ids::encode_id(
+        local_type_ids::encode_index(host_local_type_ids::k_count));
+    const local_type_id invalid_local{ 0x00000002u };
+    type_id malformed_generic;
+    const std::uint32_t malformed_raw = 0x00000002u;
+    std::memcpy(&malformed_generic, &malformed_raw, sizeof(malformed_generic));
+    const debug_system::SEventArguments normalized_ids =
+        debug_system::encode_event_arguments(
+            registered_local,
+            unresolved_local,
+            invalid_local,
+            type_id{ system_type_ids::file_load_request },
+            type_id{ registered_local },
+            malformed_generic);
+    TEST_EXPECT(ctx, normalized_ids.parameter_count == 6u);
+    TEST_EXPECT(ctx, argument_type(normalized_ids, 0u) ==
+        debug_system::EEventArgumentType::local_type_name);
+    TEST_EXPECT(ctx, argument_type(normalized_ids, 1u) ==
+        debug_system::EEventArgumentType::local_type_id_failure);
+    TEST_EXPECT(ctx, argument_type(normalized_ids, 2u) ==
+        debug_system::EEventArgumentType::local_type_id_failure);
+    TEST_EXPECT(ctx, argument_type(normalized_ids, 3u) ==
+        debug_system::EEventArgumentType::system_type_id);
+    TEST_EXPECT(ctx, argument_type(normalized_ids, 4u) ==
+        debug_system::EEventArgumentType::local_type_name);
+    TEST_EXPECT(ctx, argument_type(normalized_ids, 5u) ==
+        debug_system::EEventArgumentType::local_type_id_failure);
+    TEST_EXPECT(ctx, std::memcmp(
+        normalized_ids.parameters[0u].bytes,
+        local_type_registry::lookup_name(registered_local)->bytes,
+        debug_system::k_event_argument_slot_size) == 0);
+    TEST_EXPECT(ctx, normalized_ids.parameters[1u].bytes[4u] == std::byte{});
+    TEST_EXPECT(ctx, normalized_ids.parameters[2u].bytes[4u] == std::byte{});
+
+    const debug_system::SEventArguments runtime_ids =
+        debug_system::encode_event_arguments(
+            system_ids::host,
+            module_ids::executable,
+            thread_ids::host);
+    TEST_EXPECT(ctx, runtime_ids.parameter_count == 3u);
+    TEST_EXPECT(ctx, argument_type(runtime_ids, 0u) ==
+        debug_system::EEventArgumentType::system_id);
+    TEST_EXPECT(ctx, argument_type(runtime_ids, 1u) ==
+        debug_system::EEventArgumentType::module_id);
+    TEST_EXPECT(ctx, argument_type(runtime_ids, 2u) ==
+        debug_system::EEventArgumentType::thread_id);
+    TEST_EXPECT(ctx, runtime_ids.parameters[0u].bytes[8u] == std::byte{});
+    TEST_EXPECT(ctx, runtime_ids.parameters[1u].bytes[8u] == std::byte{});
+    TEST_EXPECT(ctx, runtime_ids.parameters[2u].bytes[8u] == std::byte{});
 }
 
 void test_argument_formatting(TTestContext& ctx)
 {
-    char output[256]{};
+    char output[512]{};
     std::size_t output_size = 0u;
 
     const debug_system::SEventArguments values =
@@ -363,6 +479,79 @@ void test_argument_formatting(TTestContext& ctx)
         debug_system::EEventFormatResult::success);
     TEST_EXPECT(ctx, std::strcmp(output, expected_type_output) == 0);
 
+    const local_type_id unresolved_local = local_type_ids::encode_id(
+        local_type_ids::encode_index(host_local_type_ids::k_count));
+    char expected_local_output[192]{};
+    const int expected_local_output_size = std::snprintf(
+        expected_local_output,
+        sizeof(expected_local_output),
+        "host_runtime | unregistered-local-type:0x%08x | invalid-local-type:0x%08x",
+        static_cast<unsigned int>(unresolved_local.raw_value()),
+        0x00000002u);
+    TEST_EXPECT(ctx, expected_local_output_size > 0);
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "{} | {} | {}",
+            debug_system::encode_event_arguments(
+                host_local_type_ids::host_runtime,
+                unresolved_local,
+                local_type_id{ 0x00000002u }),
+            output_size) ==
+        debug_system::EEventFormatResult::success);
+    TEST_EXPECT(ctx, std::strcmp(output, expected_local_output) == 0);
+
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "{} | {} | {}",
+            debug_system::encode_event_arguments(
+                system_ids::host,
+                module_ids::executable,
+                thread_ids::host),
+            output_size) ==
+        debug_system::EEventFormatResult::success);
+    TEST_EXPECT(ctx, std::strcmp(output, "executable:host | executable | host") == 0);
+
+    const module_ids::id_type unregistered_module = module_ids::make_id(
+        mount_point_ids::render,
+        module_ids::application_index);
+    const thread_ids::id_type unregistered_thread = thread_ids::make_id(
+        thread_ids::make_index(thread_ids::k_count));
+    const system_ids::id_type unregistered_system =
+        system_ids::make_system_id(unregistered_module, thread_ids::host);
+    char expected_runtime_output[512]{};
+    const int expected_runtime_output_size = std::snprintf(
+        expected_runtime_output,
+        sizeof(expected_runtime_output),
+        "unregistered-system:0x%016llx | invalid-system:0x%016llx | "
+        "unregistered-module:0x%016llx | invalid-module:0x%016llx | "
+        "unregistered-thread:0x%016llx | invalid-thread:0x%016llx",
+        static_cast<unsigned long long>(unregistered_system.raw_value()),
+        2ULL,
+        static_cast<unsigned long long>(unregistered_module.raw_value()),
+        2ULL,
+        static_cast<unsigned long long>(unregistered_thread.raw_value()),
+        2ULL);
+    TEST_EXPECT(ctx, expected_runtime_output_size > 0);
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "{} | {} | {} | {} | {} | {}",
+            debug_system::encode_event_arguments(
+                unregistered_system,
+                system_ids::id_type{ 2u },
+                unregistered_module,
+                module_ids::id_type{ 2u },
+                unregistered_thread,
+                thread_ids::id_type{ 2u }),
+            output_size) ==
+        debug_system::EEventFormatResult::success);
+    TEST_EXPECT(ctx, std::strcmp(output, expected_runtime_output) == 0);
+
     TEST_EXPECT(ctx,
         format_event(
             output,
@@ -378,6 +567,14 @@ void test_argument_formatting(TTestContext& ctx)
             "#{}",
             debug_system::encode_event_arguments(
                 debug_system::CInlineText16{ "small text" }),
+            output_size) ==
+        debug_system::EEventFormatResult::unsupported_argument);
+    TEST_EXPECT(ctx,
+        format_event(
+            output,
+            sizeof(output),
+            "#{}",
+            debug_system::encode_event_arguments(system_ids::host),
             output_size) ==
         debug_system::EEventFormatResult::unsupported_argument);
     TEST_EXPECT(ctx,
@@ -421,27 +618,53 @@ void test_argument_formatting(TTestContext& ctx)
             output_size) ==
         debug_system::EEventFormatResult::invalid_descriptor);
 
-    debug_system::SEventArguments reserved_type{};
-    reserved_type.parameter_types[0u] =
-        debug_system::EEventArgumentType::reserved_local_id_text;
-    reserved_type.parameter_count = 1u;
+    debug_system::SEventArguments malformed_system_id =
+        debug_system::encode_event_arguments(system_ids::host);
+    malformed_system_id.parameters[0u].bytes[8u] = std::byte{ 1u };
+    TEST_EXPECT(ctx,
+        format_event(output, sizeof(output), "{}", malformed_system_id, output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+
+    debug_system::SEventArguments malformed_module_id =
+        debug_system::encode_event_arguments(module_ids::executable);
+    malformed_module_id.parameters[0u].bytes[8u] = std::byte{ 1u };
+    TEST_EXPECT(ctx,
+        format_event(output, sizeof(output), "{}", malformed_module_id, output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+
+    debug_system::SEventArguments malformed_thread_id =
+        debug_system::encode_event_arguments(thread_ids::host);
+    malformed_thread_id.parameters[0u].bytes[8u] = std::byte{ 1u };
+    TEST_EXPECT(ctx,
+        format_event(output, sizeof(output), "{}", malformed_thread_id, output_size) ==
+        debug_system::EEventFormatResult::invalid_descriptor);
+
+    debug_system::SEventArguments malformed_local_name{};
+    malformed_local_name.parameter_types[0u] =
+        debug_system::EEventArgumentType::local_type_name;
+    malformed_local_name.parameter_count = 1u;
+    std::memset(malformed_local_name.parameters[0u].bytes, 'n',
+        debug_system::k_event_argument_slot_size);
     TEST_EXPECT(ctx,
         format_event(
             output,
             sizeof(output),
             "{}",
-            reserved_type,
+            malformed_local_name,
             output_size) ==
         debug_system::EEventFormatResult::invalid_descriptor);
 
-    reserved_type.parameter_types[0u] =
-        debug_system::EEventArgumentType::reserved_local_id_failure;
+    debug_system::SEventArguments malformed_local_failure{};
+    malformed_local_failure.parameter_types[0u] =
+        debug_system::EEventArgumentType::local_type_id_failure;
+    malformed_local_failure.parameter_count = 1u;
+    malformed_local_failure.parameters[0u].bytes[4u] = std::byte{ 1u };
     TEST_EXPECT(ctx,
         format_event(
             output,
             sizeof(output),
             "{}",
-            reserved_type,
+            malformed_local_failure,
             output_size) ==
         debug_system::EEventFormatResult::invalid_descriptor);
 
@@ -771,10 +994,15 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             breakpoint_override,
             true,
             debug_system::EShutdownReason::none,
-            "typed {} {} {}",
+            "typed {} {} {} {} {} {} {} {}",
             std::int32_t{ -7 },
             system_type_ids::file_load_request,
-            debug_system::CInlineText16{ "payload" })));
+            debug_system::CInlineText16{ "payload" },
+            host_local_type_ids::host_runtime,
+            type_id{ host_local_type_ids::tga_file_load },
+            system_ids::host,
+            module_ids::executable,
+            thread_ids::host)));
 
     const system_type_id unregistered_type_id =
         system_type_ids::encode_id(system_type_ids::encode_index(system_type_ids::k_count));
@@ -787,19 +1015,55 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             breakpoint_override,
             true,
             debug_system::EShutdownReason::none,
-            "typed {} {}",
+            "typed {} {} {} {}",
             unregistered_type_id,
-            system_type_id{ 0x00000002u })));
+            system_type_id{ 0x00000002u },
+            local_type_ids::encode_id(
+                local_type_ids::encode_index(host_local_type_ids::k_count)),
+            local_type_id{ 0x00000002u })));
 
     char oversized[debug_system::k_event_format_capacity + 32u];
     std::memset(oversized, 'x', sizeof(oversized) - 1u);
     oversized[sizeof(oversized) - 1u] = 0;
     TEST_EXPECT(ctx, debug_system::submit_text(oversized));
     MV_REPORT("rich %s %d %.1f", "report", 42, 3.5);
+
+    char report447[debug_system::k_event_report_capacity]{};
+    std::memset(report447, 'r', sizeof(report447) - 1u);
+    report447[0u] = 'A';
+    report447[sizeof(report447) - 2u] = 'Z';
+    TEST_EXPECT(ctx, debug_system::report(
+        source_file, sizeof(source_file) - 1u, source_line + 2u,
+        "%s", report447));
+
+    char report448[debug_system::k_event_report_capacity + 1u]{};
+    std::memset(report448, 's', sizeof(report448) - 1u);
+    report448[0u] = 'B';
+    report448[sizeof(report448) - 2u] = 'Y';
+    TEST_EXPECT(ctx, debug_system::report(
+        source_file, sizeof(source_file) - 1u, source_line + 3u,
+        "%s", report448));
+
+    MV_REPORT_IMMEDIATE("immediate %s %u", "report", 17u);
+
+    char maximum_report[debug_system::k_format_buffer_capacity]{};
+    std::memset(maximum_report, 'm', sizeof(maximum_report) - 1u);
+    maximum_report[0u] = 'C';
+    maximum_report[sizeof(maximum_report) - 2u] = 'X';
+    TEST_EXPECT(ctx, debug_system::report(
+        source_file, sizeof(source_file) - 1u, source_line + 4u,
+        "%s", maximum_report));
+
+    char oversized_report[debug_system::k_format_buffer_capacity + 1u]{};
+    std::memset(oversized_report, 'o', sizeof(oversized_report) - 1u);
+    TEST_EXPECT(ctx, !debug_system::report(
+        source_file, sizeof(source_file) - 1u, source_line + 5u,
+        "%s", oversized_report));
+
     const std::uint32_t panic_incident_id = service->allocate_incident_id();
-    TEST_EXPECT(ctx, panic_incident_id == 8u);
+    TEST_EXPECT(ctx, panic_incident_id == 13u);
     const debug_system::SEventUsagePoint panic_usage_point{
-        source_file, sizeof(source_file) - 1u, source_line + 2u };
+        source_file, sizeof(source_file) - 1u, source_line + 6u };
     TEST_EXPECT(ctx,
         service->try_write_panic_record(
             panic_usage_point,
@@ -874,23 +1138,29 @@ void test_writer_and_direct_paths(TTestContext& ctx)
 
     constexpr const char* source_suffix =
         "DebugService_test_suite.cpp";
-    char source_marker[160]{};
+    char source_marker[192]{};
     const int source_marker_size = std::snprintf(
         source_marker,
         sizeof(source_marker),
-        "[%s:%u] typed -7 file_load_request payload",
+        "[%s:%u] typed -7 file_load_request payload host_runtime tga_file_load "
+        "executable:host executable host",
         source_suffix,
         source_line);
     TEST_EXPECT(ctx, source_marker_size > 0);
 
-    char type_fallback_marker[192]{};
+    const local_type_id unresolved_local = local_type_ids::encode_id(
+        local_type_ids::encode_index(host_local_type_ids::k_count));
+    char type_fallback_marker[256]{};
     const int type_fallback_marker_size = std::snprintf(
         type_fallback_marker,
         sizeof(type_fallback_marker),
-        "[%s:%u] typed unregistered-type:0x%08x invalid-type:0x%08x",
+        "[%s:%u] typed unregistered-type:0x%08x invalid-type:0x%08x "
+        "unregistered-local-type:0x%08x invalid-local-type:0x%08x",
         source_suffix,
         source_line + 1u,
         static_cast<unsigned int>(unregistered_type_id),
+        0x00000002u,
+        static_cast<unsigned int>(unresolved_local.raw_value()),
         0x00000002u);
     TEST_EXPECT(ctx, type_fallback_marker_size > 0);
 
@@ -910,20 +1180,32 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     TEST_EXPECT(ctx, file_contains(event_path, type_fallback_marker));
     TEST_EXPECT(ctx, file_contains(direct_path, "[0000000006]"));
     TEST_EXPECT(ctx, !file_contains(direct_path, system_marker));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000007]"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "rich report 42 3.5"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000008]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000007]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "rich report 42 3.5"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000008]"));
+    TEST_EXPECT(ctx, file_contains(event_path, report447));
+    TEST_EXPECT(ctx, !file_contains(event_path, report448));
+    TEST_EXPECT(ctx, !file_contains(event_path, "immediate report 17"));
+    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000009]"));
+    TEST_EXPECT(ctx, file_contains(direct_path, report448));
+    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000010]"));
+    TEST_EXPECT(ctx, file_contains(direct_path, "immediate report 17"));
+    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000011]"));
+    TEST_EXPECT(ctx, file_contains(direct_path, maximum_report));
+    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000012]"));
+    TEST_EXPECT(ctx, file_contains(direct_path, "Invalid rich debug report"));
+    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000013]"));
     TEST_EXPECT(ctx, file_contains(direct_path, "[panic:event]"));
     TEST_EXPECT(ctx, file_contains(direct_path, "panic substrate record"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000009]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000014]"));
     TEST_EXPECT(ctx, file_contains(event_path, unregistered_marker));
     TEST_EXPECT(ctx,
         file_contains(event_path, "unregistered system identity"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000010]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000015]"));
     TEST_EXPECT(ctx, file_contains(event_path, invalid_marker));
     TEST_EXPECT(ctx, file_contains(event_path, "invalid system identity"));
 #if MV_DEVELOPMENT_BUILD
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000011]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000016]"));
     TEST_EXPECT(ctx,
         file_contains(event_path,
             "Assertion failed: std::uint32_t{} == 1u"));
@@ -1109,6 +1391,7 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
     debug_system::CDebugServiceState* const service = owner.operator->();
     TEST_EXPECT(ctx, service->configure_log_paths(event_path, direct_path));
     TEST_EXPECT(ctx, service->open_logs());
+    TEST_EXPECT(ctx, debug_system::install_service(service));
 
     for (std::uint32_t index = 0u;
         index < debug_system::CEventTransport::k_capacity; ++index)
@@ -1125,15 +1408,130 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
         (service->submit_event<
             debug_system::EEventLevel::info,
             debug_system::EEventType::event>(
-            usage_point, "equivalence {}",
-            sizeof("equivalence {}") - 1u, std::uint32_t{ 42u })));
+                usage_point, "direct ids {} {} {} {} {} {}",
+            sizeof("direct ids {} {} {} {} {} {}") - 1u,
+            host_local_type_ids::host_runtime,
+            local_type_ids::encode_id(
+                local_type_ids::encode_index(host_local_type_ids::k_count)),
+            type_id{ system_type_ids::byte_buffer },
+            system_ids::host,
+            module_ids::executable,
+            thread_ids::host)));
+    TEST_EXPECT(ctx, debug_system::report(
+        source_file, sizeof(source_file) - 1u, 778u,
+        "full %s", "report fallback"));
     TEST_EXPECT(ctx, service->start());
     TEST_EXPECT(ctx, service->stop());
-
     constexpr const char* reconstructed =
         "[info:event] [DebugService_test_suite.cpp:777] equivalence 42";
     TEST_EXPECT(ctx, file_contains(event_path, reconstructed));
-    TEST_EXPECT(ctx, file_contains(direct_path, reconstructed));
+    TEST_EXPECT(ctx, file_contains(direct_path,
+        "[DebugService_test_suite.cpp:777] direct ids host_runtime "
+        "unregistered-local-type:"));
+    TEST_EXPECT(ctx, file_contains(direct_path, "byte_buffer"));
+    TEST_EXPECT(ctx, file_contains(direct_path,
+        "byte_buffer executable:host executable host"));
+    TEST_EXPECT(ctx, file_contains(direct_path,
+        "[DebugService_test_suite.cpp:778] full report fallback"));
+    TEST_EXPECT(ctx, debug_system::report(
+        source_file, sizeof(source_file) - 1u, 779u,
+        "closed %s", "report fallback"));
+    TEST_EXPECT(ctx, debug_system::uninstall_service(service));
+    owner.reset();
+
+    TEST_EXPECT(ctx, file_contains(direct_path,
+        "[DebugService_test_suite.cpp:779] closed report fallback"));
+}
+
+void test_malformed_event_overlays(TTestContext& ctx)
+{
+    constexpr const char* event_path = "debug_service_malformed_test.log";
+    constexpr const char* direct_path = "debug_service_malformed_test_direct.log";
+
+    TInstance<debug_system::CDebugServiceState> owner =
+        TInstance<debug_system::CDebugServiceState>::create();
+    TEST_EXPECT(ctx, owner.is_ready());
+    debug_system::CDebugServiceState* const service = owner.operator->();
+    TEST_EXPECT(ctx, service->configure_log_paths(event_path, direct_path));
+    TEST_EXPECT(ctx, service->open_logs());
+
+    debug_system::SEvent valid{};
+    valid.system_id = system_ids::host;
+    valid.incident_id = 1u;
+    valid.representation = debug_system::EEventRepresentation::report;
+    valid.level = debug_system::EEventLevel::info;
+    valid.type = debug_system::EEventType::event;
+    valid.metadata.report.report_length = 3u;
+    valid.storage.report[0u] = 0;
+    std::memcpy(valid.storage.report, "abc", 4u);
+    TEST_EXPECT(ctx,
+        debug_system::SDebugServiceTestAccess::write_event(*service, valid));
+
+    debug_system::SEvent malformed = valid;
+    malformed.incident_id = 2u;
+    malformed.representation =
+        static_cast<debug_system::EEventRepresentation>(0xffu);
+    TEST_EXPECT(ctx,
+        debug_system::SDebugServiceTestAccess::write_event(*service, malformed));
+
+    malformed = valid;
+    malformed.incident_id = 3u;
+    malformed.metadata.report.report_length =
+        static_cast<std::uint16_t>(debug_system::k_event_report_capacity);
+    TEST_EXPECT(ctx,
+        debug_system::SDebugServiceTestAccess::write_event(*service, malformed));
+
+    malformed = valid;
+    malformed.incident_id = 4u;
+    malformed.metadata.report.reserved[0u] = 1u;
+    TEST_EXPECT(ctx,
+        debug_system::SDebugServiceTestAccess::write_event(*service, malformed));
+
+    malformed = valid;
+    malformed.incident_id = 5u;
+    malformed.storage.report[1u] = 0;
+    TEST_EXPECT(ctx,
+        debug_system::SDebugServiceTestAccess::write_event(*service, malformed));
+
+    malformed = valid;
+    malformed.incident_id = 6u;
+    malformed.storage.report[3u] = 'x';
+    TEST_EXPECT(ctx,
+        debug_system::SDebugServiceTestAccess::write_event(*service, malformed));
+
+    malformed = valid;
+    malformed.incident_id = 7u;
+    malformed.storage.report[4u] = 'x';
+    TEST_EXPECT(ctx,
+        debug_system::SDebugServiceTestAccess::write_event(*service, malformed));
+
+    malformed = {};
+    malformed.system_id = system_ids::host;
+    malformed.incident_id = 8u;
+    malformed.representation = debug_system::EEventRepresentation::structured;
+    malformed.level = debug_system::EEventLevel::info;
+    malformed.type = debug_system::EEventType::event;
+    malformed.metadata.structured.format_size = 3u;
+    malformed.metadata.structured.content_type =
+        static_cast<debug_system::EStructuredContentType>(0xffu);
+    std::memcpy(malformed.storage.structured.format, "abc", 4u);
+    TEST_EXPECT(ctx,
+        debug_system::SDebugServiceTestAccess::write_event(*service, malformed));
+
+    TEST_EXPECT(ctx, service->start());
+    TEST_EXPECT(ctx, service->stop());
+    TEST_EXPECT(ctx, file_contains(event_path, "[0000000001]"));
+    TEST_EXPECT(ctx, file_contains(event_path, "abc"));
+    for (std::uint32_t incident = 2u; incident <= 8u; ++incident)
+    {
+        char marker[32]{};
+        const int marker_size = std::snprintf(
+            marker, sizeof(marker), "[%010u]", incident);
+        TEST_EXPECT(ctx, marker_size == 12);
+        TEST_EXPECT(ctx, file_contains(direct_path, marker));
+    }
+    TEST_EXPECT(ctx,
+        file_contains(direct_path, "Invalid transported debug event"));
 }
 
 }   //  namespace debug_service_tests
@@ -1151,6 +1549,7 @@ int run_debug_service_tests()
     debug_service_tests::test_lazy_log_opening(ctx);
     debug_service_tests::test_filename_and_capacity_boundaries(ctx);
     debug_service_tests::test_queued_and_direct_equivalence(ctx);
+    debug_service_tests::test_malformed_event_overlays(ctx);
 
     std::cout << "DebugService: " << ctx.passed << " passed, "
         << ctx.failed << " failed\n";

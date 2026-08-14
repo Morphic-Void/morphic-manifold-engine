@@ -143,8 +143,8 @@ void test_registration_categories(TTestContext& ctx)
     static_assert(!k_can_register_type_id_v<CByteBuffer>);
     static_assert(!k_can_register_type_id_v<host::CHost>);
     static_assert(k_can_register_type_id_v<CUnregisteredType>);
-    static_assert(!debug_system::is_supported_event_argument_v<local_type_id>);
-    static_assert(!debug_system::is_supported_event_argument_v<type_id>);
+    static_assert(debug_system::is_supported_event_argument_v<local_type_id>);
+    static_assert(debug_system::is_supported_event_argument_v<type_id>);
     static_assert(k_type_id_v<CByteBuffer> == type_id{ k_system_type_id_v<CByteBuffer> });
     static_assert(k_type_id_v<host::CHost> == type_id{ k_local_type_id_v<host::CHost> });
     static_assert(k_type_id_binding_category_v<host::SHostTgaFileLoadState> == ETypeIdBindingCategory::local);

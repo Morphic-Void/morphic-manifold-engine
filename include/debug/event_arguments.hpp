@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "system/local_type_registry.hpp"
 #include "system/system_ids.hpp"
 
 namespace debug_system
@@ -40,12 +41,12 @@ enum class EEventArgumentType : std::uint8_t
     float32 = 7u,
     float64 = 8u,
     inline_text = 9u,
-    type_id = 10u,
-    reserved_local_id_text = 11u,
-    reserved_local_id_failure = 12u,
-    reserved13 = 13u,
-    reserved14 = 14u,
-    reserved15 = 15u
+    system_type_id = 10u,
+    local_type_name = 11u,
+    local_type_id_failure = 12u,
+    system_id = 13u,
+    module_id = 14u,
+    thread_id = 15u
 };
 
 enum class EEventFormatResult : std::uint32_t
@@ -135,7 +136,10 @@ MV_DEFINE_EVENT_ARGUMENT_TRAITS(std::uint64_t, EEventArgumentType::uint64);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(float, EEventArgumentType::float32);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(double, EEventArgumentType::float64);
 MV_DEFINE_EVENT_ARGUMENT_TRAITS(CInlineText16, EEventArgumentType::inline_text);
-MV_DEFINE_EVENT_ARGUMENT_TRAITS(system_type_id, EEventArgumentType::type_id);
+MV_DEFINE_EVENT_ARGUMENT_TRAITS(system_type_id, EEventArgumentType::system_type_id);
+MV_DEFINE_EVENT_ARGUMENT_TRAITS(system_ids::id_type, EEventArgumentType::system_id);
+MV_DEFINE_EVENT_ARGUMENT_TRAITS(module_ids::id_type, EEventArgumentType::module_id);
+MV_DEFINE_EVENT_ARGUMENT_TRAITS(thread_ids::id_type, EEventArgumentType::thread_id);
 
 #undef MV_DEFINE_EVENT_ARGUMENT_TRAITS
 
@@ -145,6 +149,22 @@ struct TArgumentTraits<bool>
     static constexpr bool k_supported = true;
     static constexpr EEventArgumentType k_type = EEventArgumentType::unused;
     static constexpr std::size_t k_value_size = 0u;
+};
+
+template<>
+struct TArgumentTraits<local_type_id>
+{
+    static constexpr bool k_supported = true;
+    static constexpr EEventArgumentType k_type = EEventArgumentType::unused;
+    static constexpr std::size_t k_value_size = k_event_argument_slot_size;
+};
+
+template<>
+struct TArgumentTraits<type_id>
+{
+    static constexpr bool k_supported = true;
+    static constexpr EEventArgumentType k_type = EEventArgumentType::unused;
+    static constexpr std::size_t k_value_size = k_event_argument_slot_size;
 };
 
 template<typename T>
@@ -158,26 +178,62 @@ void encode_argument(
 {
     using CValue = CArgumentType<T>;
 
-    EEventArgumentType type = TArgumentTraits<CValue>::k_type;
-    if constexpr (std::is_same_v<CValue, bool>)
+    if constexpr (std::is_same_v<CValue, local_type_id>)
     {
-        type = argument
-            ? EEventArgumentType::true_value
-            : EEventArgumentType::false_value;
-    }
-
-    parameter_types[parameter_index] = type;
-
-    if constexpr (TArgumentTraits<CValue>::k_value_size != 0u)
-    {
-        if constexpr (std::is_same_v<CValue, CInlineText16>)
+        const local_type_registry::SLocalTypeName* const name = local_type_registry::lookup_name(argument);
+        if (name != nullptr)
         {
-            std::memcpy(parameters[parameter_index].bytes, argument.data(), k_inline_text_capacity);
+            parameter_types[parameter_index] = EEventArgumentType::local_type_name;
+            std::memcpy(parameters[parameter_index].bytes, name->bytes, local_type_registry::k_short_name_capacity);
         }
         else
         {
-            const CValue value = std::forward<T>(argument);
-            std::memcpy(parameters[parameter_index].bytes, &value, sizeof(value));
+            parameter_types[parameter_index] = EEventArgumentType::local_type_id_failure;
+            const std::uint32_t raw_value = argument.raw_value();
+            std::memcpy(parameters[parameter_index].bytes, &raw_value, sizeof(raw_value));
+        }
+    }
+    else if constexpr (std::is_same_v<CValue, type_id>)
+    {
+        system_type_id system_id;
+        local_type_id local_id;
+        if (argument.try_system_type_id(system_id))
+        {
+            parameter_types[parameter_index] = EEventArgumentType::system_type_id;
+            std::memcpy(parameters[parameter_index].bytes, &system_id, sizeof(system_id));
+        }
+        else if (argument.try_local_type_id(local_id))
+        {
+            encode_argument(parameter_types, parameters, local_id, parameter_index);
+        }
+        else
+        {
+            parameter_types[parameter_index] = EEventArgumentType::local_type_id_failure;
+            const std::uint32_t raw_value = argument.raw_value();
+            std::memcpy(parameters[parameter_index].bytes, &raw_value, sizeof(raw_value));
+        }
+    }
+    else
+    {
+        EEventArgumentType type = TArgumentTraits<CValue>::k_type;
+        if constexpr (std::is_same_v<CValue, bool>)
+        {
+            type = argument ? EEventArgumentType::true_value : EEventArgumentType::false_value;
+        }
+
+        parameter_types[parameter_index] = type;
+
+        if constexpr (TArgumentTraits<CValue>::k_value_size != 0u)
+        {
+            if constexpr (std::is_same_v<CValue, CInlineText16>)
+            {
+                std::memcpy(parameters[parameter_index].bytes, argument.data(), k_inline_text_capacity);
+            }
+            else
+            {
+                const CValue value = std::forward<T>(argument);
+                std::memcpy(parameters[parameter_index].bytes, &value, sizeof(value));
+            }
         }
     }
 }
@@ -194,10 +250,8 @@ void encode_event_arguments_into(
     SEventParameterValue (&parameters)[k_event_argument_count],
     Args&&... arguments) noexcept
 {
-    static_assert((sizeof...(Args) <= k_event_argument_count),
-        "A debug event accepts at most eight dynamic arguments.");
-    static_assert((event_argument_detail::k_supported<Args> && ...),
-        "A debug event argument has an unsupported type.");
+    static_assert((sizeof...(Args) <= k_event_argument_count), "A debug event accepts at most eight dynamic arguments.");
+    static_assert((event_argument_detail::k_supported<Args> && ...), "A debug event argument has an unsupported type.");
     static_assert(((event_argument_detail::TArgumentTraits<
         event_argument_detail::CArgumentType<Args>>::k_value_size <=
         k_event_argument_slot_size) && ...),
@@ -210,8 +264,7 @@ void encode_event_arguments_into(
     }
 
     std::size_t parameter_index = 0u;
-    (event_argument_detail::encode_argument(
-        parameter_types, parameters, std::forward<Args>(arguments), parameter_index++), ...);
+    (event_argument_detail::encode_argument(parameter_types, parameters, std::forward<Args>(arguments), parameter_index++), ...);
 }
 
 template<typename... Args>

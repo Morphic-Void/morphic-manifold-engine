@@ -153,31 +153,33 @@ The transported event contains:
 64-bit ambient system identity
 uint32 incident identity
 uint32 source line
-uint8 content type
+uint8 representation
 uint8 event level
 uint8 event type
-uint8 reserved
 uint8 filename size
-uint8 expression size
-uint8 format size
-uint8 parameter count
-8 byte-wide parameter types
+12-byte representation-specific metadata
 32-byte filename buffer
-192-byte expression buffer
-128-byte format buffer
-8 explicitly aligned 16-byte parameter slots
+448-byte representation-specific storage
 ```
 
 `SEvent` is fixed at 512 bytes and explicitly aligned to 64 bytes. Compile-time
 size, alignment, standard-layout, trivial-copyability, and member-offset
 assertions fix the representation. Full-width identity fields occupy bytes
-0-15. The byte metadata occupies bytes 16-23, with the named reserved byte at
-19 and the filename, expression, and format lengths in payload order at bytes
-20-22. The parameter count remains immediately before the parameter types at
-23. The type array occupies bytes 24-31, the filename occupies bytes 32-63,
-the expression occupies bytes 64-255, and the format occupies bytes 256-383.
-The eight parameter slots occupy bytes 384-511 as two complete 64-byte cache
-lines.
+0-15. Representation, level, event type, and filename size occupy bytes 16-19.
+Bytes 20-31 are a metadata union, the filename occupies bytes 32-63, and bytes
+64-511 are a storage union.
+
+Structured metadata stores expression size at 20, format size at 21,
+structured content type at 22, parameter count at 23, and eight parameter
+types at 24-31. Structured storage retains the 192-byte expression at 64-255,
+the 128-byte format at 256-383, and eight explicitly aligned 16-byte parameter
+slots at 384-511. Structured content type distinguishes literal text from a
+format descriptor.
+
+Report metadata stores a naturally aligned `uint16_t` report length at 20-21
+and ten contiguous reserved zero bytes at 22-31. Report storage overlays the
+entire region from 64-511 with 448 bytes of text storage. Its capacity includes
+the terminator, so a transported report contains at most 447 characters.
 
 The previous generic expansion area is deliberately removed. Future argument
 representation growth is supplied primarily by the byte-wide type namespace
@@ -230,8 +232,8 @@ There are at most eight parameters. Parameter `i` has type `i` and value slot
 `i`; decoding requires no packed-tag extraction or variable-payload traversal.
 Every value is copied with `memcpy` into the beginning of its slot. The event,
 the parameter array, and every parameter slot have explicit 16-byte alignment.
-Slot tails, unused descriptors, unused slots, and the event reserved byte are
-zeroed deterministically. Typed submission encodes directly into a reset arena
+Slot tails, unused descriptors, unused slots, and unused representation bytes
+are zeroed deterministically. Typed submission encodes directly into a reset arena
 slot. If no slot is available, the producer encodes an equivalent direct-path
 argument helper and formats while holding the direct-log lock.
 
@@ -248,20 +250,32 @@ uint64
 float32
 float64
 inline_text
-type_id
-reserved_local_id_text
-reserved_local_id_failure
+system_type_id
+local_type_name
+local_type_id_failure
+system_id
+module_id
+thread_id
 ```
 
 Boolean values consume no payload bytes. `CInlineText16` owns exactly 16 bytes,
 including a guaranteed terminator, and therefore carries at most 15 text
 characters. `system_type_id` consumes four payload bytes and formats as a
 registered symbolic name when one exists, otherwise as an explicit
-`unregistered-type:0x...` or `invalid-type:0x...` diagnostic. The two named
-local-type representations reserve namespace for a later transport phase and
-remain rejected by validation. System type names are resolved through the
-installed immutable host-owned registry view on both queued and synchronous
-module paths. Local type IDs themselves remain unsupported event arguments.
+`unregistered-type:0x...` or `invalid-type:0x...` diagnostic. A registered
+`local_type_id` is normalised on the producer to its fixed 16-byte short-name
+representation. An invalid or unresolved local ID carries its four-byte raw
+value under `local_type_id_failure`, formatting as an explicit
+`unregistered-local-type:0x...` or `invalid-local-type:0x...` diagnostic.
+`type_id` is inspected on the producer and normalised to the corresponding
+system or local representation; it has no generic wire tag. System names are
+resolved through the installed host-owned registry, while local names are
+resolved only through the producing component's installed local registry.
+`system_id`, `module_id`, and `thread_id` each retain their eight-byte numeric
+representation in transport. The consumer resolves registered values through
+the host registry and otherwise emits an explicit `unregistered-...:0x...` or
+`invalid-...:0x...` diagnostic. The remainder of each 16-byte slot must be
+zero for every numeric ID representation.
 
 Unsupported C++ argument types, more than eight arguments, and any value larger
 than one 16-byte slot are compile-time errors. Pointers, references as
@@ -284,8 +298,8 @@ at most 191 bytes plus their terminator and format literals at most 127 bytes
 plus their terminator. Oversized typed literals fail compilation. Runtime typed
 entry points reject text which does not fit its corresponding field.
 Uninterpreted `submit_text()` uses the format field literally and retains its
-existing direct fallback for oversized text. `MV_REPORT` remains the rich
-direct-formatting mechanism.
+existing direct fallback for oversized text. `MV_REPORT` and
+`MV_REPORT_IMMEDIATE` provide the rich formatting mechanisms.
 
 The free `submit_text()` facade resolves the module-local service and delegates
 to `CDebugServiceState::submit_text()`. It remains as a compatibility facade
@@ -312,10 +326,12 @@ breakpoint enable, bits 1-2 to the runtime informational ceiling, and bit 3 to
 critical-incident shutdown escalation. Fatal and panic consequences do not
 depend on the critical escalation bit.
 
-The writer validates the descriptor, interprets the format, and constructs the
-final text in its service-owned 4096-byte buffer. Invalid transported events
-are represented by a fixed diagnostic in the direct log rather than trusting
-the malformed event further.
+For structured format events, the writer validates the descriptor, interprets
+the format, and constructs final text in its service-owned 4096-byte buffer.
+For report events, it validates representation, length, terminator, reserved
+metadata, and unused storage before writing the already prepared text. Invalid
+transported events are represented by a fixed diagnostic in the direct log
+rather than trusting the malformed event further.
 
 The current record envelope renders the transported system identity as a
 fixed-width hexadecimal value, renders the compositional level and type, and
@@ -325,10 +341,12 @@ adds the source filename and line when they are available:
 [decimal incident identity] [hex system identity] [level:type] [filename:line] text
 ```
 
-The direct formatting buffer is covered by the same mutex as direct-log
-opening, writing, and flushing. This makes concurrent producer fallback safe
-without stack-resident 4096-byte buffers. Event and direct routes use the same
-record reconstruction.
+The service-owned direct formatting buffer is covered by the same mutex as
+direct-log opening, writing, and flushing. Typed-event fallback and
+`MV_REPORT_IMMEDIATE` therefore avoid a 4096-byte producer stack buffer. The
+ordinary `MV_REPORT` path deliberately owns a separate bounded 4096-byte
+producer stack buffer so it can format exactly once before choosing transport
+or direct fallback. Event and direct routes use the same record reconstruction.
 
 ## Writer Lifetime
 
@@ -392,6 +410,7 @@ lifecycle calls rather than redesign the service.
 - byte-wide type ordering and zero-payload boolean encoding;
 - the eight-argument and 16-byte slot boundaries;
 - integer, floating-point, boolean, and inline-text formatting;
+- producer-normalised system, local, and generic type identity;
 - transported type-id formatting and valid/unregistered/invalid fallback;
 - sequential substitutions, escaped braces, and hexadecimal insertions;
 - malformed format, mismatched argument, invalid descriptor, unsupported
@@ -403,8 +422,9 @@ lifecycle calls rather than redesign the service.
   truncation, and deterministic termination;
 - raw system identity and source metadata reconstruction;
 - compile-time and writer-side level/type validation;
-- explicit metadata, parameter, filename, expression, and format offsets,
-  including the named reserved byte;
+- explicit common-header, metadata-union, filename, and storage-union offsets;
+- report representation, length, reserved metadata, termination, and unused-byte validation;
+- 447-character transport, 448-character fallback, full-report limits, and immediate routing;
 - identical level/type reconstruction on event and direct routes;
 - explicit pre-install opening of both configured log paths;
 - deferred event-log opening by writer startup;
@@ -412,8 +432,6 @@ lifecycle calls rather than redesign the service.
 - oversized direct fallback;
 - orderly drain, close, and join;
 - event and direct file output.
-
-The focused suite reports 85 passing checks on both x64 and x86.
 
 Implementation of the direct fallback exposed and corrected an existing
 `platform::filesystem::Log::flush()` result inversion: `std::fflush()` returns

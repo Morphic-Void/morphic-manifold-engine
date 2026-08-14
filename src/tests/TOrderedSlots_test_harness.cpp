@@ -1642,11 +1642,6 @@ int run_all_tests(const TOrderedConfig& cfg_in)
 {
     TOrderedConfig cfg = cfg_in;
 
-    if (!host::host_context_install())
-    {
-        return 1;
-    }
-
     TestLogger log;
     log.stop_on_fail = cfg.stop_on_fail;
 
@@ -1670,6 +1665,11 @@ int run_all_tests(const TOrderedConfig& cfg_in)
 #if TORDERED_TESTHARNESS_WITH_MAIN
 int main(int argc, char** argv)
 {
+    if (!host::host_context_install())
+    {
+        return 1;
+    }
+
     const TOrderedConfig cfg = parse_args(argc, argv);
     return run_all_tests(cfg);
 }

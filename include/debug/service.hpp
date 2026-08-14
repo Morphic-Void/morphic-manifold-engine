@@ -44,6 +44,8 @@ constexpr std::uint32_t k_default_configuration = k_breakpoints_enabled | k_info
 constexpr std::size_t k_event_transport_element_size = 512u;
 constexpr std::size_t k_event_expression_capacity = 192u;
 constexpr std::size_t k_event_format_capacity = 128u;
+constexpr std::size_t k_event_report_capacity = 448u;
+constexpr std::size_t k_event_report_max_size = k_event_report_capacity - 1u;
 constexpr std::size_t k_source_file_capacity = 32u;
 constexpr std::size_t k_format_buffer_capacity = 4096u;
 constexpr std::size_t k_log_path_capacity = 260u;
@@ -66,7 +68,13 @@ enum class EServiceThreadState : std::uint32_t
     failed
 };
 
-enum class EEventContentType : std::uint8_t
+enum class EEventRepresentation : std::uint8_t
+{
+    structured = 0u,
+    report
+};
+
+enum class EStructuredContentType : std::uint8_t
 {
     text = 0u,
     format
@@ -146,24 +154,52 @@ struct SIncidentContext
     SEventSource source;
 };
 
+struct SStructuredEventMetadata
+{
+    std::uint8_t expression_size = 0u;
+    std::uint8_t format_size = 0u;
+    EStructuredContentType content_type = EStructuredContentType::text;
+    std::uint8_t parameter_count = 0u;
+    EEventArgumentType parameter_types[k_event_argument_count]{};
+};
+
+struct SReportEventMetadata
+{
+    std::uint16_t report_length = 0u;
+    std::uint8_t reserved[10u]{};
+};
+
+union SEventMetadata
+{
+    SStructuredEventMetadata structured{};
+    SReportEventMetadata report;
+};
+
+struct alignas(64) SStructuredEventStorage
+{
+    char expression[k_event_expression_capacity]{};
+    char format[k_event_format_capacity]{};
+    alignas(64) SEventParameterValue parameters[k_event_argument_count]{};
+};
+
+union alignas(64) SEventStorage
+{
+    SStructuredEventStorage structured{};
+    char report[k_event_report_capacity];
+};
+
 struct alignas(64) SEvent
 {
     system_ids::id_type system_id{};
     std::uint32_t incident_id = 0u;
     std::uint32_t source_line = 0u;
-    EEventContentType content_type = EEventContentType::text;
+    EEventRepresentation representation = EEventRepresentation::structured;
     EEventLevel level = EEventLevel::info;
     EEventType type = EEventType::event;
-    std::uint8_t reserved = 0u;
     std::uint8_t filename_size = 0u;
-    std::uint8_t expression_size = 0u;
-    std::uint8_t format_size = 0u;
-    std::uint8_t parameter_count = 0u;
-    EEventArgumentType parameter_types[k_event_argument_count]{};
+    SEventMetadata metadata;
     char filename[k_source_file_capacity]{};
-    char expression[k_event_expression_capacity]{};
-    char format[k_event_format_capacity]{};
-    alignas(64) SEventParameterValue parameters[k_event_argument_count]{};
+    SEventStorage storage;
 };
 
 struct SBreakpointContext
@@ -174,10 +210,21 @@ struct SBreakpointContext
 };
 
 static_assert((sizeof(system_ids::id_type) == 8u), "Transported system IDs must retain their full 64-bit representation.");
-static_assert((sizeof(EEventContentType) == 1u), "Event content types must occupy one byte.");
+static_assert((sizeof(EEventRepresentation) == 1u), "Event representations must occupy one byte.");
+static_assert((sizeof(EStructuredContentType) == 1u), "Structured content types must occupy one byte.");
 static_assert((sizeof(EEventLevel) == 1u), "Event levels must occupy one byte.");
 static_assert((sizeof(EEventType) == 1u), "Event types must occupy one byte.");
 static_assert((sizeof(EEventArgumentType) == 1u), "Event argument types must occupy one byte.");
+static_assert((sizeof(SStructuredEventMetadata) == 12u), "Structured event metadata must occupy bytes 20-31.");
+static_assert((sizeof(SReportEventMetadata) == 12u), "Report event metadata must occupy bytes 20-31.");
+static_assert((sizeof(SEventMetadata) == 12u), "Event metadata must retain its 12-byte overlay.");
+static_assert((sizeof(SStructuredEventStorage) == k_event_report_capacity), "Structured event storage must occupy bytes 64-511.");
+static_assert((sizeof(SEventStorage) == k_event_report_capacity), "Event storage must retain its 448-byte overlay.");
+static_assert(std::is_standard_layout_v<SStructuredEventMetadata> && std::is_trivially_copyable_v<SStructuredEventMetadata>);
+static_assert(std::is_standard_layout_v<SReportEventMetadata> && std::is_trivially_copyable_v<SReportEventMetadata>);
+static_assert(std::is_standard_layout_v<SEventMetadata> && std::is_trivially_copyable_v<SEventMetadata>);
+static_assert(std::is_standard_layout_v<SStructuredEventStorage> && std::is_trivially_copyable_v<SStructuredEventStorage>);
+static_assert(std::is_standard_layout_v<SEventStorage> && std::is_trivially_copyable_v<SEventStorage>);
 static_assert((sizeof(SEvent) == k_event_transport_element_size), "SEvent must retain its fixed 512-byte transport representation.");
 static_assert((alignof(SEvent) == 64u), "SEvent must remain explicitly 64-byte aligned.");
 static_assert(std::is_standard_layout_v<SEvent>, "SEvent must retain standard layout for explicit offset checks.");
@@ -185,25 +232,31 @@ static_assert(std::is_trivially_copyable_v<SEvent>, "SEvent must remain triviall
 static_assert((offsetof(SEvent, system_id) == 0u), "SEvent system-ID offset changed.");
 static_assert((offsetof(SEvent, incident_id) == 8u), "SEvent incident-ID offset changed.");
 static_assert((offsetof(SEvent, source_line) == 12u), "SEvent source-line offset changed.");
-static_assert((offsetof(SEvent, content_type) == 16u), "SEvent content-type offset changed.");
+static_assert((offsetof(SEvent, representation) == 16u), "SEvent representation offset changed.");
 static_assert((offsetof(SEvent, level) == 17u), "SEvent level offset changed.");
 static_assert((offsetof(SEvent, type) == 18u), "SEvent type offset changed.");
-static_assert((offsetof(SEvent, reserved) == 19u), "SEvent reserved-byte offset changed.");
-static_assert((offsetof(SEvent, filename_size) == 20u), "SEvent filename-size offset changed.");
-static_assert((offsetof(SEvent, expression_size) == 21u), "SEvent expression-size offset changed.");
-static_assert((offsetof(SEvent, format_size) == 22u), "SEvent format-size offset changed.");
-static_assert((offsetof(SEvent, parameter_count) == 23u), "SEvent parameter-count offset changed.");
-static_assert((offsetof(SEvent, parameter_types) == 24u), "SEvent parameter-type offset changed.");
+static_assert((offsetof(SEvent, filename_size) == 19u), "SEvent filename-size offset changed.");
+static_assert((offsetof(SEvent, metadata) == 20u), "SEvent metadata offset changed.");
 static_assert((offsetof(SEvent, filename) == 32u), "SEvent filename offset changed.");
-static_assert((offsetof(SEvent, expression) == 64u), "SEvent expression offset changed.");
-static_assert((offsetof(SEvent, format) == 256u), "SEvent format offset changed.");
-static_assert((offsetof(SEvent, parameters) == 384u), "SEvent parameter offset changed.");
-static_assert((offsetof(SEvent, parameters) % 64u) == 0u,
+static_assert((offsetof(SEvent, storage) == 64u), "SEvent storage offset changed.");
+static_assert((offsetof(SStructuredEventMetadata, expression_size) == 0u), "Structured expression-size offset changed.");
+static_assert((offsetof(SStructuredEventMetadata, format_size) == 1u), "Structured format-size offset changed.");
+static_assert((offsetof(SStructuredEventMetadata, content_type) == 2u), "Structured content-type offset changed.");
+static_assert((offsetof(SStructuredEventMetadata, parameter_count) == 3u), "Structured parameter-count offset changed.");
+static_assert((offsetof(SStructuredEventMetadata, parameter_types) == 4u), "Structured parameter-type offset changed.");
+static_assert((offsetof(SReportEventMetadata, report_length) == 0u), "Report length offset changed.");
+static_assert((offsetof(SReportEventMetadata, reserved) == 2u), "Report reserved metadata offset changed.");
+static_assert((offsetof(SStructuredEventStorage, expression) == 0u), "Structured expression offset changed.");
+static_assert((offsetof(SStructuredEventStorage, format) == 192u), "Structured format offset changed.");
+static_assert((offsetof(SStructuredEventStorage, parameters) == 320u), "Structured parameter offset changed.");
+static_assert((((offsetof(SEvent, storage) + offsetof(SStructuredEventStorage, parameters)) % 64u) == 0u),
     "SEvent parameters must begin on a cache-line boundary.");
 
 using CEventTransport = threading::transports::TMpmcArenaTransport<SEvent, k_event_transport_capacity_hint>;
 using CReservedEventSlot = threading::transports::TReservedArenaSlot<SEvent, k_event_transport_capacity_hint>;
 using CAcquiredEventSlot = threading::transports::TAcquiredArenaSlot<SEvent, k_event_transport_capacity_hint>;
+
+struct SDebugServiceTestAccess;
 
 class CDebugServiceState
 {
@@ -227,6 +280,7 @@ public:
     [[nodiscard]] std::uint32_t allocate_incident_id() noexcept;
     [[nodiscard]] bool submit_text(const char* const text) noexcept;
     [[nodiscard]] bool report_va(const SEventUsagePoint& usage_point, const char* const format, std::va_list arguments) noexcept;
+    [[nodiscard]] bool report_immediate_va(const SEventUsagePoint& usage_point, const char* const format, std::va_list arguments) noexcept;
     [[nodiscard]] bool try_write_panic_record(const SEventUsagePoint& usage_point, const std::uint32_t incident_id, const char* const text, const std::size_t text_size) noexcept;
 
     template<EEventLevel t_level, EEventType t_type, typename... Args>
@@ -263,6 +317,8 @@ public:
     }
 
 private:
+    friend struct SDebugServiceTestAccess;
+
     static constexpr char k_invalid_event[] = "Invalid transported debug event";
     static constexpr std::size_t k_invalid_event_size = sizeof(k_invalid_event) - 1u;
     static constexpr char k_invalid_report[] = "Invalid rich debug report";
@@ -303,6 +359,9 @@ private:
         const char* const expression, const std::size_t expression_size,
         const char* const format, const std::size_t format_size,
         const SEventArguments& arguments) noexcept;
+    [[nodiscard]] bool submit_report_event(
+        const SIncidentContext& incident,
+        const char* const text, const std::size_t text_size) noexcept;
     [[nodiscard]] bool write_event(const SEvent& event) noexcept;
 
     template<EEventLevel t_level, EEventType t_type, typename... Args>
@@ -358,35 +417,36 @@ bool CDebugServiceState::submit_captured_event(
     if (!reserved_event)
     {
         const SEventArguments encoded_arguments = encode_event_arguments(std::forward<Args>(arguments)...);
-        return write_direct_event(t_level, t_type, incident,
-            expression, expression_size, format, format_size, encoded_arguments);
+        return write_direct_event(t_level, t_type, incident, expression, expression_size, format, format_size, encoded_arguments);
     }
 
     *reserved_event = {};
     reserved_event->system_id = incident.source.system_id;
     reserved_event->incident_id = incident.incident_id;
     reserved_event->source_line = incident.source.line;
-    reserved_event->content_type = EEventContentType::format;
+    reserved_event->representation = EEventRepresentation::structured;
     reserved_event->level = t_level;
     reserved_event->type = t_type;
     reserved_event->filename_size = incident.source.filename_size;
-    reserved_event->format_size = static_cast<std::uint8_t>(format_size);
-    reserved_event->expression_size = static_cast<std::uint8_t>(expression_size);
-    std::memcpy(reserved_event->filename, incident.source.filename,
-        static_cast<std::size_t>(incident.source.filename_size) + 1u);
+    reserved_event->metadata.structured.content_type = EStructuredContentType::format;
+    reserved_event->metadata.structured.format_size = static_cast<std::uint8_t>(format_size);
+    reserved_event->metadata.structured.expression_size = static_cast<std::uint8_t>(expression_size);
+    std::memcpy(reserved_event->filename, incident.source.filename, static_cast<std::size_t>(incident.source.filename_size) + 1u);
     if (expression_size != 0u)
     {
-        std::memcpy(reserved_event->expression, expression, expression_size);
+        std::memcpy(reserved_event->storage.structured.expression, expression, expression_size);
     }
-    reserved_event->expression[expression_size] = 0;
+    reserved_event->storage.structured.expression[expression_size] = 0;
     if (format_size != 0u)
     {
-        std::memcpy(reserved_event->format, format, format_size);
+        std::memcpy(reserved_event->storage.structured.format, format, format_size);
     }
-    reserved_event->format[format_size] = 0;
+    reserved_event->storage.structured.format[format_size] = 0;
     encode_event_arguments_into(
-        reserved_event->parameter_count, reserved_event->parameter_types,
-        reserved_event->parameters, std::forward<Args>(arguments)...);
+        reserved_event->metadata.structured.parameter_count,
+        reserved_event->metadata.structured.parameter_types,
+        reserved_event->storage.structured.parameters,
+        std::forward<Args>(arguments)...);
 
     const bool published = reserved_event.publish();
     signal_writer();
@@ -394,9 +454,7 @@ bool CDebugServiceState::submit_captured_event(
 }
 
 template<EEventLevel t_level, EEventType t_type, typename... Args>
-bool CDebugServiceState::submit_event(
-    const SEventUsagePoint& usage_point,
-    const char* const format, const std::size_t format_size, Args&&... arguments) noexcept
+bool CDebugServiceState::submit_event(const SEventUsagePoint& usage_point, const char* const format, const std::size_t format_size, Args&&... arguments) noexcept
 {
     static_assert(is_valid_event_metadata(t_level, t_type), "The debug event level/type combination is invalid.");
 
@@ -432,12 +490,9 @@ bool CDebugServiceState::process_event(
         return false;
     }
 
-    const bool submitted = submit_captured_event<t_level, t_type>(
-        incident, expression, expression_size, format, format_size,
-        std::forward<Args>(arguments)...);
+    const bool submitted = submit_captured_event<t_level, t_type>(incident, expression, expression_size, format, format_size, std::forward<Args>(arguments)...);
 
-    if ((shutdown_reason != EShutdownReason::none) &&
-        ((shutdown_reason != EShutdownReason::critical_incident) || critical_shutdown_enabled()))
+    if ((shutdown_reason != EShutdownReason::none) && ((shutdown_reason != EShutdownReason::critical_incident) || critical_shutdown_enabled()))
     {
         request_shutdown(shutdown_reason);
     }
@@ -453,6 +508,7 @@ bool CDebugServiceState::process_event(
 [[nodiscard]] bool submit_text(const char* const text) noexcept;
 [[nodiscard]] bool informational_event_enabled(const EEventLevel level) noexcept;
 [[nodiscard]] bool report(const char* const source_file, const std::size_t source_file_size, const std::uint32_t source_line, const char* const format, ...) noexcept;
+[[nodiscard]] bool report_immediate(const char* const source_file, const std::size_t source_file_size, const std::uint32_t source_line, const char* const format, ...) noexcept;
 [[noreturn]] void panic(const char* const source_file, const std::size_t source_file_size, const std::uint32_t source_line, const char* const format, ...) noexcept;
 
 template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std::size_t t_format_size, typename... Args>
@@ -470,9 +526,7 @@ template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std:
     }
 
     const SEventUsagePoint usage_point{ source_file, (t_source_size - 1u), source_line };
-    return service->submit_event<t_level, t_type>(
-        usage_point, format, (t_format_size - 1u),
-        std::forward<Args>(arguments)...);
+    return service->submit_event<t_level, t_type>(usage_point, format, (t_format_size - 1u), std::forward<Args>(arguments)...);
 }
 
 template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std::size_t t_format_size, typename... Args>
@@ -499,8 +553,7 @@ template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std:
         std::forward<Args>(arguments)...);
 }
 
-template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size,
-    std::size_t t_expression_size, std::size_t t_format_size, typename... Args>
+template<EEventLevel t_level, EEventType t_type, std::size_t t_source_size, std::size_t t_expression_size, std::size_t t_format_size, typename... Args>
 [[nodiscard]] bool process_condition_event(
     const char (&source_file)[t_source_size], const std::uint32_t source_line,
     EBreakpointOverride& breakpoint_override, const bool breakpoint_enabled_by_default,

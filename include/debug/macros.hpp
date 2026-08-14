@@ -132,6 +132,12 @@
         (void)debug_system::report(__FILE__, sizeof(__FILE__) - 1u, __LINE__, __VA_ARGS__); \
     } while (0)
 
+#define MV_REPORT_IMMEDIATE(...) \
+    do \
+    { \
+        (void)debug_system::report_immediate(__FILE__, sizeof(__FILE__) - 1u, __LINE__, __VA_ARGS__); \
+    } while (0)
+
 #define MV_WARNING(...) \
     MV_INTERNAL_PROCESS_EVENT(debug_system::EEventLevel::warning, false, \
         debug_system::EShutdownReason::none, __VA_ARGS__)

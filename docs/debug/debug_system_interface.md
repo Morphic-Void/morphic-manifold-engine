@@ -304,8 +304,15 @@ The transport-facing contract is:
   errors and do not implicitly select another reporting path.
 
 The initial supported set covers fixed-width signed and unsigned integers,
-`bool`, `float`, `double`, `system_type_id`, and an owning 16-byte inline
-text value. The technical limit is eight arguments, each with a byte-wide type
+`bool`, `float`, `double`, `system_type_id`, `local_type_id`, category-bearing
+`type_id`, `system_ids::id_type`, `module_ids::id_type`,
+`thread_ids::id_type`, and an owning 16-byte inline text value. Runtime system,
+module, and thread identity remains numeric in transport and is resolved by the
+consumer through the host registry. Local type identity is normalised on the
+producer to its registered short name or an explicit raw failure
+representation; generic type identity is normalised according to its category
+and has no generic wire tag.
+The technical limit is eight arguments, each with a byte-wide type
 and a fixed, explicitly aligned 16-byte value slot. Boolean truth is carried by
 its type and its value slot remains zero.
 
@@ -335,6 +342,7 @@ Unconditional rich text reporting uses:
 
 ```cpp
 MV_REPORT(format_literal, ...);
+MV_REPORT_IMMEDIATE(format_literal, ...);
 ```
 
 `MV_REPORT` is the explicit alternative when local string construction,
@@ -344,9 +352,14 @@ Contract:
 
 - it is present and emits unconditionally in every build;
 - it is not controlled by informational levels;
-- it formats completely on the calling thread;
-- it writes synchronously through the mutex-protected direct text-log path
-  rather than the event MPMC transport;
+- both forms format completely on the calling thread;
+- `MV_REPORT` formats exactly once into a producer-owned bounded 4096-byte
+  buffer, transports reports of at most 447 characters asynchronously, and
+  writes the already prepared text directly when it is oversized or transport
+  is unavailable, full, closing, or closed;
+- `MV_REPORT_IMMEDIATE` always formats into the existing service-owned direct
+  buffer and writes and flushes synchronously through its separate direct
+  entry point;
 - its arguments are consumed before it returns and do not enter asynchronous
   storage;
 - it has no normal breakpoint or shutdown consequence;
@@ -354,9 +367,11 @@ Contract:
   available infrastructure permits;
 - it is not an allocation-free or re-entrant reporting primitive.
 
-`MV_REPORT` is a convenience for intentionally rich durable reporting. Routing
-through the direct log does not give it an abnormal level and does not make it
-suitable for panic or debug-infrastructure failure.
+These macros are conveniences for intentionally rich durable reporting.
+Neither transport nor direct routing gives them an abnormal level or makes
+them suitable for panic or debug-infrastructure failure. The immediate entry
+point remains a genuinely separate low-stack escape path and never enters the
+ordinary report function's producer-buffer frame.
 
 ## Abnormal events
 
@@ -541,8 +556,9 @@ Potential sinks include:
 Runtime policy may control presentation to these sinks. Warning and stronger
 incidents retain a durable-recording requirement even when optional display
 sinks are filtered. Fatal shutdown signalling remains independent of every
-sink. `MV_REPORT` deliberately writes through the direct text log without
-acquiring an abnormal event level.
+sink. `MV_REPORT` may use the event or direct log, while
+`MV_REPORT_IMMEDIATE` deliberately uses the direct text log. Neither acquires
+an abnormal event level.
 
 The originating thread must never be required to perform internal UI work.
 
@@ -638,7 +654,8 @@ Interface                 Event production                        Durable record
 MV_INFO                   build/runtime level policy              policy
 MV_DETAIL                 build/runtime level policy              policy
 MV_TRACE                  build/runtime level policy              policy
-MV_REPORT                 emit unconditionally                    yes; direct log
+MV_REPORT                 emit unconditionally                    yes; event/direct
+MV_REPORT_IMMEDIATE       emit unconditionally                    yes; direct log
 MV_WARNING                emit unconditionally                    yes
 MV_ERROR                  emit unconditionally                    yes
 MV_CRITICAL_ASSERT        evaluate; emit when condition is false  yes
@@ -662,6 +679,7 @@ MV_INFO                   no breakpoint                not breakpoint-capable
 MV_DETAIL                 no breakpoint                not breakpoint-capable
 MV_TRACE                  no breakpoint                not breakpoint-capable
 MV_REPORT                 no breakpoint                not breakpoint-capable
+MV_REPORT_IMMEDIATE       no breakpoint                not breakpoint-capable
 MV_WARNING                breakpoint disabled          enabled/disabled/inherit
 MV_ASSERT                 breakpoint enabled           enabled/disabled/inherit
 MV_DEBUG_ASSERT           breakpoint enabled           enabled/disabled/inherit
@@ -684,7 +702,8 @@ Interface/class           Consequence
 MV_ASSERT                 caller continues after optional breakpoint
 MV_DEBUG_ASSERT           caller continues after optional breakpoint
 MV_DEBUG_ONLY             invoked diagnostic function owns any consequence
-MV_REPORT                 caller continues after synchronous rich report
+MV_REPORT                 caller continues after report publication/fallback
+MV_REPORT_IMMEDIATE       caller continues after synchronous rich report
 MV_WARNING                caller continues; operation contract remains fulfilled
 MV_ERROR                  caller owns local recovery from failed operation
 MV_CRITICAL               degraded continuation; policy may request shutdown
