@@ -79,12 +79,9 @@ private:
     std::uint32_t        m_hazards{ 0u };
 };
 
-static_assert((mount_point_ids::k_count <= 32u),
-    "CErasedOwner hazard storage cannot represent all registered mounting points");
-static_assert(((sizeof(void*) != 8u) || (sizeof(CErasedOwner) == 32u)),
-    "CErasedOwner must occupy 32 bytes on a 64-bit target");
-static_assert(((sizeof(void*) != 4u) || (sizeof(CErasedOwner) == 24u)),
-    "CErasedOwner must occupy 24 bytes on a 32-bit target");
+static_assert((mount_point_ids::k_count <= 32u), "CErasedOwner hazard storage cannot represent all registered mounting points");
+static_assert(((sizeof(void*) != 8u) || (sizeof(CErasedOwner) == 32u)), "CErasedOwner must occupy 32 bytes on a 64-bit target");
+static_assert(((sizeof(void*) != 4u) || (sizeof(CErasedOwner) == 24u)), "CErasedOwner must occupy 24 bytes on a 32-bit target");
 
 //==============================================================================
 //  Typed payload implementation
@@ -93,20 +90,13 @@ static_assert(((sizeof(void*) != 4u) || (sizeof(CErasedOwner) == 24u)),
 template<typename T>
 inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) noexcept
 {
-    static_assert(k_is_erased_owner_payload_v<T>,
-        "CErasedOwner may only create explicitly registered erased-owner payloads.");
-    static_assert(system_type_ids::is_valid_id(k_system_type_id_v<T>),
-        "CErasedOwner payload registration must provide a valid type id.");
-    static_assert(std::is_nothrow_default_constructible_v<T>,
-        "CErasedOwner payloads must be nothrow default constructible.");
-    static_assert(std::is_nothrow_move_constructible_v<T>,
-        "CErasedOwner payloads must be nothrow move constructible.");
-    static_assert(std::is_nothrow_move_assignable_v<T>,
-        "CErasedOwner payloads must be nothrow move assignable.");
-    static_assert(std::is_nothrow_destructible_v<T>,
-        "CErasedOwner payloads must be nothrow destructible.");
-    static_assert((sizeof(T) <= 0xffffu),
-        "CErasedOwner payload size exceeds the memory-token stride field.");
+    static_assert(k_is_erased_owner_payload_v<T>, "CErasedOwner may only create explicitly registered erased-owner payloads.");
+    static_assert(system_type_ids::is_valid_id(k_system_type_id_v<T>), "CErasedOwner payload registration must provide a valid type id.");
+    static_assert(std::is_nothrow_default_constructible_v<T>, "CErasedOwner payloads must be nothrow default constructible.");
+    static_assert(std::is_nothrow_move_constructible_v<T>, "CErasedOwner payloads must be nothrow move constructible.");
+    static_assert(std::is_nothrow_move_assignable_v<T>, "CErasedOwner payloads must be nothrow move assignable.");
+    static_assert(std::is_nothrow_destructible_v<T>, "CErasedOwner payloads must be nothrow destructible.");
+    static_assert((sizeof(T) <= 0xffffu), "CErasedOwner payload size exceeds the memory-token stride field.");
 
     CErasedOwner owner;
     memory::CMemoryToken storage{ sizeof(T), alignof(T), context };
@@ -124,16 +114,14 @@ inline CErasedOwner CErasedOwner::create(memory::CMemoryContext* const context) 
 template<typename T>
 inline T* CErasedOwner::payload() noexcept
 {
-    static_assert(k_is_erased_owner_payload_v<T>,
-        "CErasedOwner may only access explicitly registered erased-owner payloads.");
+    static_assert(k_is_erased_owner_payload_v<T>, "CErasedOwner may only access explicitly registered erased-owner payloads.");
     return (m_type_id == type_id{ k_system_type_id_v<T> }) ? static_cast<T*>(m_storage.data()) : nullptr;
 }
 
 template<typename T>
 inline const T* CErasedOwner::payload() const noexcept
 {
-    static_assert(k_is_erased_owner_payload_v<T>,
-        "CErasedOwner may only access explicitly registered erased-owner payloads.");
+    static_assert(k_is_erased_owner_payload_v<T>, "CErasedOwner may only access explicitly registered erased-owner payloads.");
     return (m_type_id == type_id{ k_system_type_id_v<T> }) ? static_cast<const T*>(m_storage.data()) : nullptr;
 }
 
