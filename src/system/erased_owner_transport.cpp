@@ -37,9 +37,21 @@ bool CErasedOwnerTransport::posting_is_valid() const noexcept
 
 bool CErasedOwnerTransport::post(CErasedOwner&& owner) noexcept
 {
-    if (!posting_is_valid() || (writable_count() == 0u) || !owner.is_ready() ||
-        !erased_transport_admission::is_admissible(
-            owner.query_type_id(), m_destination_module_id))
+    if (!owner.is_ready())
+    {
+        return false;
+    }
+
+    const erased_transport_admission::SDecision decision =
+        erased_transport_admission::classify(owner.query_type_id(), m_destination_module_id);
+    if (!decision.is_admitted())
+    {
+        erased_transport_admission::report_rejection(
+            decision, erased_transport_admission::EIdentityRole::owner);
+        return false;
+    }
+
+    if (!posting_is_valid() || (writable_count() == 0u))
     {
         return false;
     }
@@ -100,8 +112,7 @@ bool CErasedOwnerTransport::attribution_is_valid() const noexcept
     memory::CMemoryContext* const destination_context = (m_recipient_context != nullptr) ? m_recipient_context : transport_context;
     return module_ids::is_valid_id(m_destination_module_id) &&
         (transport_context != nullptr) && (destination_context != nullptr) &&
-        system_ids::is_valid_id(destination_context->get_system_id()) &&
-        (system_ids::get_module_id(destination_context->get_system_id()) == m_destination_module_id) &&
+        destination_context->belongs_to_module(m_destination_module_id) &&
         ((m_recipient_context == nullptr) || transport_context->is_compatible_with(*m_recipient_context));
 }
 

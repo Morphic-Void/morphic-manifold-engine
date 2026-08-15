@@ -682,6 +682,9 @@
     <ClCompile Include="src\threading\messages\CErasedOwnerMsgTransport.cpp">
       <Filter>src\threading\messages</Filter>
     </ClCompile>
+    <ClCompile Include="src\threading\messages\CErasedPodMsgTransport.cpp">
+      <Filter>src\threading\messages</Filter>
+    </ClCompile>
     <ClCompile Include="src\system\erased_owner.cpp">
       <Filter>src\system</Filter>
     </ClCompile>
@@ -689,6 +692,9 @@
       <Filter>src\system</Filter>
     </ClCompile>
     <ClCompile Include="src\system\erased_owner_transport.cpp">
+      <Filter>src\system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\system\erased_transport_admission.cpp">
       <Filter>src\system</Filter>
     </ClCompile>
     <ClCompile Include="src\system\system_context.cpp">

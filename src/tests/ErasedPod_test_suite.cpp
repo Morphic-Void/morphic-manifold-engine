@@ -7,10 +7,16 @@
 //  Date:    12 Aug 26
 
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <type_traits>
 
+#include "containers/TInstance.hpp"
+#include "debug/service.hpp"
+#include "host/host_local_type_registry.hpp"
+#include "platform/filesystem/internal/file_utils.hpp"
+#include "platform/path/native_path.hpp"
 #include "system/erased_pod.hpp"
 #include "system/system_context.hpp"
 #include "system/transported_types.hpp"
@@ -21,11 +27,17 @@
 namespace erased_pod_test_types
 {
 struct SLocalPod { std::uint32_t value; };
+struct SUnregisteredSystemPod { std::uint32_t value; };
 }
 
 MV_REGISTER_LOCAL_TYPE(
     erased_pod_test_types::SLocalPod,
     local_type_ids::encode_id(local_type_ids::encode_index(1234u)));
+
+MV_REGISTER_SYSTEM_TYPE(
+    erased_pod_test_types::SUnregisteredSystemPod,
+    system_type_ids::encode_id(
+        system_type_ids::encode_index(system_type_ids::k_count)));
 
 namespace
 {
@@ -50,6 +62,56 @@ struct TTestContext
 };
 
 #define TEST_EXPECT(ctx, expression) (ctx).expect(!!(expression), #expression, __LINE__)
+
+bool file_contains(const char* const path, const char* const expected)
+{
+    if ((path == nullptr) || (expected == nullptr) || (expected[0] == 0))
+    {
+        return false;
+    }
+
+    const platform::path::NativePath native_path =
+        platform::path::makeNativePath(path);
+    std::FILE* const stream = platform::filesystem::openFile(
+        native_path, platform::filesystem::EOpenMode::BinaryRead);
+    if (stream == nullptr)
+    {
+        return false;
+    }
+
+    constexpr std::size_t buffer_capacity = 8192u;
+    char buffer[buffer_capacity]{};
+    const std::size_t expected_size = std::strlen(expected);
+    if (expected_size >= buffer_capacity)
+    {
+        std::fclose(stream);
+        return false;
+    }
+
+    std::size_t retained = 0u;
+    for (;;)
+    {
+        const std::size_t read = std::fread(
+            buffer + retained, 1u,
+            buffer_capacity - retained - 1u, stream);
+        const std::size_t available = retained + read;
+        buffer[available] = 0;
+        if (std::strstr(buffer, expected) != nullptr)
+        {
+            std::fclose(stream);
+            return true;
+        }
+        if (read == 0u)
+        {
+            std::fclose(stream);
+            return false;
+        }
+
+        const std::size_t overlap = expected_size - 1u;
+        retained = (available < overlap) ? available : overlap;
+        std::memmove(buffer, buffer + available - retained, retained);
+    }
+}
 
 struct CCanonicalValue
 {
@@ -316,10 +378,161 @@ void test_concrete_erased_pod_transport_admission(TTestContext& ctx)
     TEST_EXPECT(ctx, cross_component.read(received));
     cross_component.deallocate();
 
+    threading::CErasedPodMsg local_source;
+    local_source.set_async_slot(18);
+    local_source.assign_payload(host::SHostTgaFileSaveState{ 18, CAssetId{} });
+    const threading::CErasedPodMsg local_snapshot = local_source;
+
+    threading::transports::CErasedPodMsgTransport local_same_component(
+        module_ids::executable);
+    TEST_EXPECT(ctx, local_same_component.initialise_fixed(2u));
+    TEST_EXPECT(ctx, local_same_component.post(local_source));
+    TEST_EXPECT(ctx, local_same_component.read(received));
+    host::SHostTgaFileSaveState local_result{};
+    TEST_EXPECT(ctx, received.copy_payload_to(local_result));
+    TEST_EXPECT(ctx, local_result.application_slot == 18);
+    TEST_EXPECT(ctx, received.query_async_slot() == 18);
+    local_same_component.deallocate();
+
+    threading::transports::CErasedPodMsgTransport local_cross_component(
+        module_ids::application);
+    TEST_EXPECT(ctx, local_cross_component.initialise_fixed(2u));
+    TEST_EXPECT(ctx, !local_cross_component.post(local_source));
+    TEST_EXPECT(ctx, std::memcmp(
+        &local_source, &local_snapshot, sizeof(local_source)) == 0);
+    TEST_EXPECT(ctx, local_cross_component.refresh_readable_count() == 0u);
+    local_cross_component.deallocate();
+
+    threading::CErasedPodMsg unregistered_local;
+    unregistered_local.set_async_slot(19);
+    unregistered_local.assign_payload(erased_pod_test_types::SLocalPod{ 19u });
+    const threading::CErasedPodMsg unregistered_local_snapshot =
+        unregistered_local;
+    threading::transports::CErasedPodMsgTransport local_registration_gate(
+        module_ids::executable);
+    TEST_EXPECT(ctx, local_registration_gate.initialise_fixed(2u));
+    TEST_EXPECT(ctx, !local_registration_gate.post(unregistered_local));
+    TEST_EXPECT(ctx, std::memcmp(
+        &unregistered_local, &unregistered_local_snapshot,
+        sizeof(unregistered_local)) == 0);
+    TEST_EXPECT(ctx, local_registration_gate.refresh_readable_count() == 0u);
+    local_registration_gate.deallocate();
+
+    threading::CErasedPodMsg unregistered_system;
+    unregistered_system.set_async_slot(20);
+    unregistered_system.assign_payload(
+        erased_pod_test_types::SUnregisteredSystemPod{ 20u });
+    const threading::CErasedPodMsg unregistered_system_snapshot =
+        unregistered_system;
+    threading::transports::CErasedPodMsgTransport system_registration_gate(
+        module_ids::application);
+    TEST_EXPECT(ctx, system_registration_gate.initialise_fixed(2u));
+    TEST_EXPECT(ctx, !system_registration_gate.post(unregistered_system));
+    TEST_EXPECT(ctx, std::memcmp(
+        &unregistered_system, &unregistered_system_snapshot,
+        sizeof(unregistered_system)) == 0);
+    TEST_EXPECT(ctx, system_registration_gate.refresh_readable_count() == 0u);
+    system_registration_gate.deallocate();
+
+    threading::CErasedPodMsg untyped;
+    untyped.set_async_slot(21);
+    const threading::CErasedPodMsg untyped_snapshot = untyped;
+    threading::transports::CErasedPodMsgTransport identity_gate(
+        module_ids::executable);
+    TEST_EXPECT(ctx, identity_gate.initialise_fixed(2u));
+    TEST_EXPECT(ctx, !identity_gate.post(untyped));
+    TEST_EXPECT(ctx, std::memcmp(
+        &untyped, &untyped_snapshot, sizeof(untyped)) == 0);
+    TEST_EXPECT(ctx, identity_gate.refresh_readable_count() == 0u);
+    identity_gate.deallocate();
+
+    threading::transports::CErasedPodMsgTransport missing_source(
+        module_ids::executable);
+    TEST_EXPECT(ctx, missing_source.initialise_fixed(2u));
+    const threading::CErasedPodMsg source_snapshot = source;
+    (void)system_context::set_ambient_module_id();
+    TEST_EXPECT(ctx, !missing_source.post(source));
+    TEST_EXPECT(ctx, std::memcmp(
+        &source, &source_snapshot, sizeof(source)) == 0);
+    TEST_EXPECT(ctx, missing_source.refresh_readable_count() == 0u);
+    (void)system_context::set_ambient_module_id(module_ids::executable);
+    missing_source.deallocate();
+
     threading::transports::CErasedPodMsgTransport invalid_destination;
     TEST_EXPECT(ctx, !invalid_destination.initialise_growable(4u));
     TEST_EXPECT(ctx, !invalid_destination.posting_is_valid());
     TEST_EXPECT(ctx, !invalid_destination.reading_is_valid());
+
+    (void)system_context::set_ambient_module_id(previous_module_id);
+}
+
+void test_concrete_erased_pod_transport_diagnostics(TTestContext& ctx)
+{
+    constexpr const char* event_path =
+        "erased_transport_admission_test.log";
+    constexpr const char* direct_path =
+        "erased_transport_admission_test_direct.log";
+
+    TInstance<debug_system::CDebugServiceState> service_owner =
+        TInstance<debug_system::CDebugServiceState>::create();
+    TEST_EXPECT(ctx, service_owner.is_ready());
+    debug_system::CDebugServiceState* const service =
+        service_owner.operator->();
+    TEST_EXPECT(ctx, service->configure_log_paths(event_path, direct_path));
+    service->publish_configuration(0u);
+    TEST_EXPECT(ctx, debug_system::install_service(service));
+    TEST_EXPECT(ctx, service->start());
+
+    const module_ids::id_type previous_module_id =
+        system_context::set_ambient_module_id(module_ids::executable);
+
+    threading::CErasedPodMsg local_message;
+    local_message.assign_payload(
+        host::SHostTgaFileSaveState{ 22, CAssetId{} });
+    threading::transports::CErasedPodMsgTransport local_cross_component(
+        module_ids::application);
+    TEST_EXPECT(ctx, local_cross_component.initialise_fixed(1u));
+    const std::uint32_t local_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !local_cross_component.post(local_message));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == local_before + 2u);
+    TEST_EXPECT(ctx, local_cross_component.refresh_readable_count() == 0u);
+    local_cross_component.deallocate();
+
+    threading::CErasedPodMsg system_message;
+    system_message.assign_payload(FileSaveResult{ true });
+    threading::transports::CErasedPodMsgTransport capacity_transport(
+        module_ids::executable);
+    TEST_EXPECT(ctx, capacity_transport.initialise_fixed(1u));
+    const std::uint32_t success_before = service->allocate_incident_id();
+    constexpr std::uint32_t capacity =
+        threading::transports::TQueue<threading::CErasedPodMsg>::k_min_capacity;
+    for (std::uint32_t index = 0u; index < capacity; ++index)
+    {
+        TEST_EXPECT(ctx, capacity_transport.post(system_message));
+    }
+    TEST_EXPECT(ctx, service->allocate_incident_id() == success_before + 1u);
+    const std::uint32_t capacity_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !capacity_transport.post(system_message));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == capacity_before + 1u);
+    TEST_EXPECT(ctx, capacity_transport.refresh_readable_count() == capacity);
+    capacity_transport.deallocate();
+
+    threading::transports::CErasedPodMsgTransport missing_source(
+        module_ids::executable);
+    TEST_EXPECT(ctx, missing_source.initialise_fixed(1u));
+    (void)system_context::set_ambient_module_id();
+    const std::uint32_t missing_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !missing_source.post(system_message));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == missing_before + 2u);
+    TEST_EXPECT(ctx, missing_source.refresh_readable_count() == 0u);
+    (void)system_context::set_ambient_module_id(module_ids::executable);
+    missing_source.deallocate();
+
+    TEST_EXPECT(ctx, service->stop());
+    TEST_EXPECT(ctx, debug_system::uninstall_service(service));
+    TEST_EXPECT(ctx, file_contains(event_path, "[invalid-system:"));
+    TEST_EXPECT(ctx, file_contains(
+        event_path, "Erased transport rejected POD message"));
 
     (void)system_context::set_ambient_module_id(previous_module_id);
 }
@@ -337,6 +550,7 @@ int run_erased_pod_tests()
     test_local_thread_message_carrier(ctx);
     test_thread_message_clears_previous_representation(ctx);
     test_concrete_erased_pod_transport_admission(ctx);
+    test_concrete_erased_pod_transport_diagnostics(ctx);
 
     std::cout << "ErasedPod: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return ctx.failed;

@@ -729,6 +729,138 @@ void test_local_erased_owner_transport_boundaries(TTestContext& ctx)
     TEST_EXPECT(ctx, application_context.get_live_allocation_count() == 0u);
 }
 
+void test_erased_owner_transport_diagnostics(TTestContext& ctx)
+{
+    TAllocatorState state;
+    memory::CMemoryAllocator allocator(
+        &state, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryAllocator incompatible_allocator(
+        &state, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext producer_context(allocator, system_ids::host);
+    memory::CMemoryContext transport_context(allocator, system_ids::host);
+    memory::CMemoryContext application_context(allocator, system_ids::application);
+    memory::CMemoryContext incompatible_context(
+        incompatible_allocator, system_ids::host);
+    const TModuleIdScope module_scope(module_ids::executable);
+
+    TInstance<debug_system::CDebugServiceState> service_owner =
+        TInstance<debug_system::CDebugServiceState>::create();
+    TEST_EXPECT(ctx, service_owner.is_ready());
+    debug_system::CDebugServiceState* const service =
+        service_owner.operator->();
+    service->publish_configuration(0u);
+    TEST_EXPECT(ctx, debug_system::install_service(service));
+    const TMemoryContextScope context_scope(&producer_context);
+
+    threading::transports::CErasedOwnerTransport cross_component(
+        module_ids::application, &application_context);
+    TEST_EXPECT(ctx, cross_component.initialise(1u));
+    const std::uint32_t cross_component_writable_count =
+        cross_component.writable_count();
+
+    CErasedOwner local =
+        CErasedOwner::create<host::SHostTgaFileLoadState>();
+    host::SHostTgaFileLoadState* const local_payload =
+        local.payload<host::SHostTgaFileLoadState>();
+    local_payload->application_slot = 101;
+    local_payload->file = "diagnosed-local-owner.tga";
+    local_payload->vflip = true;
+    local.add_hazard(mount_point_ids::asset);
+    memory::CMemoryContext* const local_context = local.memory_context();
+    const std::uint32_t producer_count =
+        producer_context.get_live_allocation_count();
+    const std::uint64_t producer_bytes =
+        producer_context.get_live_allocated_bytes();
+    const std::uint32_t application_count =
+        application_context.get_live_allocation_count();
+    const std::uint32_t local_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !cross_component.post(std::move(local)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == local_before + 2u);
+    TEST_EXPECT(ctx, local.payload<host::SHostTgaFileLoadState>() == local_payload);
+    TEST_EXPECT(ctx, local.memory_context() == local_context);
+    TEST_EXPECT(ctx, local_payload->application_slot == 101);
+    TEST_EXPECT(ctx, local_payload->vflip);
+    TEST_EXPECT(ctx, local.has_hazard(mount_point_ids::asset));
+    TEST_EXPECT(ctx, producer_context.get_live_allocation_count() == producer_count);
+    TEST_EXPECT(ctx, producer_context.get_live_allocated_bytes() == producer_bytes);
+    TEST_EXPECT(ctx, application_context.get_live_allocation_count() == application_count);
+    TEST_EXPECT(ctx, cross_component.readable_count() == 0u);
+    TEST_EXPECT(ctx, cross_component.writable_count() == cross_component_writable_count);
+    local.destroy();
+
+    CErasedOwner system = CErasedOwner::create<LoadedFile>();
+    LoadedFile* const system_payload = system.payload<LoadedFile>();
+    TEST_EXPECT(ctx, system_payload->buffer.allocate(24u));
+    const std::uint32_t system_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, cross_component.post(std::move(system)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == system_before + 1u);
+    CErasedOwner received;
+    TEST_EXPECT(ctx, cross_component.read(received));
+    TEST_EXPECT(ctx, received.payload<LoadedFile>() == system_payload);
+    TEST_EXPECT(ctx, received.memory_context() == &application_context);
+    received.destroy();
+    cross_component.deallocate();
+
+    threading::transports::CErasedOwnerTransport capacity_transport(
+        module_ids::executable, &transport_context);
+    TEST_EXPECT(ctx, capacity_transport.initialise(1u));
+    const std::uint32_t success_before = service->allocate_incident_id();
+    const std::uint32_t capacity = capacity_transport.writable_count();
+    for (std::uint32_t index = 0u; index < capacity; ++index)
+    {
+        CErasedOwner queued = CErasedOwner::create<LoadedFile>();
+        TEST_EXPECT(ctx, capacity_transport.post(std::move(queued)));
+    }
+    TEST_EXPECT(ctx, service->allocate_incident_id() == success_before + 1u);
+
+    CErasedOwner retained = CErasedOwner::create<LoadedFile>();
+    LoadedFile* const retained_payload = retained.payload<LoadedFile>();
+    memory::CMemoryContext* const retained_context = retained.memory_context();
+    const std::uint32_t retained_count =
+        producer_context.get_live_allocation_count();
+    const std::uint64_t retained_bytes =
+        producer_context.get_live_allocated_bytes();
+    const std::uint32_t capacity_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !capacity_transport.post(std::move(retained)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == capacity_before + 1u);
+    TEST_EXPECT(ctx, retained.payload<LoadedFile>() == retained_payload);
+    TEST_EXPECT(ctx, retained.memory_context() == retained_context);
+    TEST_EXPECT(ctx, producer_context.get_live_allocation_count() == retained_count);
+    TEST_EXPECT(ctx, producer_context.get_live_allocated_bytes() == retained_bytes);
+    TEST_EXPECT(ctx, capacity_transport.readable_count() == capacity);
+    retained.destroy();
+    capacity_transport.deallocate();
+
+    threading::transports::CErasedOwnerTransport compatibility_transport(
+        module_ids::executable, &transport_context);
+    TEST_EXPECT(ctx, compatibility_transport.initialise(1u));
+    CErasedOwner incompatible =
+        CErasedOwner::create<LoadedFile>(&incompatible_context);
+    LoadedFile* const incompatible_payload = incompatible.payload<LoadedFile>();
+    const std::uint32_t compatibility_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !compatibility_transport.post(std::move(incompatible)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == compatibility_before + 1u);
+    TEST_EXPECT(ctx, incompatible.payload<LoadedFile>() == incompatible_payload);
+    TEST_EXPECT(ctx, incompatible.memory_context() == &incompatible_context);
+    TEST_EXPECT(ctx, compatibility_transport.readable_count() == 0u);
+    incompatible.destroy();
+
+    state.reject_allocation = true;
+    CErasedOwner empty = CErasedOwner::create<LoadedFile>();
+    state.reject_allocation = false;
+    const std::uint32_t empty_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !compatibility_transport.post(std::move(empty)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == empty_before + 1u);
+    TEST_EXPECT(ctx, empty.is_empty());
+    compatibility_transport.deallocate();
+
+    TEST_EXPECT(ctx, debug_system::uninstall_service(service));
+    TEST_EXPECT(ctx, producer_context.is_attribution_empty());
+    TEST_EXPECT(ctx, transport_context.is_attribution_empty());
+    TEST_EXPECT(ctx, application_context.is_attribution_empty());
+    TEST_EXPECT(ctx, incompatible_context.is_attribution_empty());
+}
+
 void test_erased_owner_message(TTestContext& ctx)
 {
     static_assert(std::is_same_v<
@@ -905,6 +1037,158 @@ void test_erased_owner_message_transport(TTestContext& ctx)
     TEST_EXPECT(ctx, recipient_context.get_live_allocation_count() == 0u);
 }
 
+void test_erased_owner_message_transport_diagnostics(TTestContext& ctx)
+{
+    TAllocatorState state;
+    memory::CMemoryAllocator allocator(
+        &state, allocate_test_memory, deallocate_test_memory, system_ids::host);
+    memory::CMemoryContext producer_context(allocator, system_ids::host);
+    memory::CMemoryContext application_context(allocator, system_ids::application);
+    const TModuleIdScope module_scope(module_ids::executable);
+
+    TInstance<debug_system::CDebugServiceState> service_owner =
+        TInstance<debug_system::CDebugServiceState>::create();
+    TEST_EXPECT(ctx, service_owner.is_ready());
+    debug_system::CDebugServiceState* const service =
+        service_owner.operator->();
+    service->publish_configuration(0u);
+    TEST_EXPECT(ctx, debug_system::install_service(service));
+    const TMemoryContextScope context_scope(&producer_context);
+
+    threading::transports::CErasedOwnerMsgTransport cross_component(
+        module_ids::application, &application_context);
+    TEST_EXPECT(ctx, cross_component.initialise(4u));
+
+    threading::CErasedOwnerMsg rejected_message;
+    rejected_message.set_message_type<host::CHost>();
+    rejected_message.set_async_slot(111);
+    const std::uint32_t message_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !cross_component.post(std::move(rejected_message)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == message_before + 2u);
+    TEST_EXPECT(ctx, rejected_message.is_message_a<host::CHost>());
+    TEST_EXPECT(ctx, rejected_message.query_async_slot() == 111);
+    TEST_EXPECT(ctx, !rejected_message.has_owner());
+    TEST_EXPECT(ctx, cross_component.readable_count() == 0u);
+
+    threading::CErasedOwnerMsg rejected_payload_message;
+    rejected_payload_message.set_message_type<FileLoadResult>();
+    rejected_payload_message.set_async_slot(112);
+    CErasedOwner rejected_payload_owner =
+        CErasedOwner::create<host::SHostTgaFileLoadState>();
+    host::SHostTgaFileLoadState* const rejected_payload =
+        rejected_payload_owner.payload<host::SHostTgaFileLoadState>();
+    rejected_payload->application_slot = 112;
+    rejected_payload->file = "diagnosed-owned-payload.tga";
+    rejected_payload->vflip = true;
+    rejected_payload_owner.add_hazard(mount_point_ids::asset);
+    memory::CMemoryContext* const rejected_context =
+        rejected_payload_owner.memory_context();
+    rejected_payload_message.set_owner(std::move(rejected_payload_owner));
+    const std::uint32_t producer_count =
+        producer_context.get_live_allocation_count();
+    const std::uint64_t producer_bytes =
+        producer_context.get_live_allocated_bytes();
+    const std::uint32_t payload_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !cross_component.post(std::move(rejected_payload_message)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == payload_before + 2u);
+    TEST_EXPECT(ctx, rejected_payload_message.is_message_a<FileLoadResult>());
+    TEST_EXPECT(ctx, rejected_payload_message.query_async_slot() == 112);
+    TEST_EXPECT(ctx, rejected_payload_message.owner().payload<
+        host::SHostTgaFileLoadState>() == rejected_payload);
+    TEST_EXPECT(ctx, rejected_payload_message.owner().memory_context() ==
+        rejected_context);
+    TEST_EXPECT(ctx, rejected_payload->application_slot == 112);
+    TEST_EXPECT(ctx, rejected_payload->vflip);
+    TEST_EXPECT(ctx, rejected_payload_message.owner().has_hazard(
+        mount_point_ids::asset));
+    TEST_EXPECT(ctx, producer_context.get_live_allocation_count() == producer_count);
+    TEST_EXPECT(ctx, producer_context.get_live_allocated_bytes() == producer_bytes);
+    TEST_EXPECT(ctx, cross_component.readable_count() == 0u);
+
+    threading::CErasedOwnerMsg first_failure_message;
+    first_failure_message.set_message_type<host::CHost>();
+    first_failure_message.set_async_slot(113);
+    CErasedOwner first_failure_owner =
+        CErasedOwner::create<host::SHostTgaFileLoadState>();
+    host::SHostTgaFileLoadState* const first_failure_payload =
+        first_failure_owner.payload<host::SHostTgaFileLoadState>();
+    first_failure_payload->application_slot = 113;
+    first_failure_payload->file = "first-failure-owner.tga";
+    first_failure_payload->vflip = false;
+    first_failure_message.set_owner(std::move(first_failure_owner));
+    const std::uint32_t first_failure_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !cross_component.post(std::move(first_failure_message)));
+    TEST_EXPECT(ctx,
+        service->allocate_incident_id() == first_failure_before + 2u);
+    TEST_EXPECT(ctx, first_failure_message.is_message_a<host::CHost>());
+    TEST_EXPECT(ctx, first_failure_message.query_async_slot() == 113);
+    TEST_EXPECT(ctx, first_failure_message.owner().payload<
+        host::SHostTgaFileLoadState>() == first_failure_payload);
+    TEST_EXPECT(ctx, first_failure_payload->application_slot == 113);
+    TEST_EXPECT(ctx, first_failure_payload->vflip == false);
+    TEST_EXPECT(ctx, cross_component.readable_count() == 0u);
+
+    threading::CErasedOwnerMsg admitted_system;
+    admitted_system.set_message_type<FileLoadResult>();
+    admitted_system.set_async_slot(114);
+    CErasedOwner admitted_owner = CErasedOwner::create<LoadedFile>();
+    LoadedFile* const admitted_payload = admitted_owner.payload<LoadedFile>();
+    TEST_EXPECT(ctx, admitted_payload->buffer.allocate(32u));
+    admitted_system.set_owner(std::move(admitted_owner));
+    const std::uint32_t admitted_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, cross_component.post(std::move(admitted_system)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == admitted_before + 1u);
+    threading::CErasedOwnerMsg received;
+    TEST_EXPECT(ctx, cross_component.read(received));
+    TEST_EXPECT(ctx, received.is_message_a<FileLoadResult>());
+    TEST_EXPECT(ctx, received.query_async_slot() == 114);
+    TEST_EXPECT(ctx, received.owner().payload<LoadedFile>() == admitted_payload);
+    TEST_EXPECT(ctx, received.owner().memory_context() == &application_context);
+    received.owner().destroy();
+    cross_component.deallocate();
+
+    threading::transports::CErasedOwnerMsgTransport capacity_transport(
+        module_ids::application, &application_context);
+    TEST_EXPECT(ctx, capacity_transport.initialise(1u));
+    const std::uint32_t capacity = capacity_transport.writable_count();
+    for (std::uint32_t index = 0u; index < capacity; ++index)
+    {
+        threading::CErasedOwnerMsg queued;
+        queued.set_message_type<FileLoadResult>();
+        TEST_EXPECT(ctx, capacity_transport.post(std::move(queued)));
+    }
+
+    threading::CErasedOwnerMsg retained;
+    retained.set_message_type<FileLoadResult>();
+    retained.set_async_slot(115);
+    CErasedOwner retained_owner = CErasedOwner::create<LoadedFile>();
+    LoadedFile* const retained_payload = retained_owner.payload<LoadedFile>();
+    memory::CMemoryContext* const retained_context = retained_owner.memory_context();
+    retained.set_owner(std::move(retained_owner));
+    const std::uint32_t retained_count =
+        producer_context.get_live_allocation_count();
+    const std::uint64_t retained_bytes =
+        producer_context.get_live_allocated_bytes();
+    const std::uint32_t capacity_before = service->allocate_incident_id();
+    TEST_EXPECT(ctx, !capacity_transport.post(std::move(retained)));
+    TEST_EXPECT(ctx, service->allocate_incident_id() == capacity_before + 1u);
+    TEST_EXPECT(ctx, retained.is_message_a<FileLoadResult>());
+    TEST_EXPECT(ctx, retained.query_async_slot() == 115);
+    TEST_EXPECT(ctx, retained.owner().payload<LoadedFile>() == retained_payload);
+    TEST_EXPECT(ctx, retained.owner().memory_context() == retained_context);
+    TEST_EXPECT(ctx, producer_context.get_live_allocation_count() == retained_count);
+    TEST_EXPECT(ctx, producer_context.get_live_allocated_bytes() == retained_bytes);
+    TEST_EXPECT(ctx, capacity_transport.readable_count() == capacity);
+    retained.owner().destroy();
+    capacity_transport.deallocate();
+
+    rejected_payload_message.owner().destroy();
+    first_failure_message.owner().destroy();
+    TEST_EXPECT(ctx, debug_system::uninstall_service(service));
+    TEST_EXPECT(ctx, producer_context.is_attribution_empty());
+    TEST_EXPECT(ctx, application_context.is_attribution_empty());
+}
+
 }   //  namespace
 
 int run_erased_owner_tests()
@@ -925,8 +1209,10 @@ int run_erased_owner_tests()
     test_erased_owner_transport_attribution(ctx);
     test_erased_owner_transport_rejection(ctx);
     test_local_erased_owner_transport_boundaries(ctx);
+    test_erased_owner_transport_diagnostics(ctx);
     test_erased_owner_message(ctx);
     test_erased_owner_message_transport(ctx);
+    test_erased_owner_message_transport_diagnostics(ctx);
 
     std::cout << "ErasedOwner: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return (ctx.failed == 0) ? 0 : 1;

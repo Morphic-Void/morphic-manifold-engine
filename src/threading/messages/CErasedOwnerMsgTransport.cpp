@@ -9,6 +9,7 @@
 #include <utility>      //  std::move
 
 #include "debug/macros.hpp"
+#include "system/erased_transport_admission.hpp"
 #include "threading/messages/CErasedMessageTransports.hpp"
 
 namespace threading::transports
@@ -36,9 +37,12 @@ bool CErasedOwnerMsgTransport::posting_is_valid() const noexcept
 
 bool CErasedOwnerMsgTransport::post(threading::CErasedOwnerMsg&& msg) noexcept
 {
-    if (!posting_is_valid() || (writable_count() == 0u) || !msg.has_message_type() ||
-        !erased_transport_admission::is_admissible(msg.query_message_type_id(), m_destination_module_id))
+    const erased_transport_admission::SDecision message_decision =
+        erased_transport_admission::classify(msg.query_message_type_id(), m_destination_module_id);
+    if (!message_decision.is_admitted())
     {
+        erased_transport_admission::report_rejection(
+            message_decision, erased_transport_admission::EIdentityRole::owner_message);
         return false;
     }
 
@@ -46,12 +50,23 @@ bool CErasedOwnerMsgTransport::post(threading::CErasedOwnerMsg&& msg) noexcept
     memory::CMemoryContext* source_context = nullptr;
     if (owner.is_ready())
     {
-        if (!erased_transport_admission::is_admissible(
-            owner.query_type_id(), m_destination_module_id))
+        const erased_transport_admission::SDecision owner_decision =
+            erased_transport_admission::classify(owner.query_type_id(), m_destination_module_id);
+        if (!owner_decision.is_admitted())
         {
+            erased_transport_admission::report_rejection(
+                owner_decision, erased_transport_admission::EIdentityRole::owned_payload);
             return false;
         }
+    }
 
+    if (!posting_is_valid() || (writable_count() == 0u))
+    {
+        return false;
+    }
+
+    if (owner.is_ready())
+    {
         memory::CMemoryContext* const transport_context = memory_context();
         if (!owner.can_reattribute_to(transport_context))
         {
@@ -110,11 +125,8 @@ bool CErasedOwnerMsgTransport::attribution_is_valid() const noexcept
     return module_ids::is_valid_id(m_destination_module_id) &&
         (transport_context != nullptr) &&
         (destination_context != nullptr) &&
-        system_ids::is_valid_id(destination_context->get_system_id()) &&
-        (system_ids::get_module_id(destination_context->get_system_id()) ==
-            m_destination_module_id) &&
-        ((m_recipient_context == nullptr) ||
-            transport_context->is_compatible_with(*m_recipient_context));
+        destination_context->belongs_to_module(m_destination_module_id) &&
+        ((m_recipient_context == nullptr) || transport_context->is_compatible_with(*m_recipient_context));
 }
 
 }   //  namespace threading::transports

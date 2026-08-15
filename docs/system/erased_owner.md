@@ -161,9 +161,18 @@ over the non-reattributable `TOwning<CErasedOwner>` primitive.
 The wrapper stores an explicit destination module. Admission happens only on
 post, deriving the source from the ambient module and rejecting unavailable
 identity registrations or LOCAL identity intended for another component
-before ownership or attribution is mutated. The destination must agree with
-the fixed recipient context, or with the transport context when no separate
-recipient is configured.
+before ownership or attribution is mutated. Rejection emits one `MV_ERROR`;
+diagnostic failure does not change the Boolean result. The destination must
+agree with the fixed recipient context, or with the transport context when no
+separate recipient is configured. This provenance check uses
+`CMemoryContext::belongs_to_module()`.
+
+For `CErasedOwnerMsgTransport`, message identity is admitted first and an
+optional owned-payload identity second. The first rejected identity is the only
+one diagnosed. Both decisions precede transport validity, capacity,
+reattribution, and queue mutation. A direct owner transport quietly rejects a
+canonical empty owner, and ordinary capacity, allocation, closed-transport, or
+attribution-compatibility failure is not reported as an identity breach.
 
 On successful post:
 
@@ -190,10 +199,8 @@ Thin producer and consumer endpoints expose only their role-specific wrapper
 operations. The underlying `TOwning` and context mutation are not exposed.
 Plain transports remain non-reattributable.
 
-`MV_CRITICAL_ASSERT` marks failures that represent broken architecture or
-accounting contracts. It currently aliases `MV_HARD_ASSERT`; the upcoming debug
-infrastructure will provide published-build reporting and degraded-continuation
-policy.
+`MV_CRITICAL_ASSERT` remains reserved for failures that represent broken
+architecture or accounting contracts after successful admission.
 
 ## Virtual Interface Boundary
 

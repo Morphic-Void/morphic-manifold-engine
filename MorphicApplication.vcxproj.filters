@@ -106,6 +106,7 @@
     <ClCompile Include="src\system\system_context.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\system\erased_owner.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\system\erased_owner_operations.cpp"><Filter>src\system</Filter></ClCompile>
+    <ClCompile Include="src\system\erased_transport_admission.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\system\system_ids.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\system\local_type_registry.cpp"><Filter>src\system</Filter></ClCompile>
     <ClCompile Include="src\threading\CCountingSemaphore.cpp"><Filter>src\threading</Filter></ClCompile>
@@ -113,5 +114,6 @@
     <ClCompile Include="src\threading\CThreadPackage.cpp"><Filter>src\threading</Filter></ClCompile>
     <ClCompile Include="src\threading\CWaitPredicate.cpp"><Filter>src\threading</Filter></ClCompile>
     <ClCompile Include="src\threading\messages\CErasedOwnerMsgTransport.cpp"><Filter>src\threading\messages</Filter></ClCompile>
+    <ClCompile Include="src\threading\messages\CErasedPodMsgTransport.cpp"><Filter>src\threading\messages</Filter></ClCompile>
   </ItemGroup>
 </Project>

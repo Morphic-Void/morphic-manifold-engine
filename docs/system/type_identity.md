@@ -127,6 +127,17 @@ unregistered identities are rejected before copying, moving ownership, or
 changing memory attribution. Retrieval does not revalidate identity; owning
 retrieval only performs its required exit-side memory re-attribution.
 
+Admission classification validates source, destination, and structural type
+identity in that order. SYSTEM registration is then resolved. LOCAL boundary
+agreement precedes LOCAL registration lookup, so a cross-component LOCAL value
+is classified as a boundary violation even if it is also unavailable locally.
+The quiet policy query remains available for focused checks. Concrete posting
+wrappers emit one `MV_ERROR` for the first identity-policy rejection, including
+the failing carrier role, identity, source, destination, and reason. Diagnostic
+submission failure does not change the Boolean rejection. Successful admission
+and routine queue, allocation, or attribution failure emit no identity-policy
+diagnostic.
+
 Owning wrappers additionally require the declared destination to match the
 module represented by the recipient context, or by the transport context when
 there is no distinct recipient. `SErasedMsgHeader`, `CErasedPodMsg`,
@@ -141,8 +152,8 @@ admission.
 Message dispatch compares the umbrella value locally. An unrecognised value
 must be explicitly extracted as SYSTEM before it can enter the SYSTEM-only
 `UnrecognisedMsg` response or existing debug argument transport. Unknown LOCAL
-identity is neither echoed nor formatted, so the reserved local-type debug
-codes remain unsupported.
+identity is represented by the debug system's bounded local-identity failure
+form rather than exported as a component-owned name.
 
 ## System Name Authority
 

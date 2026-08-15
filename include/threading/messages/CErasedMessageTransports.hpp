@@ -16,7 +16,6 @@
 #include <cstdint>      //  std::uint32_t
 #include <utility>      //  std::move
 
-#include "system/erased_transport_admission.hpp"
 #include "threading/messages/CErasedOwnerMsg.hpp"
 #include "threading/messages/CErasedPodMsg.hpp"
 #include "threading/transports/TOwningTransport.hpp"
@@ -49,11 +48,7 @@ public:
     {
         return m_transport.posting_poisoned();
     }
-    [[nodiscard]] bool post(const threading::CErasedPodMsg& msg) noexcept
-    {
-        return erased_transport_admission::is_admissible(
-            msg.query_message_type_id(), m_destination_module_id) && m_transport.post(msg);
-    }
+    [[nodiscard]] bool post(const threading::CErasedPodMsg& msg) noexcept;
     [[nodiscard]] bool post_would_reallocate(const std::uint32_t count) const noexcept
     {
         return m_transport.post_would_reallocate(count);

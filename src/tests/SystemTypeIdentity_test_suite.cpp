@@ -6,7 +6,6 @@
 //  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    12 Aug 26
 
-#include <cstring>
 #include <iostream>
 #include <type_traits>
 
@@ -199,34 +198,64 @@ void test_erased_transport_admission(TTestContext& ctx)
     const module_ids::id_type previous_module_id =
         system_context::set_ambient_module_id(module_ids::executable);
 
+    const type_id registered_system{ system_type_ids::byte_buffer };
+    const type_id registered_local{ host_local_type_ids::host_runtime };
+    const type_id unregistered_system{
+        system_type_ids::encode_id(
+            system_type_ids::encode_index(system_type_ids::k_count)) };
+    const type_id unregistered_local{
+        local_type_ids::encode_id(
+            local_type_ids::encode_index(host_local_type_ids::k_count)) };
+
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        registered_system, module_ids::executable).rejection ==
+        erased_transport_admission::ERejection::none);
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        registered_system, module_ids::application).rejection ==
+        erased_transport_admission::ERejection::none);
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        registered_local, module_ids::executable).rejection ==
+        erased_transport_admission::ERejection::none);
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        registered_local, module_ids::application).rejection ==
+        erased_transport_admission::ERejection::cross_component_local_identity);
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        type_ids::undefined, module_ids::executable).rejection ==
+        erased_transport_admission::ERejection::invalid_type_identity);
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        unregistered_system, module_ids::executable).rejection ==
+        erased_transport_admission::ERejection::unregistered_system_identity);
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        unregistered_local, module_ids::executable).rejection ==
+        erased_transport_admission::ERejection::unregistered_local_identity);
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        registered_system, module_ids::id_type{}).rejection ==
+        erased_transport_admission::ERejection::invalid_destination_module);
+
     TEST_EXPECT(ctx, erased_transport_admission::is_admissible(
-        type_id{ system_type_ids::byte_buffer }, module_ids::executable));
+        registered_system, module_ids::executable));
     TEST_EXPECT(ctx, erased_transport_admission::is_admissible(
-        type_id{ system_type_ids::byte_buffer }, module_ids::application));
+        registered_system, module_ids::application));
     TEST_EXPECT(ctx, erased_transport_admission::is_admissible(
-        type_id{ host_local_type_ids::host_runtime }, module_ids::executable));
+        registered_local, module_ids::executable));
     TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
-        type_id{ host_local_type_ids::host_runtime }, module_ids::application));
+        registered_local, module_ids::application));
     TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
         type_ids::undefined, module_ids::executable));
     TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
-        type_id{ system_type_ids::encode_id(
-            system_type_ids::encode_index(system_type_ids::k_count)) },
+        unregistered_system, module_ids::executable));
+    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
+        unregistered_local,
         module_ids::executable));
     TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
-        type_id{ local_type_ids::encode_id(host_local_type_ids::k_count) },
-        module_ids::executable));
-    type_id corrupt_identity;
-    const std::uint32_t corrupt_raw_value = 0x00000002u;
-    std::memcpy(&corrupt_identity, &corrupt_raw_value, sizeof(corrupt_identity));
-    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
-        corrupt_identity, module_ids::executable));
-    TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
-        type_id{ system_type_ids::byte_buffer }, module_ids::id_type{}));
+        registered_system, module_ids::id_type{}));
 
     (void)system_context::set_ambient_module_id();
+    TEST_EXPECT(ctx, erased_transport_admission::classify(
+        registered_system, module_ids::executable).rejection ==
+        erased_transport_admission::ERejection::invalid_source_module);
     TEST_EXPECT(ctx, !erased_transport_admission::is_admissible(
-        type_id{ system_type_ids::byte_buffer }, module_ids::executable));
+        registered_system, module_ids::executable));
     (void)system_context::set_ambient_module_id(previous_module_id);
 }
 
