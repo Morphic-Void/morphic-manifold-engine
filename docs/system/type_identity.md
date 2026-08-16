@@ -95,8 +95,8 @@ registry.
 ## Local Definitions
 
 Each binary owns an immutable local definition table. The current physical
-layout keeps host definitions under `host/` and application definitions under
-`modules/application/`; this does not anticipate the later source-layout
+layout keeps host definitions under `host/` and executive definitions under
+`modules/executive/`; this does not anticipate the later source-layout
 migration.
 
 Component `.def` files enumerate ordinary zero-based ordinals. Repeated
@@ -111,7 +111,7 @@ identity, termination, and zero fill. Missing, fabricated, corrupt, and
 unavailable registrations resolve to failure without allocation or dynamic
 registration.
 
-The host TGA continuation states and application TGA continuation states are
+The host TGA continuation states and executive TGA continuation states are
 stored only in their component-owned `CASyncStates`. They therefore belong to
 their respective local tables rather than the system table. `TErasedPod` and
 `CASyncState` carry `type_id`, retain their existing fixed layouts, and accept

@@ -12,6 +12,7 @@
 *.md text eol=lf
 *.txt text eol=lf
 *.vcxproj text eol=lf
+*.vcxitems text eol=lf
 *.filters text eol=lf
 *.props text eol=lf
 *.targets text eol=lf

@@ -164,10 +164,10 @@ This layer difference is intentional:
 
 Allocation accounting is attributed to the allocation context that records the allocation.
 
-Each loaded component has its own module memory context. The host and application
+Each loaded component has its own module memory context. The host and executive
 contexts use distinct system identities and independent counters even though they
 currently share the host allocator. Sharing an allocator makes reattribution
-compatible; it does not merge component attribution or make the application
+compatible; it does not merge component attribution or make the executive
 context a reference to the host context.
 
 The context installed in a module must carry that module's system identity and

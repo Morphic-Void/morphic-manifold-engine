@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Host"><UniqueIdentifier>{4a823118-b9ba-8baa-2f47-489c0716f527}</UniqueIdentifier></Filter>
+    <Filter Include="Host\entry"><UniqueIdentifier>{a8ee6f80-f799-04d4-4099-9aa37cb96d6f}</UniqueIdentifier></Filter>
+    <Filter Include="Host\entry\Source Files"><UniqueIdentifier>{46949e7d-f13b-94e8-1104-a62df2ef60b4}</UniqueIdentifier></Filter>
+    <Filter Include="Host\module"><UniqueIdentifier>{47f0787e-bbc4-e415-b89d-f449f357862f}</UniqueIdentifier></Filter>
+    <Filter Include="Host\module\binding"><UniqueIdentifier>{bee2f7d8-8365-e53b-ab41-f709550905d7}</UniqueIdentifier></Filter>
+    <Filter Include="Host\module\binding\Header Files"><UniqueIdentifier>{a59a14f8-9134-f8f9-9fdb-f104537dda82}</UniqueIdentifier></Filter>
+    <Filter Include="Host\module\binding\Source Files"><UniqueIdentifier>{d75c0a69-e32f-d20f-9404-87e8ecbdb2ab}</UniqueIdentifier></Filter>
+    <Filter Include="Host\module\types"><UniqueIdentifier>{8dc918d9-7979-9a94-86df-363df9054407}</UniqueIdentifier></Filter>
+    <Filter Include="Host\module\types\Header Files"><UniqueIdentifier>{65b24ad9-a28c-549d-2fc2-826d704ca740}</UniqueIdentifier></Filter>
+    <Filter Include="Host\module\types\Source Files"><UniqueIdentifier>{ee34383d-a37f-b0a8-cba0-d09cb066dd8c}</UniqueIdentifier></Filter>
+    <Filter Include="Host\runtime"><UniqueIdentifier>{041b6044-cd35-0504-2dd0-71a8da162a8d}</UniqueIdentifier></Filter>
+    <Filter Include="Host\runtime\Header Files"><UniqueIdentifier>{8e82bcc9-2ad3-b13e-473a-b78052ba8354}</UniqueIdentifier></Filter>
+    <Filter Include="Host\runtime\Source Files"><UniqueIdentifier>{3e9a656f-34cb-dfed-bcab-7ad8ba4b9a72}</UniqueIdentifier></Filter>
+    <Filter Include="Host\system"><UniqueIdentifier>{847a2e7f-90f7-bc6d-67e9-4c385d335aad}</UniqueIdentifier></Filter>
+    <Filter Include="Host\system\Header Files"><UniqueIdentifier>{75dcd30d-d12b-27a1-9c19-2977d62b3577}</UniqueIdentifier></Filter>
+    <Filter Include="Host\system\Source Files"><UniqueIdentifier>{c191b9c4-2263-1c55-f7ba-7fc3034e22cb}</UniqueIdentifier></Filter>
+    <Filter Include="Tests"><UniqueIdentifier>{e5c9d703-0bad-a2fe-792a-d7e4a26ca443}</UniqueIdentifier></Filter>
+    <Filter Include="Tests\Header Files"><UniqueIdentifier>{b764e3e7-4af7-560d-9e63-1301a6d71c4d}</UniqueIdentifier></Filter>
+    <Filter Include="Tests\Source Files"><UniqueIdentifier>{a4722b90-1d15-81a3-b33a-2d93114ac046}</UniqueIdentifier></Filter>
+    <Filter Include="TestData"><UniqueIdentifier>{57bf483a-c3e0-265f-ce3b-9c55911f9092}</UniqueIdentifier></Filter>
+    <Filter Include="TestData\input"><UniqueIdentifier>{37c259ba-8f0e-9226-44e5-06738d5db527}</UniqueIdentifier></Filter>
+    <Filter Include="TestData\input\files"><UniqueIdentifier>{deca212c-d1b7-e6c9-469e-05dc744d7170}</UniqueIdentifier></Filter>
+    <Filter Include="TestData\output"><UniqueIdentifier>{04228b5f-ad7d-fb9a-dd04-2e5d7730f096}</UniqueIdentifier></Filter>
+    <Filter Include="TestData\output\files"><UniqueIdentifier>{73a6fb72-efef-392c-cb51-c2279ac65c87}</UniqueIdentifier></Filter>
+    <Filter Include="TestData\output\logs"><UniqueIdentifier>{e047485a-ae84-44ec-8e56-4604874c7c6f}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="host\module\binding\bound_module.hpp"><Filter>Host\module\binding\Header Files</Filter></ClInclude>
+    <ClInclude Include="host\module\types\host_erased_owner_payloads.def"><Filter>Host\module\types\Header Files</Filter></ClInclude>
+    <ClInclude Include="host\module\types\host_local_type_ids.def"><Filter>Host\module\types\Header Files</Filter></ClInclude>
+    <ClInclude Include="host\module\types\host_local_type_registry.hpp"><Filter>Host\module\types\Header Files</Filter></ClInclude>
+    <ClInclude Include="host\module\types\host_local_types.hpp"><Filter>Host\module\types\Header Files</Filter></ClInclude>
+    <ClInclude Include="host\runtime\host_worker_thread.hpp"><Filter>Host\runtime\Header Files</Filter></ClInclude>
+    <ClInclude Include="host\runtime\host.hpp"><Filter>Host\runtime\Header Files</Filter></ClInclude>
+    <ClInclude Include="host\system\host_context.hpp"><Filter>Host\system\Header Files</Filter></ClInclude>
+    <ClInclude Include="host\system\system_id_definitions.hpp"><Filter>Host\system\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\AssetRepository_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\AsyncState_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\ByteBuffers_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\CMemoryToken_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\CMemoryView_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\DebugService_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\ErasedOwner_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\ErasedPod_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\run_tests.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\StringBuffers_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\SystemTypeIdentity_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TInstance_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TMpmcTransport_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TOrderedCollection_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TOrderedSlots_test_harness.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TOwningTransport_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TPodFifo_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TPodVector_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TQueueTransport_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TRingTransport_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TUnorderedCollection_test_suite.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+    <ClInclude Include="tests\TUnorderedSlots_test_harness.hpp"><Filter>Tests\Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="host\entry\MorphicEngine.cpp"><Filter>Host\entry\Source Files</Filter></ClCompile>
+    <ClCompile Include="host\module\binding\bound_module.cpp"><Filter>Host\module\binding\Source Files</Filter></ClCompile>
+    <ClCompile Include="host\module\types\host_erased_owner_operations.cpp"><Filter>Host\module\types\Source Files</Filter></ClCompile>
+    <ClCompile Include="host\module\types\host_local_type_registry.cpp"><Filter>Host\module\types\Source Files</Filter></ClCompile>
+    <ClCompile Include="host\runtime\host_worker_thread.cpp"><Filter>Host\runtime\Source Files</Filter></ClCompile>
+    <ClCompile Include="host\runtime\host.cpp"><Filter>Host\runtime\Source Files</Filter></ClCompile>
+    <ClCompile Include="host\system\host_context.cpp"><Filter>Host\system\Source Files</Filter></ClCompile>
+    <ClCompile Include="host\system\system_id_definitions.cpp"><Filter>Host\system\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\AssetRepository_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\AsyncState_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\ByteBuffers_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\CMemoryToken_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\CMemoryView_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\DebugService_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\ErasedOwner_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\ErasedPod_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\run_tests.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\StringBuffers_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\SystemTypeIdentity_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TInstance_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TMpmcTransport_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TOrderedCollection_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TOrderedSlots_test_harness.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TOwningTransport_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TPodFifo_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TPodVector_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TQueueTransport_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TRingTransport_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TUnorderedCollection_test_suite.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+    <ClCompile Include="tests\TUnorderedSlots_test_harness.cpp"><Filter>Tests\Source Files</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test_data\input\files\test_input.tga"><Filter>TestData\input\files</Filter></None>
+    <None Include="test_data\output\files\test_output.tga"><Filter>TestData\output\files</Filter></None>
+    <None Include="test_data\output\logs\.gitkeep"><Filter>TestData\output\logs</Filter></None>
+  </ItemGroup>
+</Project>

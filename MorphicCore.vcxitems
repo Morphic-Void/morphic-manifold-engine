@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{a250136d-15bb-4a6c-a3bb-29c92a92e205}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)core;$(MSBuildThisFileDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="core\algo\validate_permutations.hpp" />
+    <ClInclude Include="core\assets\asset_repository.hpp" />
+    <ClInclude Include="core\bit_utils\bit_ops.hpp" />
+    <ClInclude Include="core\bit_utils\bit_utils.hpp" />
+    <ClInclude Include="core\bit_utils\spatial_codes.hpp" />
+    <ClInclude Include="core\bit_utils\TBitField.hpp" />
+    <ClInclude Include="core\containers\ByteBuffers.hpp" />
+    <ClInclude Include="core\containers\containers.hpp" />
+    <ClInclude Include="core\containers\slots\SlotsRankMap.hpp" />
+    <ClInclude Include="core\containers\slots\TOrderedSlots.hpp" />
+    <ClInclude Include="core\containers\slots\TUnorderedSlots.hpp" />
+    <ClInclude Include="core\containers\StringBuffers.hpp" />
+    <ClInclude Include="core\containers\TInstance.hpp" />
+    <ClInclude Include="core\containers\TOrderedCollection.hpp" />
+    <ClInclude Include="core\containers\TPodFifo.hpp" />
+    <ClInclude Include="core\containers\TPodOrderedSlots.hpp" />
+    <ClInclude Include="core\containers\TPodUnorderedSlots.hpp" />
+    <ClInclude Include="core\containers\TPodVector.hpp" />
+    <ClInclude Include="core\containers\TUnorderedCollection.hpp" />
+    <ClInclude Include="core\debug\event_arguments.hpp" />
+    <ClInclude Include="core\debug\macros.hpp" />
+    <ClInclude Include="core\debug\service.hpp" />
+    <ClInclude Include="core\image\codec\tga.hpp" />
+    <ClInclude Include="core\memory\memory_context.hpp" />
+    <ClInclude Include="core\memory\memory_policies.hpp" />
+    <ClInclude Include="core\memory\memory_token.hpp" />
+    <ClInclude Include="core\memory\memory_view.hpp" />
+    <ClInclude Include="core\module\module_binding_context.hpp" />
+    <ClInclude Include="core\module\module_binding.hpp" />
+    <ClInclude Include="core\system\async_state.hpp" />
+    <ClInclude Include="core\system\erased_owner_operations.hpp" />
+    <ClInclude Include="core\system\erased_owner_registration.hpp" />
+    <ClInclude Include="core\system\erased_owner_transport.hpp" />
+    <ClInclude Include="core\system\erased_owner.hpp" />
+    <ClInclude Include="core\system\erased_pod.hpp" />
+    <ClInclude Include="core\system\erased_transport_admission.hpp" />
+    <ClInclude Include="core\system\local_type_registration.hpp" />
+    <ClInclude Include="core\system\local_type_registry.hpp" />
+    <ClInclude Include="core\system\runtime_ids.def" />
+    <ClInclude Include="core\system\system_context.hpp" />
+    <ClInclude Include="core\system\system_erased_owner_payloads.def" />
+    <ClInclude Include="core\system\system_id_registry.hpp" />
+    <ClInclude Include="core\system\system_ids.hpp" />
+    <ClInclude Include="core\system\system_type_ids.def" />
+    <ClInclude Include="core\system\system_type_registration.hpp" />
+    <ClInclude Include="core\system\thread_ids.def" />
+    <ClInclude Include="core\system\transported_types.hpp" />
+    <ClInclude Include="core\system\TStaticLookup.hpp" />
+    <ClInclude Include="core\system\type_id_binding_category.hpp" />
+    <ClInclude Include="core\system\type_registration.hpp" />
+    <ClInclude Include="core\threading\CCountingSemaphore.hpp" />
+    <ClInclude Include="core\threading\CParkingGate.hpp" />
+    <ClInclude Include="core\threading\CThreadControlState.hpp" />
+    <ClInclude Include="core\threading\CThreadPackage.hpp" />
+    <ClInclude Include="core\threading\CWaitPredicate.hpp" />
+    <ClInclude Include="core\threading\messages\byte_view_payloads.hpp" />
+    <ClInclude Include="core\threading\messages\CErasedMessageTransports.hpp" />
+    <ClInclude Include="core\threading\messages\CErasedOwnerMsg.hpp" />
+    <ClInclude Include="core\threading\messages\CErasedPodMsg.hpp" />
+    <ClInclude Include="core\threading\messages\messages.hpp" />
+    <ClInclude Include="core\threading\messages\SErasedMsgHeader.hpp" />
+    <ClInclude Include="core\threading\threading.hpp" />
+    <ClInclude Include="core\threading\transports\TBulkTransport.hpp" />
+    <ClInclude Include="core\threading\transports\TMpmcTransport.hpp" />
+    <ClInclude Include="core\threading\transports\TOwningTransport.hpp" />
+    <ClInclude Include="core\threading\transports\TQueueTransport.hpp" />
+    <ClInclude Include="core\threading\transports\transports.hpp" />
+    <ClInclude Include="core\threading\transports\TRingTransport.hpp" />
+    <ClInclude Include="core\types\atomic_types.hpp" />
+    <ClInclude Include="core\types\fp16data_t.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="core\debug\event_arguments.cpp" />
+    <ClCompile Include="core\debug\service.cpp" />
+    <ClCompile Include="core\image\codec\tga.cpp" />
+    <ClCompile Include="core\memory\memory_context.cpp" />
+    <ClCompile Include="core\module\module_binding_context.cpp" />
+    <ClCompile Include="core\system\erased_owner_operations.cpp" />
+    <ClCompile Include="core\system\erased_owner_transport.cpp" />
+    <ClCompile Include="core\system\erased_owner.cpp" />
+    <ClCompile Include="core\system\erased_transport_admission.cpp" />
+    <ClCompile Include="core\system\local_type_registry.cpp" />
+    <ClCompile Include="core\system\system_context.cpp" />
+    <ClCompile Include="core\system\system_ids.cpp" />
+    <ClCompile Include="core\threading\CCountingSemaphore.cpp" />
+    <ClCompile Include="core\threading\CParkingGate.cpp" />
+    <ClCompile Include="core\threading\CThreadPackage.cpp" />
+    <ClCompile Include="core\threading\CWaitPredicate.cpp" />
+    <ClCompile Include="core\threading\messages\CErasedOwnerMsgTransport.cpp" />
+    <ClCompile Include="core\threading\messages\CErasedPodMsgTransport.cpp" />
+    <ClCompile Include="core\types\fp16data_t.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="core\platform\filesystem\file.cpp" />
+    <ClInclude Include="core\platform\filesystem\file.hpp" />
+    <ClCompile Include="core\platform\filesystem\internal\file_utils.cpp" />
+    <ClInclude Include="core\platform\filesystem\internal\file_utils.hpp" />
+    <ClCompile Include="core\platform\filesystem\log.cpp" />
+    <ClInclude Include="core\platform\filesystem\log.hpp" />
+    <ClCompile Include="core\platform\module\binding.cpp" />
+    <ClInclude Include="core\platform\module\binding.hpp" />
+    <ClCompile Include="core\platform\path\native_path.cpp" />
+    <ClInclude Include="core\platform\path\native_path.hpp" />
+    <ClInclude Include="core\platform\platform_defines.hpp" />
+    <ClCompile Include="core\platform\system\debugger.cpp" />
+    <ClInclude Include="core\platform\system\debugger.hpp" />
+    <ClCompile Include="core\platform\system\performance_counter.cpp" />
+    <ClInclude Include="core\platform\system\performance_counter.hpp" />
+    <ClCompile Include="core\platform\system\process_priority.cpp" />
+    <ClInclude Include="core\platform\system\process_priority.hpp" />
+    <ClCompile Include="core\platform\threading\exclusive_lock.cpp" />
+    <ClInclude Include="core\platform\threading\exclusive_lock.hpp" />
+    <ClCompile Include="core\platform\threading\hw_thread_count.cpp" />
+    <ClInclude Include="core\platform\threading\hw_thread_count.hpp" />
+    <ClCompile Include="core\platform\threading\native_thread_id.cpp" />
+    <ClInclude Include="core\platform\threading\native_thread_id.hpp" />
+    <ClInclude Include="core\platform\threading\platform_threading.hpp" />
+    <ClCompile Include="core\platform\threading\processor_relax.cpp" />
+    <ClInclude Include="core\platform\threading\processor_relax.hpp" />
+    <ClCompile Include="core\platform\threading\thread_lifetime.cpp" />
+    <ClInclude Include="core\platform\threading\thread_lifetime.hpp" />
+    <ClCompile Include="core\platform\threading\thread_naming.cpp" />
+    <ClInclude Include="core\platform\threading\thread_naming.hpp" />
+    <ClCompile Include="core\platform\threading\thread_priority.cpp" />
+    <ClInclude Include="core\platform\threading\thread_priority.hpp" />
+    <ClCompile Include="core\platform\threading\wait_word_semaphore.cpp" />
+    <ClInclude Include="core\platform\threading\wait_word_semaphore.hpp" />
+    <ClCompile Include="core\platform\threading\wait_word.cpp" />
+    <ClInclude Include="core\platform\threading\wait_word.hpp" />
+    <ClInclude Include="core\platform\windows_include.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include="docs\architecture\architectural-principles.md" />
+    <None Include="docs\backlog\current_scope_backlog.md" />
+    <None Include="docs\backlog\manifold_engine_interim_backlog.md" />
+    <None Include="docs\architecture\codebase-ethos-primer.md" />
+    <None Include="docs\architecture\codebase-model.md" />
+    <None Include="docs\containers\ByteBuffers.md" />
+    <None Include="docs\containers\slots\TOrderedSlots.md" />
+    <None Include="docs\containers\slots\TUnorderedSlots.md" />
+    <None Include="docs\containers\StringBuffers.md" />
+    <None Include="docs\containers\TOrderedCollection.md" />
+    <None Include="docs\containers\TPodFifo.md" />
+    <None Include="docs\containers\TPodVector.md" />
+    <None Include="docs\containers\TUnorderedCollection.md" />
+    <None Include="docs\debug\debug_service_substrate.md" />
+    <None Include="docs\debug\debug_system_audit.md" />
+    <None Include="docs\debug\debug_system_interface.md" />
+    <None Include="docs\architecture\engineering-aphorisms.md" />
+    <None Include="docs\architecture\engineering-principles.md" />
+    <None Include="docs\memory\memory_subsystem.md" />
+    <None Include="docs\architecture\origins.md" />
+    <None Include="docs\project\attribution_policy.md" />
+    <None Include="docs\project\completed_milestones.md" />
+    <None Include="docs\project\future_work_notes.md" />
+    <None Include="docs\system\erased_owner.md" />
+    <None Include="docs\system\module_bootstrap.md" />
+    <None Include="docs\system\type_identity.md" />
+    <None Include="docs\threading\job_framework_milestone.md" />
+    <None Include="docs\threading\transports\TMpmcTransport.md" />
+    <None Include="docs\threading\transports\TOwningTransport.md" />
+    <None Include="docs\threading\transports\TQueueTransport.md" />
+    <None Include="docs\threading\transports\TRingTransport.md" />
+    <None Include="logs\.gitkeep" />
+    <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="LICENSE.txt" />
+  </ItemGroup>
+</Project>

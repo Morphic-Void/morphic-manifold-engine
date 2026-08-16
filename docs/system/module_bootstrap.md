@@ -21,7 +21,7 @@ to overlap and negotiates the highest common major. That selected major governs
 the core function table and subsequent function queries. Host, module, and
 functional majors are currently all 3.
 
-The application validates and installs its immutable local-type table and its
+The executive validates and installs its immutable local-type table and its
 component-local erased-owner operation authority before returning bootstrap
 functions. That authority combines a SYSTEM table compiled into the DLL with
 the DLL's own LOCAL table. The host then exchanges numeric advertised
@@ -34,7 +34,7 @@ order:
 4. debug service.
 
 The module memory context is component-specific: its system identity must belong
-to the installed ambient module. The host and application contexts may share an
+to the installed ambient module. The host and executive contexts may share an
 allocator, but they remain distinct attribution authorities with independent
 live-allocation and byte counters. A context must be empty when installed.
 

@@ -1165,6 +1165,6 @@ Goal: make Linux compilation/linking possible and begin validating cross-platfor
 Likely scope:
 
 - build system setup
-- include/platform define fixes
+- platform define fixes
 - compile/link verification
 - later formal threading primitive smoke/stress tests

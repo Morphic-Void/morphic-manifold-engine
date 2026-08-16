@@ -16,9 +16,9 @@ replacement system.
 
 The audit covers:
 
-- `include/debug/debug.hpp`;
-- `src/debug/debug.cpp`;
-- all runtime macro and `debug_utils` call sites under `include/` and `src/`;
+- `core/debug/debug.hpp`;
+- `core/debug/debug.cpp`;
+- all runtime macro and `debug_utils` call sites under the peer ownership directories;
 - current build configuration and focused test interaction;
 - the existing MPMC transport, platform log, system identity, and threading
   surfaces that constrain the replacement.
@@ -173,7 +173,7 @@ does not need to masquerade as a distinct incident severity.
 
 ### Debug output
 
-All 31 `debug_output` calls are in `src/host/host.cpp`, which identifies itself
+All 31 `debug_output` calls are in `host/runtime/host.cpp`, which identifies itself
 as a test/sketch/prototype. They describe:
 
 - thread startup, waiting, waking, and exit;
@@ -304,7 +304,7 @@ startup integration must eventually install it.
 ### Build and test structure
 
 Debug and Release are separate Win32 and x64 configurations. The debug system
-is compiled into the single current application project. There is no dedicated
+is compiled into the single current executive project. There is no dedicated
 debug-system suite or build-time generation project.
 
 The main executable runs the host prototype before the test suites. This

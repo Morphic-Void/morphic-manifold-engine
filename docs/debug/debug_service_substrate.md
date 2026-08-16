@@ -133,7 +133,7 @@ The word contains an `EShutdownReason`. Zero means no request.
 
 Multiple reporting threads may request shutdown. Reasons are ordered by
 severity and updates are monotonic: a weaker request cannot erase or downgrade
-a stronger one. The host reads the request and owns coordinated application
+a stronger one. The host reads the request and owns coordinated executive
 shutdown. The word does not represent shutdown progress and is not cleared.
 
 The current ordered reasons are `critical_incident`, `fatal_incident`, and

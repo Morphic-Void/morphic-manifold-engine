@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Executive"><UniqueIdentifier>{f7fb9001-d913-9243-fbe0-01472744fe3f}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\module"><UniqueIdentifier>{11d511d5-f15f-dca1-1619-894b6b958643}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\module\binding"><UniqueIdentifier>{64412770-7652-795b-dc82-201c73ca50e1}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\module\binding\Header Files"><UniqueIdentifier>{ceb233d5-37b4-1edf-3229-97b8106d62ee}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\module\binding\Source Files"><UniqueIdentifier>{de0ca3fb-959f-cfd7-de01-47fb2622851a}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\module\types"><UniqueIdentifier>{44f4086e-2dbf-bcc1-eb9e-7417b236407e}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\module\types\Header Files"><UniqueIdentifier>{b5094ea1-9fd2-2c6c-b7be-55ff44fe38e0}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\module\types\Source Files"><UniqueIdentifier>{c7470d13-0722-066a-c3cf-e43bc2ce6235}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\runtime"><UniqueIdentifier>{574451ab-0d39-5c3d-3c7f-af70d6c4f0f2}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\runtime\Header Files"><UniqueIdentifier>{0dff69e9-63e6-d221-4aec-d0121f5116a2}</UniqueIdentifier></Filter>
+    <Filter Include="Executive\runtime\Source Files"><UniqueIdentifier>{40c9685a-8e55-032b-5ae5-3c9bd323a7f1}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="executive\module\binding\executive_binding.hpp"><Filter>Executive\module\binding\Header Files</Filter></ClInclude>
+    <ClInclude Include="executive\module\types\executive_local_type_ids.def"><Filter>Executive\module\types\Header Files</Filter></ClInclude>
+    <ClInclude Include="executive\module\types\executive_local_type_registry.hpp"><Filter>Executive\module\types\Header Files</Filter></ClInclude>
+    <ClInclude Include="executive\runtime\executive_thread.hpp"><Filter>Executive\runtime\Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="executive\module\binding\executive_binding.cpp"><Filter>Executive\module\binding\Source Files</Filter></ClCompile>
+    <ClCompile Include="executive\module\types\executive_local_type_registry.cpp"><Filter>Executive\module\types\Source Files</Filter></ClCompile>
+    <ClCompile Include="executive\runtime\executive_thread.cpp"><Filter>Executive\runtime\Source Files</Filter></ClCompile>
+  </ItemGroup>
+</Project>
