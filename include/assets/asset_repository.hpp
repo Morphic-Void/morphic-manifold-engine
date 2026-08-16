@@ -40,10 +40,7 @@ public:
     [[nodiscard]] explicit constexpr operator bool() const noexcept { return is_valid(); }
     [[nodiscard]] constexpr std::uint64_t query_value() const noexcept { return m_value; }
 
-    [[nodiscard]] constexpr std::int32_t relationship(const CAssetId& other) const noexcept
-    {
-        return (m_value < other.m_value) ? -1 : ((m_value > other.m_value) ? 1 : 0);
-    }
+    [[nodiscard]] constexpr std::int32_t relationship(const CAssetId& other) const noexcept;
 
 private:
     explicit constexpr CAssetId(const std::uint64_t value) noexcept : m_value(value) {}
@@ -52,6 +49,19 @@ private:
 
     friend class CAssetRepository;
 };
+
+//==============================================================================
+//  CAssetId out of class function bodies
+//==============================================================================
+
+constexpr std::int32_t CAssetId::relationship(const CAssetId& other) const noexcept
+{
+    return (m_value < other.m_value) ? -1 : ((m_value > other.m_value) ? 1 : 0);
+}
+
+//==============================================================================
+//  Asset identity operators
+//==============================================================================
 
 [[nodiscard]] constexpr bool operator==(const CAssetId lhs, const CAssetId rhs) noexcept
 {
@@ -117,38 +127,17 @@ public:
 
     [[nodiscard]] bool initialise(
         const std::size_t initial_slot_count = 0u,
-        const std::size_t slots_per_buffer = 0u) noexcept
-    {
-        return m_assets.initialise(initial_slot_count, slots_per_buffer);
-    }
+        const std::size_t slots_per_buffer = 0u) noexcept;
 
     void deallocate() noexcept { m_assets.deallocate(); }
 
-    [[nodiscard]] CAssetId insert(CErasedOwner&& owner) noexcept
-    {
-        if (!owner.is_ready() || (m_next_id == 0u))
-        {
-            return CAssetId{};
-        }
+    [[nodiscard]] CAssetId insert(CErasedOwner&& owner) noexcept;
 
-        const CAssetId id{ m_next_id++ };
-        return (m_assets.emplace(id, std::move(owner)) >= 0) ? id : CAssetId{};
-    }
+    [[nodiscard]] CAssetRecord* resolve(const CAssetId id) noexcept;
 
-    [[nodiscard]] CAssetRecord* resolve(const CAssetId id) noexcept
-    {
-        return id.is_valid() ? m_assets.get_object(id) : nullptr;
-    }
+    [[nodiscard]] const CAssetRecord* resolve(const CAssetId id) const noexcept;
 
-    [[nodiscard]] const CAssetRecord* resolve(const CAssetId id) const noexcept
-    {
-        return id.is_valid() ? m_assets.get_object(id) : nullptr;
-    }
-
-    [[nodiscard]] bool erase(const CAssetId id) noexcept
-    {
-        return id.is_valid() && m_assets.erase(id);
-    }
+    [[nodiscard]] bool erase(const CAssetId id) noexcept;
 
     void compact() noexcept { m_assets.sort_and_pack(); }
 
@@ -158,5 +147,42 @@ private:
     TOrderedCollection<CAssetRecord, CAssetId> m_assets;
     std::uint64_t m_next_id{ 1u };
 };
+
+//==============================================================================
+//  CAssetRepository out of class function bodies
+//==============================================================================
+
+inline bool CAssetRepository::initialise(
+    const std::size_t initial_slot_count,
+    const std::size_t slots_per_buffer) noexcept
+{
+    return m_assets.initialise(initial_slot_count, slots_per_buffer);
+}
+
+inline CAssetId CAssetRepository::insert(CErasedOwner&& owner) noexcept
+{
+    if (!owner.is_ready() || (m_next_id == 0u))
+    {
+        return CAssetId{};
+    }
+
+    const CAssetId id{ m_next_id++ };
+    return (m_assets.emplace(id, std::move(owner)) >= 0) ? id : CAssetId{};
+}
+
+inline CAssetRecord* CAssetRepository::resolve(const CAssetId id) noexcept
+{
+    return id.is_valid() ? m_assets.get_object(id) : nullptr;
+}
+
+inline const CAssetRecord* CAssetRepository::resolve(const CAssetId id) const noexcept
+{
+    return id.is_valid() ? m_assets.get_object(id) : nullptr;
+}
+
+inline bool CAssetRepository::erase(const CAssetId id) noexcept
+{
+    return id.is_valid() && m_assets.erase(id);
+}
 
 #endif  //  #ifndef ASSET_REPOSITORY_HPP_INCLUDED

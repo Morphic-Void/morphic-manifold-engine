@@ -69,7 +69,7 @@ private:
     void shutdown_threads() noexcept;
     void shutdown_debug_service() noexcept;
 
-    [[nodiscard]] threading::CThreadPackage* thread_package(EWorkerThreadID id) noexcept;
+    [[nodiscard]] threading::CThreadPackage* thread_package(const EWorkerThreadID id) noexcept;
 
     TInstance<debug_system::CDebugServiceState> m_debug_service_owner;
     debug_system::CDebugServiceState* m_debug_service{ nullptr };

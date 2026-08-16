@@ -124,14 +124,8 @@ public:
     [[nodiscard]] CByteConstView const_view() const noexcept;
 
     //  Accessors
-    [[nodiscard]] std::uint8_t* data() const noexcept
-    {
-        return m_meta.is_ready() ? static_cast<std::uint8_t*>(const_cast<void*>(m_token.data())) : nullptr;
-    }
-    [[nodiscard]] std::size_t align() const noexcept
-    {
-        return m_meta.is_ready() ? m_token.storage_alignment() : std::size_t{ 0 };
-    }
+    [[nodiscard]] std::uint8_t* data() const noexcept { return m_meta.is_ready() ? static_cast<std::uint8_t*>(const_cast<void*>(m_token.data())) : nullptr; }
+    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_token.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t size() const noexcept { return is_ready() ? m_meta.size : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t capacity() const noexcept { return is_ready() ? m_meta.capacity : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t available() const noexcept { return is_ready() ? (m_meta.capacity - m_meta.size) : std::size_t{ 0 }; }
@@ -155,33 +149,22 @@ public:
     void zero_fill() const noexcept;
 
     //  Handoff
-    memory::CMemoryToken disown(MetaByteBuffer& meta) noexcept
-    {
-        meta = m_meta;
-        m_meta.reset();
-        return std::move(m_token);
-    }
+    memory::CMemoryToken disown(MetaByteBuffer& meta) noexcept;
 
     //  Direct storage attribution
     [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* const context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
     friend class CStringBuffer;
     friend class CErasedOwner;
 
-    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept
-    {
-        return m_token.owns_storage() ? m_token.context() : nullptr;
-    }
+    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept
-    {
-        m_token.unsafe_replace_context_without_accounting(expected_source, target);
-    }
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     memory::CMemoryToken m_token{ 1u, 1u };
     MetaByteBuffer m_meta;
@@ -225,10 +208,7 @@ public:
     [[nodiscard]] CByteView tail_from(const std::size_t offset) const noexcept;
 
     //  Accessors
-    [[nodiscard]] std::uint8_t* data() const noexcept
-    {
-        return m_meta.is_ready() ? static_cast<std::uint8_t*>(m_view.data()) : nullptr;
-    }
+    [[nodiscard]] std::uint8_t* data() const noexcept { return m_meta.is_ready() ? static_cast<std::uint8_t*>(m_view.data()) : nullptr; }
     [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t size() const noexcept { return is_ready() ? m_meta.size : std::size_t{ 0 }; }
 
@@ -277,10 +257,7 @@ public:
     [[nodiscard]] CByteConstView tail_from(const std::size_t offset) const noexcept;
 
     //  Accessors
-    [[nodiscard]] const std::uint8_t* data() const noexcept
-    {
-        return m_meta.is_ready() ? static_cast<const std::uint8_t*>(m_view.data()) : nullptr;
-    }
+    [[nodiscard]] const std::uint8_t* data() const noexcept { return m_meta.is_ready() ? static_cast<const std::uint8_t*>(m_view.data()) : nullptr; }
     [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t size() const noexcept { return is_ready() ? m_meta.size : std::size_t{ 0 }; }
 
@@ -364,28 +341,13 @@ public:
     [[nodiscard]] CByteRectConstView const_view() const noexcept;
 
     //  Contiguous byte views
-    [[nodiscard]] CByteView byte_view() const noexcept
-    {
-        return is_contiguous() ? CByteView{ data(), m_meta.size_as_buffer(), align() } : CByteView{};
-    }
-    [[nodiscard]] CByteConstView byte_const_view() const noexcept
-    {
-        return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{};
-    }
+    [[nodiscard]] CByteView byte_view() const noexcept { return is_contiguous() ? CByteView{ data(), m_meta.size_as_buffer(), align() } : CByteView{}; }
+    [[nodiscard]] CByteConstView byte_const_view() const noexcept { return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{}; }
 
     //  Accessors
-    [[nodiscard]] std::uint8_t* data() const noexcept
-    {
-        return m_meta.is_ready() ? static_cast<std::uint8_t*>(const_cast<void*>(m_token.data())) : nullptr;
-    }
-    [[nodiscard]] std::uint8_t* row_data(const std::size_t y) const noexcept
-    {
-        return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr;
-    }
-    [[nodiscard]] std::size_t align() const noexcept
-    {
-        return m_meta.is_ready() ? m_token.storage_alignment() : std::size_t{ 0 };
-    }
+    [[nodiscard]] std::uint8_t* data() const noexcept { return m_meta.is_ready() ? static_cast<std::uint8_t*>(const_cast<void*>(m_token.data())) : nullptr; }
+    [[nodiscard]] std::uint8_t* row_data(const std::size_t y) const noexcept { return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr; }
+    [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_token.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_pitch() const noexcept { return is_ready() ? m_meta.row_pitch : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_width() const noexcept { return is_ready() ? m_meta.row_width : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_count() const noexcept { return is_ready() ? m_meta.row_count : std::size_t{ 0 }; }
@@ -400,32 +362,21 @@ public:
     void zero_fill() const noexcept;
 
     //  Handoff
-    memory::CMemoryToken disown(MetaByteRectBuffer& meta) noexcept
-    {
-        meta = m_meta;
-        m_meta.reset();
-        return std::move(m_token);
-    }
+    memory::CMemoryToken disown(MetaByteRectBuffer& meta) noexcept;
 
     //  Direct storage attribution
     [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* const context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
     friend class CErasedOwner;
 
-    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept
-    {
-        return m_token.owns_storage() ? m_token.context() : nullptr;
-    }
+    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept
-    {
-        m_token.unsafe_replace_context_without_accounting(expected_source, target);
-    }
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     memory::CMemoryToken m_token{ 1u, 1u };
     MetaByteRectBuffer m_meta;
@@ -468,24 +419,12 @@ public:
     [[nodiscard]] CByteRectView subview(const std::size_t x, const std::size_t y, const std::size_t width, const std::size_t height) const noexcept;
 
     //  Contiguous byte views
-    [[nodiscard]] CByteView byte_view() const noexcept
-    {
-        return is_contiguous() ? CByteView{ data(), m_meta.size_as_buffer(), align() } : CByteView{};
-    }
-    [[nodiscard]] CByteConstView byte_const_view() const noexcept
-    {
-        return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{};
-    }
+    [[nodiscard]] CByteView byte_view() const noexcept { return is_contiguous() ? CByteView{ data(), m_meta.size_as_buffer(), align() } : CByteView{}; }
+    [[nodiscard]] CByteConstView byte_const_view() const noexcept { return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{}; }
 
     //  Accessors
-    [[nodiscard]] std::uint8_t* data() const noexcept
-    {
-        return m_meta.is_ready() ? static_cast<std::uint8_t*>(m_view.data()) : nullptr;
-    }
-    [[nodiscard]] std::uint8_t* row_data(const std::size_t y) const noexcept
-    {
-        return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr;
-    }
+    [[nodiscard]] std::uint8_t* data() const noexcept { return m_meta.is_ready() ? static_cast<std::uint8_t*>(m_view.data()) : nullptr; }
+    [[nodiscard]] std::uint8_t* row_data(const std::size_t y) const noexcept { return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr; }
     [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_pitch() const noexcept { return is_ready() ? m_meta.row_pitch : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_width() const noexcept { return is_ready() ? m_meta.row_width : std::size_t{ 0 }; }
@@ -535,20 +474,11 @@ public:
     [[nodiscard]] CByteRectConstView subview(const std::size_t x, const std::size_t y, const std::size_t width, const std::size_t height) const noexcept;
 
     //  Contiguous byte views
-    [[nodiscard]] CByteConstView byte_view() const noexcept
-    {
-        return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{};
-    }
+    [[nodiscard]] CByteConstView byte_view() const noexcept { return is_contiguous() ? CByteConstView{ data(), m_meta.size_as_buffer(), align() } : CByteConstView{}; }
 
     //  Accessors
-    [[nodiscard]] const std::uint8_t* data() const noexcept
-    {
-        return m_meta.is_ready() ? static_cast<const std::uint8_t*>(m_view.data()) : nullptr;
-    }
-    [[nodiscard]] const std::uint8_t* row_data(const std::size_t y) const noexcept
-    {
-        return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr;
-    }
+    [[nodiscard]] const std::uint8_t* data() const noexcept { return m_meta.is_ready() ? static_cast<const std::uint8_t*>(m_view.data()) : nullptr; }
+    [[nodiscard]] const std::uint8_t* row_data(const std::size_t y) const noexcept { return (is_ready() && (y < m_meta.row_count)) ? (data() + (y * m_meta.row_pitch)) : nullptr; }
     [[nodiscard]] std::size_t align() const noexcept { return m_meta.is_ready() ? m_view.storage_alignment() : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_pitch() const noexcept { return is_ready() ? m_meta.row_pitch : std::size_t{ 0 }; }
     [[nodiscard]] std::size_t row_width() const noexcept { return is_ready() ? m_meta.row_width : std::size_t{ 0 }; }
@@ -614,6 +544,13 @@ inline CByteBuffer& CByteBuffer::operator=(CByteBuffer&& other) noexcept
     return *this;
 }
 
+inline memory::CMemoryToken CByteBuffer::disown(MetaByteBuffer& meta) noexcept
+{
+    meta = m_meta;
+    m_meta.reset();
+    return std::move(m_token);
+}
+
 inline bool CByteBuffer::is_valid() const noexcept
 {
     return m_meta.is_valid() && m_token.is_relocatable() &&
@@ -628,6 +565,18 @@ inline bool CByteBuffer::is_empty() const noexcept
 inline bool CByteBuffer::is_ready() const noexcept
 {
     return is_valid() && (m_token.data() != nullptr);
+}
+
+inline memory::CMemoryContext* CByteBuffer::memory_source_context() const noexcept
+{
+    return m_token.owns_storage() ? m_token.context() : nullptr;
+}
+
+inline void CByteBuffer::unsafe_replace_memory_context_without_accounting(
+    memory::CMemoryContext* const expected_source,
+    memory::CMemoryContext* const target) noexcept
+{
+    m_token.unsafe_replace_context_without_accounting(expected_source, target);
 }
 
 [[nodiscard]] inline CByteView CByteBuffer::view() const noexcept
@@ -743,16 +692,14 @@ inline bool CByteBuffer::is_ready() const noexcept
 [[nodiscard]] inline bool CByteBuffer::resize(const std::size_t size, const std::size_t align) noexcept
 {
     return (size <= memory::k_byte_size_ceiling) ?
-        reallocate(size, ((size > m_meta.capacity) ?
-            memory::buffer_growth_policy(size, memory::k_byte_size_ceiling) : m_meta.capacity), align) :
+        reallocate(size, ((size > m_meta.capacity) ? memory::buffer_growth_policy(size, memory::k_byte_size_ceiling) : m_meta.capacity), align) :
         false;
 }
 
 [[nodiscard]] inline bool CByteBuffer::reserve(const std::size_t minimum_capacity, const std::size_t align) noexcept
 {
     return (minimum_capacity <= memory::k_byte_size_ceiling) ?
-        reallocate(m_meta.size, std::max(
-            memory::buffer_growth_policy(minimum_capacity, memory::k_byte_size_ceiling), m_meta.capacity), align) :
+        reallocate(m_meta.size, std::max(memory::buffer_growth_policy(minimum_capacity, memory::k_byte_size_ceiling), m_meta.capacity), align) :
         false;
 }
 
@@ -828,12 +775,12 @@ inline std::uint64_t CByteBuffer::memory_allocation_size() const noexcept
     return m_token.memory_allocation_size();
 }
 
-inline bool CByteBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+inline bool CByteBuffer::can_reattribute_to(memory::CMemoryContext* const context) const noexcept
 {
     return m_token.can_reattribute_to(context);
 }
 
-inline bool CByteBuffer::reattribute(memory::CMemoryContext* context) noexcept
+inline bool CByteBuffer::reattribute(memory::CMemoryContext* const context) noexcept
 {
     return m_token.reattribute(context);
 }
@@ -970,6 +917,13 @@ inline CByteRectBuffer& CByteRectBuffer::operator=(CByteRectBuffer&& other) noex
     return *this;
 }
 
+inline memory::CMemoryToken CByteRectBuffer::disown(MetaByteRectBuffer& meta) noexcept
+{
+    meta = m_meta;
+    m_meta.reset();
+    return std::move(m_token);
+}
+
 inline bool CByteRectBuffer::is_valid() const noexcept
 {
     return m_meta.is_valid() && m_token.is_relocatable() &&
@@ -984,6 +938,18 @@ inline bool CByteRectBuffer::is_empty() const noexcept
 inline bool CByteRectBuffer::is_ready() const noexcept
 {
     return is_valid() && (m_token.data() != nullptr);
+}
+
+inline memory::CMemoryContext* CByteRectBuffer::memory_source_context() const noexcept
+{
+    return m_token.owns_storage() ? m_token.context() : nullptr;
+}
+
+inline void CByteRectBuffer::unsafe_replace_memory_context_without_accounting(
+    memory::CMemoryContext* const expected_source,
+    memory::CMemoryContext* const target) noexcept
+{
+    m_token.unsafe_replace_context_without_accounting(expected_source, target);
 }
 
 [[nodiscard]] inline CByteRectView CByteRectBuffer::view() const noexcept
@@ -1181,12 +1147,12 @@ inline std::uint64_t CByteRectBuffer::memory_allocation_size() const noexcept
     return m_token.memory_allocation_size();
 }
 
-inline bool CByteRectBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+inline bool CByteRectBuffer::can_reattribute_to(memory::CMemoryContext* const context) const noexcept
 {
     return m_token.can_reattribute_to(context);
 }
 
-inline bool CByteRectBuffer::reattribute(memory::CMemoryContext* context) noexcept
+inline bool CByteRectBuffer::reattribute(memory::CMemoryContext* const context) noexcept
 {
     return m_token.reattribute(context);
 }

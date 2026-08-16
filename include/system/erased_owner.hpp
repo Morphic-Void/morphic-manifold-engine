@@ -54,9 +54,9 @@ public:
 
     void destroy() noexcept;
 
-    void add_hazard(mount_point_ids::id_type mount_point_id) noexcept;
-    void remove_hazard(mount_point_ids::id_type mount_point_id) noexcept;
-    [[nodiscard]] bool has_hazard(mount_point_ids::id_type mount_point_id) const noexcept;
+    void add_hazard(const mount_point_ids::id_type mount_point_id) noexcept;
+    void remove_hazard(const mount_point_ids::id_type mount_point_id) noexcept;
+    [[nodiscard]] bool has_hazard(const mount_point_ids::id_type mount_point_id) const noexcept;
     [[nodiscard]] bool has_any_hazard() const noexcept { return m_hazards != 0u; }
     [[nodiscard]] std::uint32_t hazard_mask() const noexcept { return m_hazards; }
 
@@ -71,38 +71,38 @@ private:
     template<typename T, auto Member>
     friend struct erased_owner_operations::TNestedOperationsFactory;
 
-    [[nodiscard]] static std::uint32_t hazard_bit(mount_point_ids::id_type mount_point_id) noexcept;
+    [[nodiscard]] static std::uint32_t hazard_bit(const mount_point_ids::id_type mount_point_id) noexcept;
     [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
     [[nodiscard]] const erased_owner_operations::SRegistration* operations() const noexcept;
-    [[nodiscard]] static bool identity_is_registered(type_id identity) noexcept;
-    [[nodiscard]] static bool memory_context_belongs_to_current_component(memory::CMemoryContext* context) noexcept;
+    [[nodiscard]] static bool identity_is_registered(const type_id identity) noexcept;
+    [[nodiscard]] static bool memory_context_belongs_to_current_component(memory::CMemoryContext* const context) noexcept;
     void make_canonical_empty() noexcept;
 
     template<typename T>
-    static void destroy_payload(void* payload) noexcept;
+    static void destroy_payload(void* const payload) noexcept;
 
-    [[nodiscard]] static bool validate_no_nested_memory_source(const void* payload, memory::CMemoryContext* source) noexcept;
-    [[nodiscard]] static std::uint32_t no_nested_memory_allocation_count(const void* payload) noexcept;
-    [[nodiscard]] static std::uint64_t no_nested_memory_allocation_size(const void* payload) noexcept;
-    [[nodiscard]] static bool no_nested_can_reattribute_to(const void* payload, memory::CMemoryContext* target) noexcept;
-    static void replace_no_nested_memory_context(void* payload, memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
-
-    template<typename T, auto Member>
-    [[nodiscard]] static bool validate_nested_memory_source(const void* payload, memory::CMemoryContext* source) noexcept;
+    [[nodiscard]] static bool validate_no_nested_memory_source(const void* const payload, memory::CMemoryContext* const source) noexcept;
+    [[nodiscard]] static std::uint32_t no_nested_memory_allocation_count(const void* const payload) noexcept;
+    [[nodiscard]] static std::uint64_t no_nested_memory_allocation_size(const void* const payload) noexcept;
+    [[nodiscard]] static bool no_nested_can_reattribute_to(const void* const payload, memory::CMemoryContext* const target) noexcept;
+    static void replace_no_nested_memory_context(void* const payload, memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     template<typename T, auto Member>
-    [[nodiscard]] static std::uint32_t nested_memory_allocation_count(const void* payload) noexcept;
+    [[nodiscard]] static bool validate_nested_memory_source(const void* const payload, memory::CMemoryContext* const source) noexcept;
 
     template<typename T, auto Member>
-    [[nodiscard]] static std::uint64_t nested_memory_allocation_size(const void* payload) noexcept;
+    [[nodiscard]] static std::uint32_t nested_memory_allocation_count(const void* const payload) noexcept;
 
     template<typename T, auto Member>
-    [[nodiscard]] static bool nested_can_reattribute_to(const void* payload, memory::CMemoryContext* target) noexcept;
+    [[nodiscard]] static std::uint64_t nested_memory_allocation_size(const void* const payload) noexcept;
 
     template<typename T, auto Member>
-    static void replace_nested_memory_context(void* payload, memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+    [[nodiscard]] static bool nested_can_reattribute_to(const void* const payload, memory::CMemoryContext* const target) noexcept;
+
+    template<typename T, auto Member>
+    static void replace_nested_memory_context(void* const payload, memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     memory::CMemoryToken m_storage;
     type_id              m_type_id{ type_ids::undefined };
@@ -114,7 +114,7 @@ static_assert(((sizeof(void*) != 8u) || (sizeof(CErasedOwner) == 32u)), "CErased
 static_assert(((sizeof(void*) != 4u) || (sizeof(CErasedOwner) == 24u)), "CErasedOwner must occupy 24 bytes on a 32-bit target");
 
 //==============================================================================
-//  Typed payload implementation
+//  CErasedOwner typed payload out of class function bodies
 //==============================================================================
 
 template<typename T>
@@ -217,34 +217,44 @@ namespace erased_owner_operations
 template<typename T>
 struct TDefaultOperationsFactory
 {
-    [[nodiscard]] static constexpr SOperations make() noexcept
-    {
-        return SOperations{
-            &CErasedOwner::destroy_payload<T>,
-            &CErasedOwner::validate_no_nested_memory_source,
-            &CErasedOwner::no_nested_memory_allocation_count,
-            &CErasedOwner::no_nested_memory_allocation_size,
-            &CErasedOwner::no_nested_can_reattribute_to,
-            &CErasedOwner::replace_no_nested_memory_context
-        };
-    }
+    [[nodiscard]] static constexpr SOperations make() noexcept;
 };
 
 template<typename T, auto Member>
 struct TNestedOperationsFactory
 {
-    [[nodiscard]] static constexpr SOperations make() noexcept
-    {
-        return SOperations{
-            &CErasedOwner::destroy_payload<T>,
-            &CErasedOwner::validate_nested_memory_source<T, Member>,
-            &CErasedOwner::nested_memory_allocation_count<T, Member>,
-            &CErasedOwner::nested_memory_allocation_size<T, Member>,
-            &CErasedOwner::nested_can_reattribute_to<T, Member>,
-            &CErasedOwner::replace_nested_memory_context<T, Member>
-        };
-    }
+    [[nodiscard]] static constexpr SOperations make() noexcept;
 };
+
+//==============================================================================
+//  Erased owner operation factories out of class function bodies
+//==============================================================================
+
+template<typename T>
+constexpr SOperations TDefaultOperationsFactory<T>::make() noexcept
+{
+    return SOperations{
+        &CErasedOwner::destroy_payload<T>,
+        &CErasedOwner::validate_no_nested_memory_source,
+        &CErasedOwner::no_nested_memory_allocation_count,
+        &CErasedOwner::no_nested_memory_allocation_size,
+        &CErasedOwner::no_nested_can_reattribute_to,
+        &CErasedOwner::replace_no_nested_memory_context
+    };
+}
+
+template<typename T, auto Member>
+constexpr SOperations TNestedOperationsFactory<T, Member>::make() noexcept
+{
+    return SOperations{
+        &CErasedOwner::destroy_payload<T>,
+        &CErasedOwner::validate_nested_memory_source<T, Member>,
+        &CErasedOwner::nested_memory_allocation_count<T, Member>,
+        &CErasedOwner::nested_memory_allocation_size<T, Member>,
+        &CErasedOwner::nested_can_reattribute_to<T, Member>,
+        &CErasedOwner::replace_nested_memory_context<T, Member>
+    };
+}
 
 }   //  namespace erased_owner_operations
 

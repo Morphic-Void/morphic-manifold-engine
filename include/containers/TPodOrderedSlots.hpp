@@ -60,7 +60,7 @@ protected:
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
     [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     TPodVector<T> m_slots;
     TPodVector<TKey> m_keys;
@@ -179,9 +179,7 @@ inline std::uint32_t TPodOrderedSlotsStorage<T, TKey>::on_reserve_empty(
 }
 
 template<typename T, typename TKey>
-inline std::int32_t TPodOrderedSlotsStorage<T, TKey>::on_compare_keys(
-    const std::int32_t source_index,
-    const std::int32_t target_index) const noexcept
+inline std::int32_t TPodOrderedSlotsStorage<T, TKey>::on_compare_keys(const std::int32_t source_index, const std::int32_t target_index) const noexcept
 {
     const TKey& source_key = (source_index < 0) ? m_staged_key : m_keys[static_cast<std::size_t>(source_index)];
     const TKey& target_key = (target_index < 0) ? m_staged_key : m_keys[static_cast<std::size_t>(target_index)];
@@ -207,8 +205,7 @@ inline std::uint64_t TPodOrderedSlotsStorage<T, TKey>::memory_allocation_size() 
 }
 
 template<typename T, typename TKey>
-inline bool TPodOrderedSlotsStorage<T, TKey>::memory_source_context(
-    memory::CMemoryContext*& source) const noexcept
+inline bool TPodOrderedSlotsStorage<T, TKey>::memory_source_context(memory::CMemoryContext*& source) const noexcept
 {
     memory::CMemoryContext* context = m_slots.memory_source_context();
     if ((source != nullptr) && (context != nullptr) && (context != source))

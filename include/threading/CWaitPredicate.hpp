@@ -70,7 +70,7 @@ public:
     bool is_control_released() const noexcept;
 
     //  Control
-    bool acquire_control(std::uint32_t initial_value = 0u) noexcept;
+    bool acquire_control(const std::uint32_t initial_value = 0u) noexcept;
     void release_control() noexcept;
 
     //  Word observation
@@ -103,7 +103,7 @@ public:
     //
     //  These functions do not wake, release, or otherwise activate waiting threads.
     //  See the top-of-file contract for sentinel and wrapping semantics.
-    bool set(std::uint32_t value) noexcept;
+    bool set(const std::uint32_t value) noexcept;
     bool increment() noexcept;
     bool decrement() noexcept;
     bool poke_epoch() noexcept { return increment(); }

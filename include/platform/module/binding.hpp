@@ -53,7 +53,7 @@ public:
 
     //  Queries
     [[nodiscard]] bool is_bound() const noexcept;
-    [[nodiscard]] FModuleFunction find_function(const char* symbol_name) const noexcept;
+    [[nodiscard]] FModuleFunction find_function(const char* const symbol_name) const noexcept;
     [[nodiscard]] void* find_symbol(const char* const symbol_name) const noexcept;
     [[nodiscard]] void* native_handle() const noexcept;
 

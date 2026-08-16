@@ -16,7 +16,7 @@
 namespace host
 {
 
-namespace
+namespace internal
 {
 
 constexpr std::array<erased_owner_operations::SRegistration, host_local_type_ids::k_count> make_local_erased_owner_operations() noexcept
@@ -40,11 +40,11 @@ constexpr auto s_local_erased_owner_operations = make_local_erased_owner_operati
 constexpr erased_owner_operations::SCategoryView s_local_erased_owner_operations_view{
     s_local_erased_owner_operations.data(), static_cast<std::uint32_t>(s_local_erased_owner_operations.size()) };
 
-}   //  namespace
+}   //  namespace internal
 
 const erased_owner_operations::SCategoryView& local_erased_owner_operations_view() noexcept
 {
-    return s_local_erased_owner_operations_view;
+    return internal::s_local_erased_owner_operations_view;
 }
 
 }   //  namespace host

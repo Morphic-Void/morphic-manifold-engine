@@ -59,7 +59,7 @@ protected:
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
     [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     TPodVector<T> m_slots;
 };
@@ -178,8 +178,7 @@ inline std::uint64_t TPodUnorderedSlotsStorage<T>::memory_allocation_size() cons
 }
 
 template<typename T>
-inline bool TPodUnorderedSlotsStorage<T>::memory_source_context(
-    memory::CMemoryContext*& source) const noexcept
+inline bool TPodUnorderedSlotsStorage<T>::memory_source_context(memory::CMemoryContext*& source) const noexcept
 {
     memory::CMemoryContext* const context = m_slots.memory_source_context();
     if ((source != nullptr) && (context != nullptr) && (context != source))

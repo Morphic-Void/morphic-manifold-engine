@@ -73,7 +73,7 @@ bool test_tga()
     return success;
 }
 
-int main(int argc, char** argv)
+int main(const int argc, char** const argv)
 {
     if (should_print_usage(argc, argv))
     {

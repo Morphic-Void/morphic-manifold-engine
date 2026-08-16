@@ -31,7 +31,7 @@
 namespace platform::threading
 {
 
-bool set_current_thread_name(const char* name) noexcept;
+bool set_current_thread_name(const char* const name) noexcept;
 
 }   //  namespace platform::threading
 

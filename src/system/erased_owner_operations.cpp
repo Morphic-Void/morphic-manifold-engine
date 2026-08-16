@@ -17,7 +17,7 @@
 namespace erased_owner_operations
 {
 
-namespace
+namespace internal
 {
 
 constexpr std::array<SRegistration, system_type_ids::k_count>
@@ -109,34 +109,34 @@ bool s_view_installed{ false };
         : nullptr;
 }
 
-}   //  namespace
+}   //  namespace internal
 
 bool validate_view(const SRegistryView& view) noexcept
 {
     return
-        validate_category_view(view.system, ETypeIdCategory::system) &&
-        validate_category_view(view.local, ETypeIdCategory::local);
+        internal::validate_category_view(view.system, ETypeIdCategory::system) &&
+        internal::validate_category_view(view.local, ETypeIdCategory::local);
 }
 
 bool install_view(const SRegistryView& view) noexcept
 {
-    if (s_view_installed || !validate_view(view))
+    if (internal::s_view_installed || !validate_view(view))
     {
         return false;
     }
-    s_installed_view = view;
-    s_view_installed = true;
+    internal::s_installed_view = view;
+    internal::s_view_installed = true;
     return true;
 }
 
 bool view_is_installed() noexcept
 {
-    return s_view_installed;
+    return internal::s_view_installed;
 }
 
 const SRegistryView* installed_view() noexcept
 {
-    return s_view_installed ? &s_installed_view : nullptr;
+    return internal::s_view_installed ? &internal::s_installed_view : nullptr;
 }
 
 const SRegistration* find(const SRegistryView* const view, const type_id identity) noexcept
@@ -150,7 +150,7 @@ const SRegistration* find(const SRegistryView* const view, const type_id identit
     if (identity.try_system_type_id(system_identity))
     {
         const std::uint32_t index = system_type_ids::decode_index(system_type_ids::decode_id(system_identity));
-        return find_in_category(view->system, identity, index);
+        return internal::find_in_category(view->system, identity, index);
     }
 
     local_type_id local_identity;
@@ -159,7 +159,7 @@ const SRegistration* find(const SRegistryView* const view, const type_id identit
         return nullptr;
     }
     const std::uint32_t index = local_type_ids::decode_index(local_type_ids::decode_id(local_identity));
-    return find_in_category(view->local, identity, index);
+    return internal::find_in_category(view->local, identity, index);
 }
 
 const SRegistration* find(const type_id identity) noexcept
@@ -169,7 +169,7 @@ const SRegistration* find(const type_id identity) noexcept
 
 const SCategoryView& system_operations_view() noexcept
 {
-    return s_system_view;
+    return internal::s_system_view;
 }
 
 }   //  namespace erased_owner_operations

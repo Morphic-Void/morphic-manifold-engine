@@ -43,8 +43,8 @@ public:
 
     CMemoryToken() noexcept = default;
 
-    CMemoryToken(std::size_t stride, std::size_t storage_alignment, CMemoryContext* context = nullptr) noexcept;
-    CMemoryToken(std::size_t stride, std::size_t storage_alignment, std::size_t buffer_capacity_hint, CMemoryContext* context = nullptr) noexcept;
+    CMemoryToken(const std::size_t stride, const std::size_t storage_alignment, CMemoryContext* const context = nullptr) noexcept;
+    CMemoryToken(const std::size_t stride, const std::size_t storage_alignment, const std::size_t buffer_capacity_hint, CMemoryContext* const context = nullptr) noexcept;
 
     CMemoryToken(const CMemoryToken&) = delete;
     CMemoryToken& operator=(const CMemoryToken&) = delete;
@@ -52,17 +52,11 @@ public:
     CMemoryToken(CMemoryToken&& other) noexcept;
     CMemoryToken& operator=(CMemoryToken&& other) noexcept;
 
-    ~CMemoryToken() noexcept
-    {
-        deallocate();
-        m_context = nullptr;
-        m_stride = 0u;
-        m_control = 0u;
-    }
+    ~CMemoryToken() noexcept;
 
     // Configuration preserves an existing context and otherwise selects the ambient context.
-    [[nodiscard]] bool configure_relocatable(std::size_t stride, std::size_t storage_alignment = 0u) noexcept;
-    [[nodiscard]] bool configure_stable(std::size_t stride, std::size_t storage_alignment = 0u, std::size_t buffer_capacity_hint = 0u) noexcept;
+    [[nodiscard]] bool configure_relocatable(const std::size_t stride, const std::size_t storage_alignment = 0u) noexcept;
+    [[nodiscard]] bool configure_stable(const std::size_t stride, const std::size_t storage_alignment = 0u, const std::size_t buffer_capacity_hint = 0u) noexcept;
 
     [[nodiscard]] bool clone(const CMemoryToken& source) noexcept;
     [[nodiscard]] bool clone(const CMemoryToken& source, CMemoryContext* context) noexcept;
@@ -85,22 +79,22 @@ public:
     [[nodiscard]] std::size_t per_buffer_capacity() const noexcept;
 
     [[nodiscard]] bool contains_index(const std::size_t index) const noexcept { return index < count(); }
-    [[nodiscard]] bool can_grow_to(std::size_t count) const noexcept;
+    [[nodiscard]] bool can_grow_to(const std::size_t count) const noexcept;
 
     [[nodiscard]] void* data() noexcept;
     [[nodiscard]] const void* data() const noexcept;
     [[nodiscard]] CMemoryView view() noexcept;
     [[nodiscard]] CMemoryConstView view() const noexcept;
     [[nodiscard]] CMemoryConstView const_view() const noexcept { return view(); }
-    [[nodiscard]] void* map_index(std::size_t index, bool zero_new = true) noexcept;
-    [[nodiscard]] void* index_ptr(std::size_t index) noexcept;
-    [[nodiscard]] const void* index_ptr(std::size_t index) const noexcept;
+    [[nodiscard]] void* map_index(const std::size_t index, const bool zero_new = true) noexcept;
+    [[nodiscard]] void* index_ptr(const std::size_t index) noexcept;
+    [[nodiscard]] const void* index_ptr(const std::size_t index) const noexcept;
 
     // allocate() replaces all storage in either mode. reallocate() preserves a
     // relocatable prefix; grow_to() preserves all stable addresses and content.
-    [[nodiscard]] bool allocate(std::size_t count, bool zero = true) noexcept;
-    [[nodiscard]] bool reallocate(std::size_t count, std::size_t copy_count, bool zero_new = true) noexcept;
-    [[nodiscard]] bool grow_to(std::size_t count, bool zero_new = true) noexcept;
+    [[nodiscard]] bool allocate(const std::size_t count, const bool zero = true) noexcept;
+    [[nodiscard]] bool reallocate(const std::size_t count, const std::size_t copy_count, const bool zero_new = true) noexcept;
+    [[nodiscard]] bool grow_to(const std::size_t count, const bool zero_new = true) noexcept;
     void deallocate() noexcept;
 
     // Direct storage attribution.
@@ -109,8 +103,8 @@ public:
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
     [[nodiscard]] bool can_reattribute_to(CMemoryContext* context = nullptr) const noexcept;
     [[nodiscard]] bool reattribute(CMemoryContext* context = nullptr) noexcept;
-    [[nodiscard]] bool set_context(CMemoryContext* context = nullptr) noexcept { return reattribute(context); }
-    void unsafe_replace_context_without_accounting(CMemoryContext* expected_source, CMemoryContext* target) noexcept;
+    [[nodiscard]] bool set_context(CMemoryContext* const context = nullptr) noexcept { return reattribute(context); }
+    void unsafe_replace_context_without_accounting(CMemoryContext* const expected_source, CMemoryContext* const target) noexcept;
 
 private:
     using storage_alignment_field = TBitField16<0x001fu>;       // bits  0..4
@@ -120,13 +114,13 @@ private:
     static constexpr std::uint16_t k_known_mask = static_cast<std::uint16_t>(
         storage_alignment_field::k_mask | buffer_capacity_field::k_mask | k_stable_mask);
 
-    [[nodiscard]] bool configure(EMode mode, std::size_t stride, std::size_t storage_alignment,
-        std::size_t buffer_capacity_hint, CMemoryContext* context) noexcept;
+    [[nodiscard]] bool configure(const EMode mode, const std::size_t stride, const std::size_t storage_alignment,
+        const std::size_t buffer_capacity_hint, CMemoryContext* context) noexcept;
     [[nodiscard]] static bool make_control(
-        EMode mode,
-        std::size_t stride,
-        std::size_t storage_alignment,
-        std::size_t buffer_capacity_hint,
+        const EMode mode,
+        const std::size_t stride,
+        const std::size_t storage_alignment,
+        const std::size_t buffer_capacity_hint,
         std::uint16_t& control) noexcept;
 
     [[nodiscard]] std::size_t count_limit() const noexcept { return memory::max_elements(m_stride); }
@@ -134,18 +128,18 @@ private:
     [[nodiscard]] std::size_t get_buffer_capacity_log2() const noexcept { return buffer_capacity_field::decode(m_control); }
     [[nodiscard]] std::size_t get_buffer_capacity_mask() const noexcept { return (std::size_t{ 1u } << get_buffer_capacity_log2()) - 1u; }
     [[nodiscard]] bool get_stable() const noexcept { return (m_control & k_stable_mask) != 0u; }
-    void set_storage_alignment_log2(std::size_t value) noexcept;
-    void set_buffer_capacity_log2(std::size_t value) noexcept;
-    void set_stable(bool stable) noexcept;
+    void set_storage_alignment_log2(const std::size_t value) noexcept;
+    void set_buffer_capacity_log2(const std::size_t value) noexcept;
+    void set_stable(const bool stable) noexcept;
 
-    [[nodiscard]] static std::size_t directory_capacity(std::size_t buffer_count) noexcept;
-    [[nodiscard]] std::size_t buffer_count_for(std::size_t count) const noexcept;
-    [[nodiscard]] std::size_t directory_bytes_for(std::size_t buffer_count) const noexcept;
-    [[nodiscard]] bool allocate_stable_buffers(void** buffers, std::size_t first_buffer, std::size_t buffer_count, bool zero) noexcept;
-    [[nodiscard]] bool create_stable_storage(std::size_t count, bool zero, void*& new_memory) noexcept;
-    [[nodiscard]] bool clone_to(const CMemoryToken& source, CMemoryContext* context) noexcept;
-    [[nodiscard]] bool grow(std::size_t count, bool zero_new) noexcept;
-    void release_storage(void* memory, std::uint32_t count) noexcept;
+    [[nodiscard]] static std::size_t directory_capacity(const std::size_t buffer_count) noexcept;
+    [[nodiscard]] std::size_t buffer_count_for(const std::size_t count) const noexcept;
+    [[nodiscard]] std::size_t directory_bytes_for(const std::size_t buffer_count) const noexcept;
+    [[nodiscard]] bool allocate_stable_buffers(void** const buffers, const std::size_t first_buffer, const std::size_t buffer_count, const bool zero) noexcept;
+    [[nodiscard]] bool create_stable_storage(const std::size_t count, const bool zero, void*& new_memory) noexcept;
+    [[nodiscard]] bool clone_to(const CMemoryToken& source, CMemoryContext* const context) noexcept;
+    [[nodiscard]] bool grow(const std::size_t count, const bool zero_new) noexcept;
+    void release_storage(void* const memory, const std::uint32_t count) noexcept;
 
     void*           m_memory{ nullptr };
     CMemoryContext* m_context{ nullptr };
@@ -162,8 +156,16 @@ static_assert(memory::k_byte_size_ceiling <= 0xffffffffu,
     "CMemoryToken count storage cannot represent the shared memory limit");
 
 //==============================================================================
-//  CMemoryToken implementation
+//  CMemoryToken out of class function bodies
 //==============================================================================
+
+inline CMemoryToken::~CMemoryToken() noexcept
+{
+    deallocate();
+    m_context = nullptr;
+    m_stride = 0u;
+    m_control = 0u;
+}
 
 inline CMemoryToken::CMemoryToken(
     const std::size_t stride,

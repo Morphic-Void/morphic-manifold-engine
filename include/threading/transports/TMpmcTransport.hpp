@@ -71,14 +71,11 @@ private:
     static constexpr std::uint32_t condition_capacity(const std::uint32_t hint) noexcept
     {
         const std::uint32_t rounded = bit_ops::round_up_to_pow2(hint);
-        return (rounded < k_min_capacity)
-            ? k_min_capacity
-            : rounded;
+        return (rounded < k_min_capacity) ? k_min_capacity : rounded;
     }
 
 public:
-    static_assert(t_capacity_hint <= k_max_capacity,
-        "TMpmcIndexRing capacity hint exceeds the supported maximum.");
+    static_assert((t_capacity_hint <= k_max_capacity), "TMpmcIndexRing capacity hint exceeds the supported maximum.");
 
     static constexpr std::uint32_t k_capacity = condition_capacity(t_capacity_hint);
     static constexpr std::uint32_t k_mask = k_capacity - 1u;
@@ -104,7 +101,7 @@ public:
     [[nodiscard]] std::uint32_t readable_count() const noexcept;
     [[nodiscard]] std::uint32_t writable_count() const noexcept;
 
-    [[nodiscard]] bool push(std::uint32_t payload, std::uint32_t& out_sequence) noexcept;
+    [[nodiscard]] bool push(const std::uint32_t payload, std::uint32_t& out_sequence) noexcept;
     [[nodiscard]] bool pop(std::uint32_t& out_payload, std::uint32_t& out_sequence) noexcept;
 
 private:
@@ -208,14 +205,11 @@ public:
     void shutdown() noexcept;
 
     [[nodiscard]] T* reserve(std::uint32_t& out_index, std::uint32_t& out_sequence) noexcept;
-    [[nodiscard]] bool publish(const T* slot, std::uint32_t& out_sequence) noexcept;
+    [[nodiscard]] bool publish(const T* const slot, std::uint32_t& out_sequence) noexcept;
     [[nodiscard]] T* acquire(std::uint32_t& out_index, std::uint32_t& out_sequence) noexcept;
-    [[nodiscard]] bool recycle(const T* slot, std::uint32_t& out_sequence) noexcept;
+    [[nodiscard]] bool recycle(const T* const slot, std::uint32_t& out_sequence) noexcept;
 
-    [[nodiscard]] std::uint32_t outstanding_count() const noexcept
-    {
-        return m_outstanding_count.value.load(std::memory_order_acquire);
-    }
+    [[nodiscard]] std::uint32_t outstanding_count() const noexcept { return m_outstanding_count.value.load(std::memory_order_acquire); }
 
 private:
     friend class TReservedArenaSlot<T, t_capacity_hint>;
@@ -223,7 +217,7 @@ private:
 
     [[nodiscard]] bool state_allows_reserve() const noexcept;
     [[nodiscard]] bool state_allows_acquire_or_complete() const noexcept;
-    [[nodiscard]] std::uint32_t slot_index(const T* slot, bool& ok) const noexcept;
+    [[nodiscard]] std::uint32_t slot_index(const T* const slot, bool& ok) const noexcept;
 
     TMpmcIndexRing<t_capacity_hint> m_supplier_ring{ true };
     TMpmcIndexRing<t_capacity_hint> m_populated_ring{ false };
@@ -240,14 +234,11 @@ struct TMpmcJobTransport
     TMpmcArenaTransport<TWork, t_work_capacity_hint> work;
     TMpmcArenaTransport<TReturn, t_return_capacity_hint> feedback;
 
-    [[nodiscard]] bool is_valid() const noexcept
-    {
-        return work.is_valid() && feedback.is_valid();
-    }
+    [[nodiscard]] bool is_valid() const noexcept { return work.is_valid() && feedback.is_valid(); }
 };
 
 //==============================================================================
-// TMpmcIndexRing<t_capacity_hint> out-of-class function bodies
+//  TMpmcIndexRing<t_capacity_hint> out of class function bodies
 //==============================================================================
 
 template<std::uint32_t t_capacity_hint>
@@ -287,7 +278,7 @@ inline std::uint32_t TMpmcIndexRing<t_capacity_hint>::writable_count() const noe
 }
 
 template<std::uint32_t t_capacity_hint>
-inline bool TMpmcIndexRing<t_capacity_hint>::push(std::uint32_t payload, std::uint32_t& out_sequence) noexcept
+inline bool TMpmcIndexRing<t_capacity_hint>::push(const std::uint32_t payload, std::uint32_t& out_sequence) noexcept
 {
     std::uint32_t position = m_enqueue_position.value.load(std::memory_order_relaxed);
 
@@ -353,7 +344,7 @@ inline bool TMpmcIndexRing<t_capacity_hint>::pop(std::uint32_t& out_payload, std
 }
 
 //==============================================================================
-// TReservedArenaSlot<T, t_capacity_hint> out-of-class function bodies
+//  TReservedArenaSlot<T, t_capacity_hint> out of class function bodies
 //==============================================================================
 
 template<typename T, std::uint32_t t_capacity_hint>
@@ -406,7 +397,7 @@ inline bool TReservedArenaSlot<T, t_capacity_hint>::publish() noexcept
 }
 
 //==============================================================================
-// TAcquiredArenaSlot<T, t_capacity_hint> out-of-class function bodies
+//  TAcquiredArenaSlot<T, t_capacity_hint> out of class function bodies
 //==============================================================================
 
 template<typename T, std::uint32_t t_capacity_hint>
@@ -459,14 +450,15 @@ inline bool TAcquiredArenaSlot<T, t_capacity_hint>::recycle() noexcept
 }
 
 //==============================================================================
-// TMpmcArenaTransport<T, t_capacity_hint> out-of-class function bodies
+//  TMpmcArenaTransport<T, t_capacity_hint> out of class function bodies
 //==============================================================================
 
 template<typename T, std::uint32_t t_capacity_hint>
 inline bool TMpmcArenaTransport<T, t_capacity_hint>::is_valid() const noexcept
 {
     const std::uint32_t raw_status = m_status_word.value.load(std::memory_order_acquire);
-    return m_supplier_ring.is_valid() &&
+    return
+        m_supplier_ring.is_valid() &&
         m_populated_ring.is_valid() &&
         (outstanding_count() <= k_capacity) &&
         (raw_status <= static_cast<std::uint32_t>(EMpmcTransportStatus::shutdown));
@@ -524,8 +516,7 @@ inline bool TMpmcArenaTransport<T, t_capacity_hint>::state_allows_acquire_or_com
 }
 
 template<typename T, std::uint32_t t_capacity_hint>
-inline std::uint32_t TMpmcArenaTransport<T, t_capacity_hint>::slot_index(
-    const T* slot, bool& ok) const noexcept
+inline std::uint32_t TMpmcArenaTransport<T, t_capacity_hint>::slot_index(const T* const slot, bool& ok) const noexcept
 {
     if ((slot == nullptr) || (slot < m_arena) || (slot >= (m_arena + k_capacity)))
     {
@@ -538,8 +529,7 @@ inline std::uint32_t TMpmcArenaTransport<T, t_capacity_hint>::slot_index(
 }
 
 template<typename T, std::uint32_t t_capacity_hint>
-inline T* TMpmcArenaTransport<T, t_capacity_hint>::reserve(
-    std::uint32_t& out_index, std::uint32_t& out_sequence) noexcept
+inline T* TMpmcArenaTransport<T, t_capacity_hint>::reserve(std::uint32_t& out_index, std::uint32_t& out_sequence) noexcept
 {
     if (!state_allows_reserve())
     {
@@ -558,8 +548,7 @@ inline T* TMpmcArenaTransport<T, t_capacity_hint>::reserve(
 }
 
 template<typename T, std::uint32_t t_capacity_hint>
-inline bool TMpmcArenaTransport<T, t_capacity_hint>::publish(
-    const T* slot, std::uint32_t& out_sequence) noexcept
+inline bool TMpmcArenaTransport<T, t_capacity_hint>::publish(const T* const slot, std::uint32_t& out_sequence) noexcept
 {
     if (!state_allows_acquire_or_complete())
     {
@@ -572,8 +561,7 @@ inline bool TMpmcArenaTransport<T, t_capacity_hint>::publish(
 }
 
 template<typename T, std::uint32_t t_capacity_hint>
-inline T* TMpmcArenaTransport<T, t_capacity_hint>::acquire(
-    std::uint32_t& out_index, std::uint32_t& out_sequence) noexcept
+inline T* TMpmcArenaTransport<T, t_capacity_hint>::acquire(std::uint32_t& out_index, std::uint32_t& out_sequence) noexcept
 {
     if (!state_allows_acquire_or_complete())
     {
@@ -591,8 +579,7 @@ inline T* TMpmcArenaTransport<T, t_capacity_hint>::acquire(
 }
 
 template<typename T, std::uint32_t t_capacity_hint>
-inline bool TMpmcArenaTransport<T, t_capacity_hint>::recycle(
-    const T* slot, std::uint32_t& out_sequence) noexcept
+inline bool TMpmcArenaTransport<T, t_capacity_hint>::recycle(const T* const slot, std::uint32_t& out_sequence) noexcept
 {
     if (!state_allows_acquire_or_complete())
     {

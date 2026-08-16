@@ -27,9 +27,9 @@ class CErasedOwnerTransport
 public:
     CErasedOwnerTransport() noexcept = default;
     explicit CErasedOwnerTransport(
-        module_ids::id_type destination_module_id,
-        memory::CMemoryContext* transport_context,
-        memory::CMemoryContext* recipient_context = nullptr) noexcept;
+        const module_ids::id_type destination_module_id,
+        memory::CMemoryContext* const transport_context,
+        memory::CMemoryContext* const recipient_context = nullptr) noexcept;
     CErasedOwnerTransport(const CErasedOwnerTransport&) = delete;
     CErasedOwnerTransport& operator=(const CErasedOwnerTransport&) = delete;
     CErasedOwnerTransport(CErasedOwnerTransport&&) = delete;
@@ -47,21 +47,12 @@ public:
     [[nodiscard]] bool read(CErasedOwner& owner) noexcept;
     [[nodiscard]] std::uint32_t readable_count() const noexcept { return m_transport.readable_count(); }
 
-    [[nodiscard]] bool initialise(std::uint32_t capacity) noexcept;
+    [[nodiscard]] bool initialise(const std::uint32_t capacity) noexcept;
     void deallocate() noexcept { m_transport.deallocate(); }
 
-    [[nodiscard]] memory::CMemoryContext* memory_context() const noexcept
-    {
-        return m_transport.memory_context();
-    }
-    [[nodiscard]] memory::CMemoryContext* recipient_memory_context() const noexcept
-    {
-        return m_recipient_context;
-    }
-    [[nodiscard]] module_ids::id_type destination_module_id() const noexcept
-    {
-        return m_destination_module_id;
-    }
+    [[nodiscard]] memory::CMemoryContext* memory_context() const noexcept;
+    [[nodiscard]] memory::CMemoryContext* recipient_memory_context() const noexcept;
+    [[nodiscard]] module_ids::id_type destination_module_id() const noexcept;
 
 private:
     [[nodiscard]] bool attribution_is_valid() const noexcept;
@@ -74,10 +65,7 @@ private:
 class CErasedOwnerProducerEndpoint
 {
 public:
-    explicit CErasedOwnerProducerEndpoint(CErasedOwnerTransport& transport) noexcept
-        : m_transport(transport)
-    {
-    }
+    explicit CErasedOwnerProducerEndpoint(CErasedOwnerTransport& transport) noexcept : m_transport(transport) {}
     ~CErasedOwnerProducerEndpoint() noexcept = default;
 
     [[nodiscard]] bool is_valid() const noexcept { return m_transport.posting_is_valid(); }
@@ -92,10 +80,7 @@ private:
 class CErasedOwnerConsumerEndpoint
 {
 public:
-    explicit CErasedOwnerConsumerEndpoint(CErasedOwnerTransport& transport) noexcept
-        : m_transport(transport)
-    {
-    }
+    explicit CErasedOwnerConsumerEndpoint(CErasedOwnerTransport& transport) noexcept : m_transport(transport) {}
     ~CErasedOwnerConsumerEndpoint() noexcept = default;
 
     [[nodiscard]] bool is_valid() const noexcept { return m_transport.reading_is_valid(); }
@@ -106,6 +91,25 @@ public:
 private:
     CErasedOwnerTransport& m_transport;
 };
+
+//==============================================================================
+//  CErasedOwnerTransport out of class function bodies
+//==============================================================================
+
+inline memory::CMemoryContext* CErasedOwnerTransport::memory_context() const noexcept
+{
+    return m_transport.memory_context();
+}
+
+inline memory::CMemoryContext* CErasedOwnerTransport::recipient_memory_context() const noexcept
+{
+    return m_recipient_context;
+}
+
+inline module_ids::id_type CErasedOwnerTransport::destination_module_id() const noexcept
+{
+    return m_destination_module_id;
+}
 
 }   //  namespace threading::transports
 

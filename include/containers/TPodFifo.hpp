@@ -107,8 +107,8 @@ public:
     [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* const context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
     [[nodiscard]] T* raw_data() noexcept { return static_cast<T*>(m_token.data()); }
@@ -117,7 +117,7 @@ private:
     void pack(T* const dst, const T* const src) noexcept;
     void move_from(TPodFifo& src) noexcept;
 
-    static_assert(k_element_size <= 0xffffu, "TPodFifo<T> element size exceeds the memory token stride field.");
+    static_assert((k_element_size <= 0xffffu), "TPodFifo<T> element size exceeds the memory token stride field.");
 
     memory::CMemoryToken m_token{ k_element_size, k_align };
     std::size_t m_size = 0u;
@@ -156,8 +156,7 @@ inline bool TPodFifo<T>::is_valid() const noexcept
     }
 
     return (raw_data() != nullptr) ?
-        ((m_size <= m_capacity) && memory::in_non_empty_range(m_capacity, k_max_elements) &&
-            (m_read_index < m_capacity) && ((m_size != 0u) || (m_read_index == 0u))) :
+        ((m_size <= m_capacity) && memory::in_non_empty_range(m_capacity, k_max_elements) && (m_read_index < m_capacity) && ((m_size != 0u) || (m_read_index == 0u))) :
         ((m_size | m_capacity | m_read_index) == 0u);
 }
 
@@ -363,13 +362,13 @@ inline std::uint64_t TPodFifo<T>::memory_allocation_size() const noexcept
 }
 
 template<typename T>
-inline bool TPodFifo<T>::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+inline bool TPodFifo<T>::can_reattribute_to(memory::CMemoryContext* const context) const noexcept
 {
     return m_token.can_reattribute_to(context);
 }
 
 template<typename T>
-inline bool TPodFifo<T>::reattribute(memory::CMemoryContext* context) noexcept
+inline bool TPodFifo<T>::reattribute(memory::CMemoryContext* const context) noexcept
 {
     return m_token.reattribute(context);
 }
@@ -440,7 +439,6 @@ inline void TPodFifo<T>::pack(T* const dst, const T* const src) noexcept
     }
     m_read_index = 0u;
 }
-
 
 template<typename T>
 inline void TPodFifo<T>::move_from(TPodFifo& src) noexcept

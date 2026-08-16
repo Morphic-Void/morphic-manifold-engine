@@ -15,7 +15,7 @@
 namespace platform::filesystem
 {
 
-bool Log::open(const char* utf8_path, const bool append) noexcept
+bool Log::open(const char* const utf8_path, const bool append) noexcept
 {
     close();
     if (utf8_path != nullptr)
@@ -29,7 +29,7 @@ bool Log::open(const char* utf8_path, const bool append) noexcept
     return m_stream != nullptr;
 }
 
-int Log::write(const char* format, ...) noexcept
+int Log::write(const char* const format, ...) noexcept
 {
     int ret = -1;
     if ((m_stream != nullptr) && (format != nullptr))
@@ -42,7 +42,7 @@ int Log::write(const char* format, ...) noexcept
     return ret;   //  ret < 0 on failure
 }
 
-int Log::write_va(const char* format, std::va_list args) noexcept
+int Log::write_va(const char* const format, std::va_list args) noexcept
 {
     int ret = -1;
     if ((m_stream != nullptr) && (format != nullptr))

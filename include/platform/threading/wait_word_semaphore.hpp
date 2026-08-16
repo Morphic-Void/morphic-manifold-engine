@@ -69,7 +69,7 @@ public:
     bool try_acquire() noexcept;
 
     //  Producer operations
-    bool release(std::uint32_t release_count = 1u) noexcept;
+    bool release(const std::uint32_t release_count = 1u) noexcept;
 
     //  Producer state management
     void signal_shutdown() noexcept;

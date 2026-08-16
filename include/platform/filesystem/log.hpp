@@ -26,30 +26,21 @@ public:
     Log& operator=(const Log&) = delete;
 
     Log() noexcept = default;
-    explicit Log(const char* utf8_path) noexcept { (void)open(utf8_path); }
+    explicit Log(const char* const utf8_path) noexcept { (void)open(utf8_path); }
     Log(Log&& other) noexcept : m_stream(other.m_stream) { other.m_stream = nullptr; }
 
     ~Log() noexcept { close(); }
 
-    Log& operator=(Log&& other) noexcept
-    {
-        if (this != &other)
-        {
-            close();
-            m_stream = other.m_stream;
-            other.m_stream = nullptr;
-        }
-        return *this;
-    }
+    Log& operator=(Log&& other) noexcept;
 
     bool opened() const noexcept { return m_stream != nullptr; }
     bool closed() const noexcept { return m_stream == nullptr; }
 
-    bool open(const char* utf8_path, bool append = false) noexcept;
+    bool open(const char* const utf8_path, const bool append = false) noexcept;
 
     //  write text to the log, return is < 0 on failure
-    int  write(const char* format, ...) noexcept;
-    int  write_va(const char* format, std::va_list args) noexcept;
+    int  write(const char* const format, ...) noexcept;
+    int  write_va(const char* const format, std::va_list args) noexcept;
 
     //  on-demand: flush stdio only.
     bool flush() noexcept;
@@ -62,6 +53,21 @@ public:
 private:
     std::FILE* m_stream = nullptr;
 };
+
+//==============================================================================
+//  Log out of class function bodies
+//==============================================================================
+
+inline Log& Log::operator=(Log&& other) noexcept
+{
+    if (this != &other)
+    {
+        close();
+        m_stream = other.m_stream;
+        other.m_stream = nullptr;
+    }
+    return *this;
+}
 
 }   //  namespace platform::filesystem
 

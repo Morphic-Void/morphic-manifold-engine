@@ -31,7 +31,7 @@ namespace platform::path
 {
 
 using NativePath = TPodVector<native_char>;
-NativePath makeNativePath(const char* utf8_path) noexcept;  // UTF-8 -> native (with policy)
+NativePath makeNativePath(const char* const utf8_path) noexcept;  // UTF-8 -> native (with policy)
 NativePath makeTempNativePath(const NativePath& std_path) noexcept; // append ".tmp"
 
 }   //  namespace platform::path

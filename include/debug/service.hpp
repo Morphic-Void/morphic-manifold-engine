@@ -105,6 +105,10 @@ enum class EBreakpointOverride : std::uint32_t
     disabled
 };
 
+//==============================================================================
+//  Event metadata validation
+//==============================================================================
+
 [[nodiscard]] constexpr bool is_valid_event_metadata(const EEventLevel level, const EEventType type) noexcept
 {
     switch (level)
@@ -309,15 +313,9 @@ public:
     void request_shutdown(const EShutdownReason reason) noexcept;
     [[nodiscard]] EShutdownReason read_shutdown_request() const noexcept;
 
-    [[nodiscard]] const char* event_log_path() const noexcept
-    {
-        return m_event_log_path;
-    }
+    [[nodiscard]] const char* event_log_path() const noexcept { return m_event_log_path; }
 
-    [[nodiscard]] const char* direct_log_path() const noexcept
-    {
-        return m_direct_log_path;
-    }
+    [[nodiscard]] const char* direct_log_path() const noexcept { return m_direct_log_path; }
 
 private:
     friend struct SDebugServiceTestAccess;

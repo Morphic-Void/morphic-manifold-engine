@@ -34,8 +34,8 @@ class CMemoryContext;
 //==============================================================================
 
 [[nodiscard]] CMemoryContext* get_ambient_memory_context() noexcept;
-CMemoryContext* set_module_memory_context(CMemoryContext* context = nullptr) noexcept;
-CMemoryContext* set_thread_memory_context(CMemoryContext* context = nullptr) noexcept;
+CMemoryContext* set_module_memory_context(CMemoryContext* const context = nullptr) noexcept;
+CMemoryContext* set_thread_memory_context(CMemoryContext* const context = nullptr) noexcept;
 
 //==============================================================================
 //  Allocator callback interface
@@ -51,8 +51,8 @@ using FDeallocate = bool (MV_STD_ABI_CALL*)(void* const context, const std::size
 class CMemoryAllocator
 {
 public:
-    CMemoryAllocator(void* context, FAllocate allocate, FDeallocate deallocate,
-        system_ids::id_type system_id = system_context::get_ambient_system_id()) noexcept;
+    CMemoryAllocator(void* const context, const FAllocate allocate, const FDeallocate deallocate,
+        const system_ids::id_type system_id = system_context::get_ambient_system_id()) noexcept;
 
     CMemoryAllocator(const CMemoryAllocator&) = delete;
     CMemoryAllocator& operator=(const CMemoryAllocator&) = delete;
@@ -64,8 +64,8 @@ public:
     [[nodiscard]] system_ids::id_type get_system_id() const noexcept { return m_system_id; }
 
 private:
-    [[nodiscard]] void* allocate(std::size_t conditioned_alignment, std::size_t conditioned_bytes) noexcept;
-    [[nodiscard]] bool deallocate(std::size_t conditioned_alignment, void* ptr) noexcept;
+    [[nodiscard]] void* allocate(const std::size_t conditioned_alignment, const std::size_t conditioned_bytes) noexcept;
+    [[nodiscard]] bool deallocate(const std::size_t conditioned_alignment, void* const ptr) noexcept;
 
     friend class CMemoryContext;
 
@@ -83,7 +83,7 @@ class CMemoryContext
 {
 public:
     explicit CMemoryContext(CMemoryAllocator& allocator,
-        system_ids::id_type system_id = system_context::get_ambient_system_id()) noexcept;
+        const system_ids::id_type system_id = system_context::get_ambient_system_id()) noexcept;
 
     CMemoryContext(const CMemoryContext&) = delete;
     CMemoryContext& operator=(const CMemoryContext&) = delete;
@@ -93,27 +93,27 @@ public:
 
     [[nodiscard]] bool is_usable() const noexcept { return m_allocator.is_usable(); }
     [[nodiscard]] bool is_compatible_with(const CMemoryContext& other) const noexcept { return &m_allocator == &other.m_allocator; }
-    [[nodiscard]] bool belongs_to_module(module_ids::id_type module_id) const noexcept;
+    [[nodiscard]] bool belongs_to_module(const module_ids::id_type module_id) const noexcept;
     [[nodiscard]] bool is_attribution_empty() const noexcept;
     [[nodiscard]] const CMemoryAllocator& get_allocator() const noexcept { return m_allocator; }
     [[nodiscard]] system_ids::id_type get_system_id() const noexcept { return m_system_id; }
 
     [[nodiscard]] std::uint32_t get_live_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t get_live_allocated_bytes() const noexcept;
-    [[nodiscard]] std::size_t condition_alignment(std::size_t requested_alignment) const noexcept;
-    [[nodiscard]] std::size_t condition_bytes(std::size_t conditioned_alignment, std::size_t requested_bytes) const noexcept;
+    [[nodiscard]] std::size_t condition_alignment(const std::size_t requested_alignment) const noexcept;
+    [[nodiscard]] std::size_t condition_bytes(const std::size_t conditioned_alignment, const std::size_t requested_bytes) const noexcept;
 
-    [[nodiscard]] void* allocate(std::size_t requested_alignment, std::size_t requested_bytes) noexcept;
-    void deallocate(std::size_t requested_alignment, std::size_t requested_bytes, void* ptr) noexcept;
+    [[nodiscard]] void* allocate(const std::size_t requested_alignment, const std::size_t requested_bytes) noexcept;
+    void deallocate(const std::size_t requested_alignment, const std::size_t requested_bytes, void* const ptr) noexcept;
 
 private:
-    [[nodiscard]] static bool validate(std::size_t align, std::size_t bytes) noexcept;
-    [[nodiscard]] static bool validate(std::size_t align, std::size_t bytes, const void* ptr) noexcept;
-    [[nodiscard]] bool add(std::size_t allocation_count, std::uint64_t bytes) noexcept;
-    [[nodiscard]] bool sub(std::size_t allocation_count, std::uint64_t bytes) noexcept;
+    [[nodiscard]] static bool validate(const std::size_t align, const std::size_t bytes) noexcept;
+    [[nodiscard]] static bool validate(const std::size_t align, const std::size_t bytes, const void* const ptr) noexcept;
+    [[nodiscard]] bool add(const std::size_t allocation_count, const std::uint64_t bytes) noexcept;
+    [[nodiscard]] bool sub(const std::size_t allocation_count, const std::uint64_t bytes) noexcept;
 
     friend bool reattribute(CMemoryContext& from, CMemoryContext& to,
-        std::size_t allocation_count, std::uint64_t bytes) noexcept;
+        const std::size_t allocation_count, const std::uint64_t bytes) noexcept;
 
     CMemoryAllocator&          m_allocator;
     system_ids::id_type        m_system_id{};
@@ -122,7 +122,7 @@ private:
 };
 
 [[nodiscard]] bool reattribute(CMemoryContext& from, CMemoryContext& to,
-    std::size_t allocation_count, std::uint64_t bytes) noexcept;
+    const std::size_t allocation_count, const std::uint64_t bytes) noexcept;
 
 //==============================================================================
 //  CMemoryAllocator implementation

@@ -39,29 +39,15 @@ public:
 
     constexpr CPlatformThreadId() noexcept = default;
 
-    explicit constexpr CPlatformThreadId(const std::uint64_t value) noexcept : m_value(value)
-    {
-    }
+    explicit constexpr CPlatformThreadId(const std::uint64_t value) noexcept : m_value(value) {}
 
-    constexpr bool is_valid() const noexcept
-    {
-        return m_value != 0u;
-    }
+    constexpr bool is_valid() const noexcept { return m_value != 0u; }
 
-    constexpr std::uint64_t value() const noexcept
-    {
-        return m_value;
-    }
+    constexpr std::uint64_t value() const noexcept { return m_value; }
 
-    constexpr bool operator==(const CPlatformThreadId rhs) const noexcept
-    {
-        return m_value == rhs.m_value;
-    }
+    constexpr bool operator==(const CPlatformThreadId rhs) const noexcept { return m_value == rhs.m_value; }
 
-    constexpr bool operator!=(const CPlatformThreadId rhs) const noexcept
-    {
-        return m_value != rhs.m_value;
-    }
+    constexpr bool operator!=(const CPlatformThreadId rhs) const noexcept { return m_value != rhs.m_value; }
 
 private:
 

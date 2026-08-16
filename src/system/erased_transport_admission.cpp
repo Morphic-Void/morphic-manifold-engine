@@ -74,7 +74,7 @@ bool is_admissible(
     return classify(identity, destination_module_id).is_admitted();
 }
 
-namespace
+namespace util
 {
 
 [[nodiscard]] debug_system::CInlineText16 identity_role_text(const EIdentityRole role) noexcept
@@ -104,11 +104,11 @@ namespace
     }
 }
 
-}   //  namespace
+}   //  namespace util
 
 void report_rejection(const SDecision& decision, const EIdentityRole role) noexcept
 {
-    const debug_system::CInlineText16 role_text = identity_role_text(role);
+    const debug_system::CInlineText16 role_text = util::identity_role_text(role);
     switch (decision.rejection)
     {
         case ERejection::none:

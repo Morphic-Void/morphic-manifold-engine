@@ -47,7 +47,7 @@ namespace platform::threading
 //  Native thread lifetime
 //==============================================================================
 
-using FThreadEntry = std::uint32_t(MV_STD_ABI_CALL*)(void* user_data) noexcept;
+using FThreadEntry = std::uint32_t(MV_STD_ABI_CALL*)(void* const user_data) noexcept;
 
 class CThread
 {

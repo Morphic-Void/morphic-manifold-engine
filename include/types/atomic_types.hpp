@@ -23,10 +23,7 @@ struct alignas(128) TCacheLineAtomic
 
     TCacheLineAtomic() noexcept = default;
 
-    TCacheLineAtomic(const T initial_value) noexcept
-        : value{ initial_value }
-    {
-    }
+    TCacheLineAtomic(const T initial_value) noexcept : value{ initial_value } {}
 
     std::atomic<T> value{ T{ 0u } };
     std::uint8_t padding[128u - sizeof(std::atomic<T>)]{ 0u };

@@ -46,22 +46,34 @@ bool set_current_thread_priority(const EThreadPriority priority) noexcept
     switch (priority)
     {
         case EThreadPriority::Background:
+        {
             native_priority = THREAD_PRIORITY_LOWEST;
             break;
+        }
         case EThreadPriority::Low:
+        {
             native_priority = THREAD_PRIORITY_BELOW_NORMAL;
             break;
+        }
         case EThreadPriority::Normal:
+        {
             native_priority = THREAD_PRIORITY_NORMAL;
             break;
+        }
         case EThreadPriority::High:
+        {
             native_priority = THREAD_PRIORITY_ABOVE_NORMAL;
             break;
+        }
         case EThreadPriority::Realtime:
+        {
             native_priority = THREAD_PRIORITY_TIME_CRITICAL;
             break;
+        }
         default:
+        {
             return false;
+        }
     }
 
     const BOOL result = ::SetThreadPriority(::GetCurrentThread(), native_priority);
@@ -108,22 +120,34 @@ bool set_current_thread_priority(const EThreadPriority priority) noexcept
     switch (priority)
     {
         case EThreadPriority::Background:
+        {
             native_qos = QOS_CLASS_BACKGROUND;
             break;
+        }
         case EThreadPriority::Low:
+        {
             native_qos = QOS_CLASS_UTILITY;
             break;
+        }
         case EThreadPriority::Normal:
+        {
             native_qos = QOS_CLASS_DEFAULT;
             break;
+        }
         case EThreadPriority::High:
+        {
             native_qos = QOS_CLASS_USER_INITIATED;
             break;
+        }
         case EThreadPriority::Realtime:
+        {
             native_qos = QOS_CLASS_USER_INTERACTIVE;
             break;
+        }
         default:
+        {
             return false;
+        }
     }
 
     const int result = ::pthread_set_qos_class_self_np(native_qos, 0);

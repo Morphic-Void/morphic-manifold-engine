@@ -166,9 +166,9 @@ public:
 private:
     [[nodiscard]] bool storage_is_valid() const noexcept;
     [[nodiscard]] bool storage_is_ready() const noexcept;
-    [[nodiscard]] T* storage_map_index(std::size_t storage_index) noexcept;
-    [[nodiscard]] T* storage_index_ptr(std::size_t storage_index) noexcept;
-    [[nodiscard]] const T* storage_index_ptr(std::size_t storage_index) const noexcept;
+    [[nodiscard]] T* storage_map_index(const std::size_t storage_index) noexcept;
+    [[nodiscard]] T* storage_index_ptr(const std::size_t storage_index) noexcept;
+    [[nodiscard]] const T* storage_index_ptr(const std::size_t storage_index) const noexcept;
 
     void deconstruct_payload() noexcept;
     static [[nodiscard]] bool failed_integrity_check() noexcept;
@@ -220,7 +220,8 @@ inline std::int32_t TOrderedCollectionStorage<T, TKey>::on_compare_keys(const st
 template<typename T, typename TKey>
 inline std::uint32_t TOrderedCollectionStorage<T, TKey>::memory_token_count() const noexcept
 {
-    return m_storage.memory_token_count() +
+    return
+        m_storage.memory_token_count() +
         m_slots.memory_token_count() +
         m_keys.memory_token_count();
 }
@@ -228,7 +229,8 @@ inline std::uint32_t TOrderedCollectionStorage<T, TKey>::memory_token_count() co
 template<typename T, typename TKey>
 inline std::uint32_t TOrderedCollectionStorage<T, TKey>::memory_allocation_count() const noexcept
 {
-    return m_storage.memory_allocation_count() +
+    return
+        m_storage.memory_allocation_count() +
         m_slots.memory_allocation_count() +
         m_keys.memory_allocation_count();
 }
@@ -236,14 +238,14 @@ inline std::uint32_t TOrderedCollectionStorage<T, TKey>::memory_allocation_count
 template<typename T, typename TKey>
 inline std::uint64_t TOrderedCollectionStorage<T, TKey>::memory_allocation_size() const noexcept
 {
-    return m_storage.memory_allocation_size() +
+    return
+        m_storage.memory_allocation_size() +
         m_slots.memory_allocation_size() +
         m_keys.memory_allocation_size();
 }
 
 template<typename T, typename TKey>
-inline bool TOrderedCollectionStorage<T, TKey>::memory_source_context(
-    memory::CMemoryContext*& source) const noexcept
+inline bool TOrderedCollectionStorage<T, TKey>::memory_source_context(memory::CMemoryContext*& source) const noexcept
 {
     if (m_storage.owns_storage())
     {

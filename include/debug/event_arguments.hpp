@@ -65,25 +65,29 @@ public:
     constexpr CInlineText16() noexcept = default;
 
     template<std::size_t t_size>
-    explicit constexpr CInlineText16(const char (&text)[t_size]) noexcept
-    {
-        static_assert((t_size > 0u), "CInlineText16 requires storage for a terminator.");
-        static_assert((t_size <= k_inline_text_capacity), "CInlineText16 text exceeds 15 characters plus its terminator.");
+    explicit constexpr CInlineText16(const char (&text)[t_size]) noexcept;
 
-        for (std::size_t index = 0u; index < (t_size - 1u); ++index)
-        {
-            m_text[index] = text[index];
-        }
-    }
-
-    [[nodiscard]] constexpr const char* data() const noexcept
-    {
-        return m_text;
-    }
+    [[nodiscard]] constexpr const char* data() const noexcept { return m_text; }
 
 private:
     char m_text[k_inline_text_capacity]{};
 };
+
+//==============================================================================
+//  CInlineText16 out of class function bodies
+//==============================================================================
+
+template<std::size_t t_size>
+constexpr CInlineText16::CInlineText16(const char (&text)[t_size]) noexcept
+{
+    static_assert((t_size > 0u), "CInlineText16 requires storage for a terminator.");
+    static_assert((t_size <= k_inline_text_capacity), "CInlineText16 text exceeds 15 characters plus its terminator.");
+
+    for (std::size_t index = 0u; index < (t_size - 1u); ++index)
+    {
+        m_text[index] = text[index];
+    }
+}
 
 struct alignas(16) SEventParameterValue
 {
@@ -239,6 +243,10 @@ void encode_argument(
 }
 
 }   //  namespace event_argument_detail
+
+//==============================================================================
+//  Event argument encoding
+//==============================================================================
 
 template<typename T>
 inline constexpr bool is_supported_event_argument_v = event_argument_detail::k_supported<T>;

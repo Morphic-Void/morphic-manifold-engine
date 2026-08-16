@@ -46,17 +46,14 @@ struct SDecision
     module_ids::id_type destination_module_id{};
     ERejection rejection{ ERejection::invalid_type_identity };
 
-    [[nodiscard]] constexpr bool is_admitted() const noexcept
-    {
-        return rejection == ERejection::none;
-    }
+    [[nodiscard]] constexpr bool is_admitted() const noexcept { return rejection == ERejection::none; }
 };
 
-[[nodiscard]] SDecision classify(type_id identity, module_ids::id_type destination_module_id) noexcept;
+[[nodiscard]] SDecision classify(const type_id identity, const module_ids::id_type destination_module_id) noexcept;
 
-[[nodiscard]] bool is_admissible(type_id identity, module_ids::id_type destination_module_id) noexcept;
+[[nodiscard]] bool is_admissible(const type_id identity, const module_ids::id_type destination_module_id) noexcept;
 
-void report_rejection(const SDecision& decision, EIdentityRole role) noexcept;
+void report_rejection(const SDecision& decision, const EIdentityRole role) noexcept;
 
 }   //  namespace erased_transport_admission
 

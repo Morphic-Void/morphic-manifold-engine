@@ -35,7 +35,7 @@ public:
     ~CErasedOwnerMsg() noexcept = default;
 
     [[nodiscard]] std::int32_t query_async_slot() const noexcept;
-    void set_async_slot(std::int32_t async_slot) noexcept;
+    void set_async_slot(const std::int32_t async_slot) noexcept;
 
     [[nodiscard]] bool has_message_type() const noexcept;
     [[nodiscard]] type_id query_message_type_id() const noexcept;

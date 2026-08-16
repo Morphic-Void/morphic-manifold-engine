@@ -37,16 +37,24 @@ bool set_current_process_priority(const EProcessPriority priority) noexcept
     switch (priority)
     {
         case EProcessPriority::Normal:
+        {
             native_priority = NORMAL_PRIORITY_CLASS;
             break;
+        }
         case EProcessPriority::AboveNormal:
+        {
             native_priority = ABOVE_NORMAL_PRIORITY_CLASS;
             break;
+        }
         case EProcessPriority::High:
+        {
             native_priority = HIGH_PRIORITY_CLASS;
             break;
+        }
         default:
+        {
             return false;
+        }
     }
 
     const BOOL result = ::SetPriorityClass(::GetCurrentProcess(), native_priority);

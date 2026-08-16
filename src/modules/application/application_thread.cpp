@@ -32,7 +32,7 @@ struct SApplicationTgaSaveState { CAssetId source; };
 class CApplicationThread
 {
 public:
-    static std::uint32_t MV_STD_ABI_CALL entry_point(void* user_data) noexcept;
+    static std::uint32_t MV_STD_ABI_CALL entry_point(void* const user_data) noexcept;
 
 private:
     CApplicationThread(const CApplicationThread&) noexcept = delete;
@@ -48,7 +48,7 @@ private:
     [[nodiscard]] bool initialise() noexcept;
     void operate() noexcept;
     void shutdown() noexcept;
-    void fail(std::uint32_t code) noexcept;
+    void fail(const std::uint32_t code) noexcept;
 
     threading::CThreadContext m_context;
     platform::system::CPerfCounter m_perf_counter;
@@ -57,7 +57,7 @@ private:
     std::uint32_t m_failure_code{ 0u };
 };
 
-std::uint32_t MV_STD_ABI_CALL CApplicationThread::entry_point(void* user_data) noexcept
+std::uint32_t MV_STD_ABI_CALL CApplicationThread::entry_point(void* const user_data) noexcept
 {
     if (user_data == nullptr)
     {

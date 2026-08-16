@@ -65,18 +65,8 @@ class TOrderedSlots : protected TSlotBacking
 {
 public:
     TOrderedSlots() noexcept = default;
-    TOrderedSlots(TOrderedSlots&& src) noexcept
-        : TSlotBacking(std::move(src))
-    {
-        set_empty();
-        (void)move_from(src);
-    }
-    TOrderedSlots(const TOrderedSlots& src) noexcept
-        : TSlotBacking(src)
-    {
-        set_empty();
-        (void)copy_from(src);
-    }
+    TOrderedSlots(TOrderedSlots&& src) noexcept;
+    TOrderedSlots(const TOrderedSlots& src) noexcept;
     TOrderedSlots(const std::uint32_t capacity) noexcept { (void)initialise(capacity); }
     ~TOrderedSlots() noexcept { (void)shutdown(); }
 
@@ -329,7 +319,7 @@ protected:
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
     [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
 private:
 
@@ -375,16 +365,8 @@ private:
         constexpr bool is_lexed_twig() const noexcept { return (child_index[0] ^ child_index[1]) < 0; }
         constexpr bool is_lexed_stem() const noexcept { return (child_index[0] | child_index[1]) >= 0; }
 
-        constexpr bool is_occupied() const noexcept
-        {
-            SlotState state = get_slot_state();
-            return (state == SlotState::is_loose_slot) || (state == SlotState::is_lexed_slot);
-        }
-
-        constexpr std::uint32_t get_child_mask() const noexcept
-        {
-            return ((static_cast<std::uint32_t>(child_index[0]) >> 31) & 1u) | ((static_cast<std::uint32_t>(child_index[1]) >> 30) & 2u);
-        }
+        constexpr bool is_occupied() const noexcept;
+        constexpr std::uint32_t get_child_mask() const noexcept;
     };
 
     //  Typed access helpers for slot metadata storage.
@@ -552,9 +534,7 @@ private:
 
     //  Constants
     static constexpr std::uint32_t k_capacity_limit =
-        static_cast<std::uint32_t>(std::min(
-            memory::t_max_elements<Slot>(),
-            static_cast<std::size_t>(std::numeric_limits<TIndex>::max() + 1u)));
+        static_cast<std::uint32_t>(std::min(memory::t_max_elements<Slot>(), static_cast<std::size_t>(std::numeric_limits<TIndex>::max() + 1u)));
 
     static constexpr std::int32_t k_index_limit = static_cast<std::int32_t>(k_capacity_limit - 1u);
 
@@ -566,11 +546,11 @@ private:
     static_assert(std::is_trivially_copyable_v<Slot>,
         "TOrderedSlots: Slot must be trivially copyable.");
 
-    static_assert(sizeof(Slot) <= 0xffffu,
+    static_assert((sizeof(Slot) <= 0xffffu),
         "TOrderedSlots: Slot metadata stride exceeds the memory token stride field.");
 
     //  Enforce std::size_t has at least 32 bits
-    static_assert(sizeof(std::size_t) >= sizeof(std::uint32_t),
+    static_assert((sizeof(std::size_t) >= sizeof(std::uint32_t)),
         "TOrderedSlots: std::size_t must be at least 32 bits.");
 
     //  Enforce signed integer types so that negative sentinels and sign-based comparisons behave correctly
@@ -578,16 +558,49 @@ private:
         "TOrderedSlots: TIndex and TMeta must be signed integer types.");
 
     //  Enforce 2:1 index-to-metadata size ratio for predictable Slot layout and packing
-    static_assert(sizeof(TMeta) * 2 == sizeof(TIndex),
+    static_assert(((sizeof(TMeta) * 2) == sizeof(TIndex)),
         "TOrderedSlots: sizeof(TMeta) must be exactly half of sizeof(TIndex).");
 
     //  Enforce the only supported type pairs
-    static_assert(
+    static_assert((
         (std::is_same_v<TIndex, std::int32_t> && std::is_same_v<TMeta, std::int16_t>) ||
-        (std::is_same_v<TIndex, std::int16_t> && std::is_same_v<TMeta, std::int8_t>),
+        (std::is_same_v<TIndex, std::int16_t> && std::is_same_v<TMeta, std::int8_t>)),
         "TOrderedSlots: Supported type pairs are (std::int32_t,std::int16_t) and (std::int16_t,std::int8_t).");
 
 };
+
+//==============================================================================
+//  TOrderedSlots<TSlotBacking, TIndex, TMeta> out of class function bodies
+//==============================================================================
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline TOrderedSlots<TSlotBacking, TIndex, TMeta>::TOrderedSlots(TOrderedSlots&& src) noexcept : TSlotBacking(std::move(src))
+{
+    set_empty();
+    (void)move_from(src);
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+inline TOrderedSlots<TSlotBacking, TIndex, TMeta>::TOrderedSlots(const TOrderedSlots& src) noexcept : TSlotBacking(src)
+{
+    set_empty();
+    (void)copy_from(src);
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+constexpr bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::Slot::is_occupied() const noexcept
+{
+    const SlotState state = get_slot_state();
+    return (state == SlotState::is_loose_slot) || (state == SlotState::is_lexed_slot);
+}
+
+template<typename TSlotBacking, typename TIndex, typename TMeta>
+constexpr std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::Slot::get_child_mask() const noexcept
+{
+    return
+        ((static_cast<std::uint32_t>(child_index[0]) >> 31) & 1u) |
+        ((static_cast<std::uint32_t>(child_index[1]) >> 30) & 2u);
+}
 
 //! Protected function bodies
 
@@ -1494,8 +1507,7 @@ inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::avl_remove(const std::in
     Slot& slot = meta[slot_index];
 
     const std::int32_t parent_index = slot.parent_index;
-    const std::int32_t parent_side =
-        ((parent_index >= 0) && (meta[parent_index].child_index[1] == slot_index)) ? 1 : 0;
+    const std::int32_t parent_side = ((parent_index >= 0) && (meta[parent_index].child_index[1] == slot_index)) ? 1 : 0;
 
     std::int32_t walk_index = -1;
     std::int32_t walk_side = 0;
@@ -1631,9 +1643,7 @@ inline void TOrderedSlots<TSlotBacking, TIndex, TMeta>::avl_remove(const std::in
 template<typename TSlotBacking, typename TIndex, typename TMeta>
 inline std::uint32_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::apply_growth_policy(const std::uint32_t capacity) noexcept
 {
-    return static_cast<std::uint32_t>(memory::vector_growth_policy(
-        static_cast<std::size_t>(capacity),
-        static_cast<std::size_t>(k_capacity_limit)));
+    return static_cast<std::uint32_t>(memory::vector_growth_policy(static_cast<std::size_t>(capacity), static_cast<std::size_t>(k_capacity_limit)));
 }
 
 template<typename TSlotBacking, typename TIndex, typename TMeta>
@@ -1766,8 +1776,7 @@ inline std::uint64_t TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_allocati
 }
 
 template<typename TSlotBacking, typename TIndex, typename TMeta>
-inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_source_context(
-    memory::CMemoryContext*& source) const noexcept
+inline bool TOrderedSlots<TSlotBacking, TIndex, TMeta>::memory_source_context(memory::CMemoryContext*& source) const noexcept
 {
     if (!m_meta_slot_array.owns_storage())
     {

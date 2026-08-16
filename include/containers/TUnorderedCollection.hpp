@@ -152,9 +152,9 @@ public:
 private:
     [[nodiscard]] bool storage_is_valid() const noexcept;
     [[nodiscard]] bool storage_is_ready() const noexcept;
-    [[nodiscard]] T* storage_map_index(std::size_t storage_index) noexcept;
-    [[nodiscard]] T* storage_index_ptr(std::size_t storage_index) noexcept;
-    [[nodiscard]] const T* storage_index_ptr(std::size_t storage_index) const noexcept;
+    [[nodiscard]] T* storage_map_index(const std::size_t storage_index) noexcept;
+    [[nodiscard]] T* storage_index_ptr(const std::size_t storage_index) noexcept;
+    [[nodiscard]] const T* storage_index_ptr(const std::size_t storage_index) const noexcept;
 
     void deconstruct_payload() noexcept;
     static [[nodiscard]] bool failed_integrity_check() noexcept;

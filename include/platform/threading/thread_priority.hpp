@@ -38,7 +38,7 @@ enum class EThreadPriority : std::uint8_t { Background = 0u, Low = 1u, Normal = 
 //  Applies a best-effort priority hint to the calling native thread.
 //  Returns true if a native priority / QoS signal was applied.
 //  Returns false if the mapping is unsupported or the native call fails.
-bool set_current_thread_priority(EThreadPriority priority) noexcept;
+bool set_current_thread_priority(const EThreadPriority priority) noexcept;
 
 }   //  namespace platform::threading
 

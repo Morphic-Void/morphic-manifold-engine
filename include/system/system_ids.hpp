@@ -128,43 +128,64 @@ struct TEncodedField
     static constexpr Repr k_invalid_id_mask = ~k_id_field_mask;
     static constexpr std::int32_t k_id_field_shift = bit_ops::lo_bit_index(k_id_field_mask);
 
-    static constexpr index_type make_index(const Repr value) noexcept
-    {
-        return (value < k_payload_mask) ? index_type(value) : index_type{};
-    }
+    static constexpr index_type make_index(const Repr value) noexcept;
 
-    static constexpr bool is_valid_index(const index_type index) noexcept
-    {
-        return index.is_valid() && (index.raw_value() < k_payload_mask);
-    }
+    static constexpr bool is_valid_index(const index_type index) noexcept;
 
-    static constexpr bool is_valid_id(const id_type id) noexcept
-    {
-        return id.is_valid() && ((id.raw_value() & k_invalid_id_mask) == 0u);
-    }
+    static constexpr bool is_valid_id(const id_type id) noexcept;
 
-    static constexpr id_type make_id(const index_type index) noexcept
-    {
-        return is_valid_index(index)
-            ? id_type(static_cast<Repr>(
-                bit_ops::spread_to_even_bits(k_payload_mask - index.raw_value()) << k_id_field_shift))
-            : id_type{ Repr{ 0 } };
-    }
+    static constexpr id_type make_id(const index_type index) noexcept;
 
-    static constexpr index_type get_index(const id_type id) noexcept
-    {
-        return is_valid_id(id)
-            ? index_type(static_cast<Repr>(
-                (k_payload_mask - bit_ops::pack_from_even_bits(id.raw_value() >> k_id_field_shift))))
-            : index_type{};
-    }
+    static constexpr index_type get_index(const id_type id) noexcept;
 };
+
+//==============================================================================
+//  TEncodedField out of class function bodies
+//==============================================================================
+
+template<typename IdTag, typename IndexTag, typename Repr, Repr t_encoded_field_mask>
+constexpr typename TEncodedField<IdTag, IndexTag, Repr, t_encoded_field_mask>::index_type
+TEncodedField<IdTag, IndexTag, Repr, t_encoded_field_mask>::make_index(const Repr value) noexcept
+{
+    return (value < k_payload_mask) ? index_type(value) : index_type{};
+}
+
+template<typename IdTag, typename IndexTag, typename Repr, Repr t_encoded_field_mask>
+constexpr bool TEncodedField<IdTag, IndexTag, Repr, t_encoded_field_mask>::is_valid_index(
+    const index_type index) noexcept
+{
+    return index.is_valid() && (index.raw_value() < k_payload_mask);
+}
+
+template<typename IdTag, typename IndexTag, typename Repr, Repr t_encoded_field_mask>
+constexpr bool TEncodedField<IdTag, IndexTag, Repr, t_encoded_field_mask>::is_valid_id(
+    const id_type id) noexcept
+{
+    return id.is_valid() && ((id.raw_value() & k_invalid_id_mask) == 0u);
+}
+
+template<typename IdTag, typename IndexTag, typename Repr, Repr t_encoded_field_mask>
+constexpr typename TEncodedField<IdTag, IndexTag, Repr, t_encoded_field_mask>::id_type
+TEncodedField<IdTag, IndexTag, Repr, t_encoded_field_mask>::make_id(const index_type index) noexcept
+{
+    return is_valid_index(index)
+        ? id_type(static_cast<Repr>(bit_ops::spread_to_even_bits(k_payload_mask - index.raw_value()) << k_id_field_shift))
+        : id_type{ Repr{ 0 } };
+}
+
+template<typename IdTag, typename IndexTag, typename Repr, Repr t_encoded_field_mask>
+constexpr typename TEncodedField<IdTag, IndexTag, Repr, t_encoded_field_mask>::index_type
+TEncodedField<IdTag, IndexTag, Repr, t_encoded_field_mask>::get_index(const id_type id) noexcept
+{
+    return is_valid_id(id)
+        ? index_type(static_cast<Repr>((k_payload_mask - bit_ops::pack_from_even_bits(id.raw_value() >> k_id_field_shift))))
+        : index_type{};
+}
 
 template<std::uint64_t t_payload_mask, std::uint32_t t_payload_offset>
 struct TEvenMask
 {
-    static constexpr std::uint64_t value =
-        (bit_ops::spread_to_even_bits(t_payload_mask) << (t_payload_offset * 2u));
+    static constexpr std::uint64_t value = (bit_ops::spread_to_even_bits(t_payload_mask) << (t_payload_offset * 2u));
 };
 
 struct CSystemTypeIdTag {};
@@ -228,8 +249,8 @@ class type_id
 {
 public:
     constexpr type_id() noexcept = default;
-    explicit constexpr type_id(system_type_id id) noexcept;
-    explicit constexpr type_id(local_type_id id) noexcept;
+    explicit constexpr type_id(const system_type_id id) noexcept;
+    explicit constexpr type_id(const local_type_id id) noexcept;
 
     [[nodiscard]] constexpr std::uint32_t raw_value() const noexcept { return m_value; }
     [[nodiscard]] constexpr ETypeIdCategory category() const noexcept;
@@ -344,7 +365,8 @@ constexpr bool is_defined(const system_type_id id) noexcept
 
 constexpr bool is_valid_index(const index_type value) noexcept
 {
-    return ((value & ~k_tagged_index_mask) == 0u) &&
+    return
+        ((value & ~k_tagged_index_mask) == 0u) &&
         ((value & k_category_bit) != 0u) &&
         ((value & k_ordinal_mask) <= k_max_ordinal);
 }
@@ -371,16 +393,14 @@ constexpr index_type decode_index(const index_type value) noexcept
 constexpr system_type_id encode_id(const index_type value) noexcept
 {
     return is_valid_index(value)
-        ? system_type_id(static_cast<std::uint32_t>(
-            bit_ops::spread_to_even_bits(k_ordinal_mask - decode_index(value))) | k_system_type_flag)
+        ? system_type_id(static_cast<std::uint32_t>(bit_ops::spread_to_even_bits(k_ordinal_mask - decode_index(value))) | k_system_type_flag)
         : undefined;
 }
 
 constexpr index_type decode_id(const system_type_id id) noexcept
 {
     return is_valid_id(id)
-        ? encode_index(static_cast<index_type>(k_ordinal_mask -
-            bit_ops::pack_from_even_bits(id.raw_value() & k_encoded_payload_mask)))
+        ? encode_index(static_cast<index_type>(k_ordinal_mask - bit_ops::pack_from_even_bits(id.raw_value() & k_encoded_payload_mask)))
         : k_invalid_index;
 }
 
@@ -400,7 +420,8 @@ constexpr bool is_defined(const local_type_id id) noexcept
 
 constexpr bool is_valid_index(const index_type value) noexcept
 {
-    return ((value & ~system_type_ids::k_tagged_index_mask) == 0u) &&
+    return
+        ((value & ~system_type_ids::k_tagged_index_mask) == 0u) &&
         ((value & system_type_ids::k_category_bit) == 0u) &&
         (value <= k_max_ordinal);
 }
@@ -427,16 +448,14 @@ constexpr index_type decode_index(const index_type value) noexcept
 constexpr local_type_id encode_id(const index_type value) noexcept
 {
     return is_valid_index(value)
-        ? local_type_id(static_cast<std::uint32_t>(
-            bit_ops::spread_to_even_bits(k_ordinal_mask - decode_index(value))))
+        ? local_type_id(static_cast<std::uint32_t>(bit_ops::spread_to_even_bits(k_ordinal_mask - decode_index(value))))
         : undefined;
 }
 
 constexpr index_type decode_id(const local_type_id id) noexcept
 {
     return is_valid_id(id)
-        ? encode_index(static_cast<index_type>(k_ordinal_mask -
-            bit_ops::pack_from_even_bits(id.raw_value() & system_type_ids::k_encoded_payload_mask)))
+        ? encode_index(static_cast<index_type>(k_ordinal_mask - bit_ops::pack_from_even_bits(id.raw_value() & system_type_ids::k_encoded_payload_mask)))
         : k_invalid_index;
 }
 
@@ -446,13 +465,11 @@ constexpr index_type decode_id(const local_type_id id) noexcept
 //  Category-bearing type identity
 //==============================================================================
 
-constexpr type_id::type_id(const system_type_id id) noexcept
-    : m_value(system_type_ids::is_valid_id(id) ? id.raw_value() : 0u)
+constexpr type_id::type_id(const system_type_id id) noexcept : m_value(system_type_ids::is_valid_id(id) ? id.raw_value() : 0u)
 {
 }
 
-constexpr type_id::type_id(const local_type_id id) noexcept
-    : m_value(local_type_ids::is_valid_id(id) ? id.raw_value() : 0u)
+constexpr type_id::type_id(const local_type_id id) noexcept : m_value(local_type_ids::is_valid_id(id) ? id.raw_value() : 0u)
 {
 }
 
@@ -576,16 +593,14 @@ constexpr bool is_valid_id(const id_type id) noexcept
 constexpr id_type make_id(const mount_point_ids::id_type mount_point_id, const index_type module_index) noexcept
 {
     return (mount_point_ids::is_valid_id(mount_point_id) && is_valid_index(module_index))
-        ? id_type(mount_point_id.raw_value()
-            | (bit_ops::spread_to_even_bits(k_payload_mask - module_index.raw_value()) << k_id_field_shift))
+        ? id_type(mount_point_id.raw_value() | (bit_ops::spread_to_even_bits(k_payload_mask - module_index.raw_value()) << k_id_field_shift))
         : id_type{ 0u };
 }
 
 constexpr index_type decode_id(const id_type id) noexcept
 {
     return is_valid_id(id)
-        ? index_type(static_cast<std::uint64_t>(
-            (k_payload_mask - bit_ops::pack_from_even_bits(id.raw_value() >> k_id_field_shift))))
+        ? index_type(static_cast<std::uint64_t>((k_payload_mask - bit_ops::pack_from_even_bits(id.raw_value() >> k_id_field_shift))))
         : index_type{};
 }
 
@@ -666,8 +681,7 @@ enum : index_type
 };
 #undef MV_SYSTEM_TYPE
 
-static_assert((k_count <= k_capacity),
-    "The system type definition count exceeds the encoded system-type capacity.");
+static_assert((k_count <= k_capacity), "The system type definition count exceeds the encoded system-type capacity.");
 
 #define MV_SYSTEM_TYPE(name) \
 constexpr index_type name##_index = encode_index(name##_index_value); \
@@ -694,8 +708,7 @@ enum : index_type::repr_type
 #undef MV_SYSTEM_MODULE
 #undef MV_SYSTEM_MOUNT_POINT
 
-static_assert((k_count <= k_capacity),
-    "The mount-point definition count exceeds the encoded mount-point capacity.");
+static_assert((k_count <= k_capacity), "The mount-point definition count exceeds the encoded mount-point capacity.");
 
 #define MV_SYSTEM_MOUNT_POINT(name) \
 constexpr index_type name##_index = make_index(name##_index_value); \
@@ -724,8 +737,7 @@ enum : index_type::repr_type
 #undef MV_SYSTEM_MODULE
 #undef MV_SYSTEM_MOUNT_POINT
 
-static_assert((k_count <= k_capacity),
-    "The module definition count exceeds the encoded module capacity.");
+static_assert((k_count <= k_capacity), "The module definition count exceeds the encoded module capacity.");
 
 #define MV_SYSTEM_MOUNT_POINT(name)
 #define MV_SYSTEM_MODULE(name, mount_point_name) \
@@ -752,8 +764,7 @@ enum : index_type::repr_type
 };
 #undef MV_SYSTEM_THREAD
 
-static_assert((k_count <= k_capacity),
-    "The thread definition count exceeds the encoded thread capacity.");
+static_assert((k_count <= k_capacity), "The thread definition count exceeds the encoded thread capacity.");
 
 #define MV_SYSTEM_THREAD(name) \
 constexpr index_type name##_index = make_index(name##_index_value); \

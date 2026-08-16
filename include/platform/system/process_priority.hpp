@@ -42,7 +42,7 @@ enum class EProcessPriority : std::uint8_t { Normal = 0u, AboveNormal = 1u, High
 //  Applies a best-effort priority hint to the current process.
 //  Returns true if a native process-priority signal was applied.
 //  Returns false if the mapping is unsupported or the native call fails.
-bool set_current_process_priority(EProcessPriority priority) noexcept;
+bool set_current_process_priority(const EProcessPriority priority) noexcept;
 
 }   //  namespace platform::system
 

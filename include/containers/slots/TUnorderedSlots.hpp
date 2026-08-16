@@ -64,18 +64,8 @@ class TUnorderedSlots : protected TSlotBacking
 {
 public:
     TUnorderedSlots() noexcept = default;
-    TUnorderedSlots(TUnorderedSlots&& src) noexcept
-        : TSlotBacking(std::move(src))
-    {
-        set_empty();
-        (void)move_from(src);
-    }
-    TUnorderedSlots(const TUnorderedSlots& src) noexcept
-        : TSlotBacking(src)
-    {
-        set_empty();
-        (void)copy_from(src);
-    }
+    TUnorderedSlots(TUnorderedSlots&& src) noexcept;
+    TUnorderedSlots(const TUnorderedSlots& src) noexcept;
     TUnorderedSlots(const std::uint32_t capacity) noexcept { (void)initialise(capacity); }
     ~TUnorderedSlots() noexcept { (void)shutdown(); }
 
@@ -238,7 +228,7 @@ protected:
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
     [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
 private:
 
@@ -273,28 +263,21 @@ private:
         constexpr std::int32_t get_prev_index() const noexcept { return static_cast<std::int32_t>(static_cast<std::uint32_t>(prev_index) & k_mask); }
         constexpr std::int32_t get_next_index() const noexcept { return static_cast<std::int32_t>(static_cast<std::uint32_t>(next_index) & k_mask); }
 
-        inline void set_slot_state(const SlotState slot_state) noexcept {
-            prev_index = static_cast<TIndex>((static_cast<std::uint32_t>(prev_index) & k_mask) | ((static_cast<std::uint32_t>(slot_state) & 1) ? k_flag : 0));
-            next_index = static_cast<TIndex>((static_cast<std::uint32_t>(next_index) & k_mask) | ((static_cast<std::uint32_t>(slot_state) & 2) ? k_flag : 0)); }
+        inline void set_slot_state(const SlotState slot_state) noexcept;
 
         inline void set_is_unassigned() noexcept { set_slot_state(SlotState::is_unassigned); }
         inline void set_is_empty_slot() noexcept { set_slot_state(SlotState::is_empty_slot); }
         inline void set_is_loose_slot() noexcept { set_slot_state(SlotState::is_loose_slot); }
         inline void set_is_terminator() noexcept { set_slot_state(SlotState::is_terminator); }
 
-        constexpr SlotState get_slot_state() const noexcept {
-            return static_cast<SlotState>(
-                ((static_cast<std::uint32_t>(prev_index) & k_flag) ? 1 : 0) |
-                ((static_cast<std::uint32_t>(next_index) & k_flag) ? 2 : 0)); }
+        constexpr SlotState get_slot_state() const noexcept;
 
         constexpr bool is_unassigned() const noexcept { return get_slot_state() == SlotState::is_unassigned; }
         constexpr bool is_empty_slot() const noexcept { return get_slot_state() == SlotState::is_empty_slot; }
         constexpr bool is_loose_slot() const noexcept { return get_slot_state() == SlotState::is_loose_slot; }
         constexpr bool is_terminator() const noexcept { return get_slot_state() == SlotState::is_terminator; }
 
-        constexpr bool is_invalid() const noexcept {
-            SlotState state = get_slot_state();
-            return (state != SlotState::is_loose_slot) && (state != SlotState::is_empty_slot); }
+        constexpr bool is_invalid() const noexcept;
     };
 
     //  Typed access helpers for slot metadata storage.
@@ -414,7 +397,7 @@ private:
         "TUnorderedSlots: Slot size exceeds the memory token stride field.");
 
     //  Enforce std::size_t has at least 32 bits
-    static_assert(sizeof(std::size_t) >= sizeof(std::uint32_t),
+    static_assert((sizeof(std::size_t) >= sizeof(std::uint32_t)),
         "TUnorderedSlots: std::size_t must be at least 32 bits.");
 
     //  Enforce signed integer types so that negative sentinels and sign-based comparisons behave correctly
@@ -422,10 +405,53 @@ private:
         "TUnorderedSlots: TIndex must be a signed integer type.");
 
     //  Enforce the only supported type pairs
-    static_assert(std::is_same_v<TIndex, std::int32_t> || std::is_same_v<TIndex, std::int16_t>,
+    static_assert((std::is_same_v<TIndex, std::int32_t> || std::is_same_v<TIndex, std::int16_t>),
         "TUnorderedSlots: Supported types are std::int32_t and std::int16_t.");
 
 };
+
+//==============================================================================
+//  TUnorderedSlots<TSlotBacking, TIndex> out of class function bodies
+//==============================================================================
+
+template<typename TSlotBacking, typename TIndex>
+inline TUnorderedSlots<TSlotBacking, TIndex>::TUnorderedSlots(TUnorderedSlots&& src) noexcept : TSlotBacking(std::move(src))
+{
+    set_empty();
+    (void)move_from(src);
+}
+
+template<typename TSlotBacking, typename TIndex>
+inline TUnorderedSlots<TSlotBacking, TIndex>::TUnorderedSlots(const TUnorderedSlots& src) noexcept : TSlotBacking(src)
+{
+    set_empty();
+    (void)copy_from(src);
+}
+
+template<typename TSlotBacking, typename TIndex>
+inline void TUnorderedSlots<TSlotBacking, TIndex>::Slot::set_slot_state(const SlotState slot_state) noexcept
+{
+    prev_index = static_cast<TIndex>((static_cast<std::uint32_t>(prev_index) & k_mask) |
+        ((static_cast<std::uint32_t>(slot_state) & 1) ? k_flag : 0));
+    next_index = static_cast<TIndex>((static_cast<std::uint32_t>(next_index) & k_mask) |
+        ((static_cast<std::uint32_t>(slot_state) & 2) ? k_flag : 0));
+}
+
+template<typename TSlotBacking, typename TIndex>
+constexpr typename TUnorderedSlots<TSlotBacking, TIndex>::SlotState
+TUnorderedSlots<TSlotBacking, TIndex>::Slot::get_slot_state() const noexcept
+{
+    return static_cast<SlotState>(
+        ((static_cast<std::uint32_t>(prev_index) & k_flag) ? 1 : 0) |
+        ((static_cast<std::uint32_t>(next_index) & k_flag) ? 2 : 0));
+}
+
+template<typename TSlotBacking, typename TIndex>
+constexpr bool TUnorderedSlots<TSlotBacking, TIndex>::Slot::is_invalid() const noexcept
+{
+    const SlotState state = get_slot_state();
+    return (state != SlotState::is_loose_slot) && (state != SlotState::is_empty_slot);
+}
 
 //! Protected function bodies
 
@@ -1497,4 +1523,3 @@ inline void TUnorderedSlots<TSlotBacking, TIndex>::set_empty() noexcept
 }   //  namespace slots
 
 #endif  //  TUNORDERED_SLOTS_HPP_INCLUDED
-

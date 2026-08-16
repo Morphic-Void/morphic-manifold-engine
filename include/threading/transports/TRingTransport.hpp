@@ -102,7 +102,7 @@ public:
     //  initialise() requires a deallocated / not-ready instance.
     //  deallocate() releases owned storage and must not race active role use.
     [[nodiscard]] bool initialise(const std::uint32_t capacity) noexcept;
-    [[nodiscard]] bool initialise(const std::uint32_t capacity, memory::CMemoryContext* context) noexcept;
+    [[nodiscard]] bool initialise(const std::uint32_t capacity, memory::CMemoryContext* const context) noexcept;
     void deallocate() noexcept;
 
     //  Memory context accessor
@@ -112,7 +112,7 @@ private:
     [[nodiscard]] T* raw_data() noexcept { return static_cast<T*>(m_ring.data()); }
     [[nodiscard]] const T* raw_data() const noexcept { return static_cast<const T*>(m_ring.data()); }
 
-    static_assert(k_element_size <= 0xffffu, "TRing<T> element size exceeds the memory token stride field.");
+    static_assert((k_element_size <= 0xffffu), "TRing<T> element size exceeds the memory token stride field.");
 
     memory::CMemoryToken m_ring{ k_element_size, k_align };
     std::uint32_t m_capacity = 0u;
@@ -294,7 +294,7 @@ inline std::uint32_t TRing<T>::readable_count() const noexcept
 }
 
 template<typename T>
-inline bool TRing<T>::initialise(const std::uint32_t capacity, memory::CMemoryContext* context) noexcept
+inline bool TRing<T>::initialise(const std::uint32_t capacity, memory::CMemoryContext* const context) noexcept
 {
     if (capacity > k_max_capacity)
     {   //  requested capacity not supported

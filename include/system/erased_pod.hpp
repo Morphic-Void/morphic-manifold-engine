@@ -73,7 +73,7 @@ public:
 
     [[nodiscard]] type_id query_type_id() const noexcept;
     [[nodiscard]] std::uint32_t query_tag() const noexcept;
-    void set_tag(std::uint32_t tag) noexcept;
+    void set_tag(const std::uint32_t tag) noexcept;
 
     template<typename T> static constexpr bool is_compatible_with() noexcept;
 

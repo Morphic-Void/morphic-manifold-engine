@@ -238,14 +238,14 @@ struct TGAHeader
 
 static_assert((sizeof(TGAHeader) == 18u), "TGAHeader must be 18 bytes");
 
-static std::uint16_t read_le_u16(const std::uint8_t bytes[2]) noexcept
+static std::uint16_t read_le_u16(const std::uint8_t* const bytes) noexcept
 {
     return static_cast<std::uint16_t>(
         static_cast<std::uint16_t>(bytes[0]) |
         (static_cast<std::uint16_t>(bytes[1]) << 8u));
 }
 
-static void write_le_u16(std::uint8_t bytes[2], const std::uint16_t value) noexcept
+static void write_le_u16(std::uint8_t* const bytes, const std::uint16_t value) noexcept
 {
     bytes[0] = static_cast<std::uint8_t>(value & 0x00ffu);
     bytes[1] = static_cast<std::uint8_t>((value >> 8u) & 0x00ffu);
@@ -459,27 +459,41 @@ CByteBuffer encode(const CByteRectConstView& view, const EncodeOptions& options)
     {
         case (image_encode_src::AutoTrue32):
         case (image_encode_src::RGBA):
+        {
             state.channel_mask = 0xffffffffu;
             state.src_element_bytes = 4u;
             break;
+        }
         case (image_encode_src::RGB):
+        {
             state.channel_mask = 0x00ffffffu;
             state.src_element_bytes = 3u;
             break;
+        }
         case (image_encode_src::A):
+        {
             state.channel_shift += 24u;
             break;
+        }
         case (image_encode_src::B):
+        {
             state.channel_shift = 16u;
             break;
+        }
         case (image_encode_src::G):
+        {
             state.channel_shift = 8u;
             break;
+        }
         case (image_encode_src::R):
         case (image_encode_src::Gray):
+        {
             break;
+        }
         default:    //  unrecognised or un-encodable source, return the empty buffer
+        {
             return buffer;
+        }
     }
     const std::size_t view_height = view.row_count();
     if (view_height > 0x0000ffffu)

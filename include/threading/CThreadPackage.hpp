@@ -32,7 +32,7 @@
 namespace threading
 {
 
-using FThreadPrepare = bool(MV_STD_ABI_CALL*)(void* context, thread_ids::id_type thread_id, void* thread_resources) noexcept;
+using FThreadPrepare = bool(MV_STD_ABI_CALL*)(void* const context, const thread_ids::id_type thread_id, void* const thread_resources) noexcept;
 
 struct ThreadConfig
 {
@@ -49,14 +49,7 @@ class CThreadResources
 public:
     CThreadResources(
         const ThreadConfig& thread_config,
-        const platform::system::CPerfCountConversion& perf_count_conversion) noexcept
-        : config{ thread_config }
-        , perf_count_conversion{ perf_count_conversion }
-        , host_to_worker_msgs{ thread_config.worker_module_id }
-        , worker_to_host_msgs{ module_ids::executable }
-        , worker_to_host_owned_msgs{ module_ids::executable, nullptr }
-    {
-    }
+        const platform::system::CPerfCountConversion& perf_count_conversion) noexcept;
     ~CThreadResources() noexcept = default;
 
     //  Immutable configuration shared by the package and thread context.
@@ -85,12 +78,12 @@ public:
     void mark_running() noexcept;
     void mark_exiting() noexcept;
     void mark_exited() noexcept;
-    void mark_failed(std::uint32_t code) noexcept;
+    void mark_failed(const std::uint32_t code) noexcept;
     void advance_heartbeat() noexcept;
 
     [[nodiscard]] bool exit_requested() const noexcept;
     [[nodiscard]] const platform::system::CPerfCountConversion& perf_count_conversion() const noexcept;
-    std::uint32_t wait_for_new_epoch(std::uint32_t epoch) noexcept;
+    std::uint32_t wait_for_new_epoch(const std::uint32_t epoch) noexcept;
 
     bool read(CErasedPodMsg& msg) noexcept;
     bool post(const CErasedPodMsg& msg) noexcept;
@@ -105,10 +98,7 @@ class CThreadPackage
 public:
     CThreadPackage(
         const ThreadConfig& thread_config,
-        const platform::system::CPerfCountConversion& perf_count_conversion) noexcept
-        : m_resources{ thread_config, perf_count_conversion }
-    {
-    }
+        const platform::system::CPerfCountConversion& perf_count_conversion) noexcept;
     ~CThreadPackage() noexcept = default;
 
     bool startup() noexcept;
@@ -120,10 +110,25 @@ public:
     [[nodiscard]] EThreadRunState query_state() const noexcept;
 
 private:
-    static std::uint32_t MV_STD_ABI_CALL thread_entry_point(void* user_data) noexcept;
+    static std::uint32_t MV_STD_ABI_CALL thread_entry_point(void* const user_data) noexcept;
 
     CThreadResources m_resources;
 };
+
+//==============================================================================
+//  CThreadResources inline out of class function bodies
+//==============================================================================
+
+inline CThreadResources::CThreadResources(
+    const ThreadConfig& thread_config,
+    const platform::system::CPerfCountConversion& perf_count_conversion) noexcept
+    : config{ thread_config }
+    , perf_count_conversion{ perf_count_conversion }
+    , host_to_worker_msgs{ thread_config.worker_module_id }
+    , worker_to_host_msgs{ module_ids::executable }
+    , worker_to_host_owned_msgs{ module_ids::executable, nullptr }
+{
+}
 
 //==============================================================================
 //  CThreadContext inline out of class function bodies
@@ -188,6 +193,13 @@ inline bool CThreadContext::post(CErasedOwnerMsg&& msg) noexcept
 //==============================================================================
 //  CThreadPackage inline out of class function bodies
 //==============================================================================
+
+inline CThreadPackage::CThreadPackage(
+    const ThreadConfig& thread_config,
+    const platform::system::CPerfCountConversion& perf_count_conversion) noexcept
+    : m_resources{ thread_config, perf_count_conversion }
+{
+}
 
 inline bool CThreadPackage::read(CErasedPodMsg& msg) noexcept
 {

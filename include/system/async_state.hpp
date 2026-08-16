@@ -53,28 +53,28 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
 
-    [[nodiscard]] bool initialise(std::size_t initial_slot_count = 0u) noexcept;
+    [[nodiscard]] bool initialise(const std::size_t initial_slot_count = 0u) noexcept;
 
     void deallocate() noexcept;
 
     template<typename T>
-    [[nodiscard]] std::int32_t acquire(std::uint32_t tag = 0u) noexcept;
+    [[nodiscard]] std::int32_t acquire(const std::uint32_t tag = 0u) noexcept;
 
     //  Returned pointers are invalidated by capacity growth, reinitialisation,
     //  deallocation, or release of their slot. Retain the slot index instead.
-    [[nodiscard]] CASyncState* resolve(std::int32_t slot_index) noexcept;
-    [[nodiscard]] const CASyncState* resolve(std::int32_t slot_index) const noexcept;
+    [[nodiscard]] CASyncState* resolve(const std::int32_t slot_index) noexcept;
+    [[nodiscard]] const CASyncState* resolve(const std::int32_t slot_index) const noexcept;
 
     template<typename T>
-    [[nodiscard]] T* payload(std::int32_t slot_index) noexcept;
+    [[nodiscard]] T* payload(const std::int32_t slot_index) noexcept;
 
     template<typename T>
-    [[nodiscard]] const T* payload(std::int32_t slot_index) const noexcept;
+    [[nodiscard]] const T* payload(const std::int32_t slot_index) const noexcept;
 
     template<typename T>
-    [[nodiscard]] T* redefine(std::int32_t slot_index) noexcept;
+    [[nodiscard]] T* redefine(const std::int32_t slot_index) noexcept;
 
-    [[nodiscard]] bool release(std::int32_t slot_index) noexcept;
+    [[nodiscard]] bool release(const std::int32_t slot_index) noexcept;
 
     [[nodiscard]] bool check_integrity() const noexcept;
 

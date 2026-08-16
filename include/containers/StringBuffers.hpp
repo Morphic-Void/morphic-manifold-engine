@@ -216,8 +216,8 @@ public:
     [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* const context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
     bool private_allocate(const std::uint8_t* const string, const std::size_t length) noexcept;
@@ -300,15 +300,15 @@ public:
     [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* const context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
     friend class CStableStrings;
 
     [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     [[nodiscard]] std::size_t private_append(const std::uint8_t* const string, const std::size_t length) noexcept;
 
@@ -410,7 +410,7 @@ public:
 private:
     [[nodiscard]] bool memory_source_context(memory::CMemoryContext*& source) const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept;
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     std::size_t private_find_ref_index(const std::uint8_t* const string, const std::size_t length, std::size_t& insert_at) noexcept;
     std::size_t private_find_id(const std::uint8_t* const string, const std::size_t length) noexcept;
@@ -551,12 +551,12 @@ inline std::uint64_t CSimpleString::memory_allocation_size() const noexcept
     return m_string.memory_allocation_size();
 }
 
-inline bool CSimpleString::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+inline bool CSimpleString::can_reattribute_to(memory::CMemoryContext* const context) const noexcept
 {
     return m_string.can_reattribute_to(context);
 }
 
-inline bool CSimpleString::reattribute(memory::CMemoryContext* context) noexcept
+inline bool CSimpleString::reattribute(memory::CMemoryContext* const context) noexcept
 {
     return m_string.reattribute(context);
 }
@@ -688,12 +688,12 @@ inline std::uint64_t CStringBuffer::memory_allocation_size() const noexcept
     return m_buffer.memory_allocation_size();
 }
 
-inline bool CStringBuffer::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+inline bool CStringBuffer::can_reattribute_to(memory::CMemoryContext* const context) const noexcept
 {
     return m_buffer.can_reattribute_to(context);
 }
 
-inline bool CStringBuffer::reattribute(memory::CMemoryContext* context) noexcept
+inline bool CStringBuffer::reattribute(memory::CMemoryContext* const context) noexcept
 {
     return m_buffer.reattribute(context);
 }
@@ -1078,9 +1078,7 @@ inline void CStableStrings::deallocate() noexcept
 
     //  validate the range and permutation of sorted_ref_indices
     if (!algo::validate_extracted_permutation(
-        sorted_ref_indices_data,
-        static_cast<std::uint32_t>(count),
-        [](const std::size_t value) noexcept { return value; }))
+        sorted_ref_indices_data, static_cast<std::uint32_t>(count), [](const std::size_t value) noexcept { return value; }))
     {
         return failed_integrity_check();
     }

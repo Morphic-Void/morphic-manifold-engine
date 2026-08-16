@@ -107,15 +107,15 @@ public:
     //  initialise() requires a deallocated / not-ready instance.
     //  deallocate() releases owned storage and must not race active role use.
     [[nodiscard]] bool initialise(const std::uint32_t capacity) noexcept;
-    [[nodiscard]] bool initialise(const std::uint32_t capacity, memory::CMemoryContext* context) noexcept;
+    [[nodiscard]] bool initialise(const std::uint32_t capacity, memory::CMemoryContext* const context) noexcept;
     void deallocate() noexcept;
 
     //  Memory context accessor
     [[nodiscard]] memory::CMemoryContext* memory_context() const noexcept { return m_ring.context(); }
 
 private:
-    static_assert(k_element_size <= 0xffffu, "TOwning<T> element size exceeds the memory token stride field.");
-    static_assert(k_element_size <= memory::k_byte_size_ceiling, "TOwning<T> element size exceeds the shared byte ceiling.");
+    static_assert((k_element_size <= 0xffffu), "TOwning<T> element size exceeds the memory token stride field.");
+    static_assert((k_element_size <= memory::k_byte_size_ceiling), "TOwning<T> element size exceeds the shared byte ceiling.");
 
     memory::CMemoryToken m_ring{ k_element_size, k_align };
     std::uint32_t m_capacity = 0u;
@@ -267,7 +267,7 @@ inline std::uint32_t TOwning<T>::readable_count() const noexcept
 }
 
 template<typename T>
-inline bool TOwning<T>::initialise(const std::uint32_t capacity, memory::CMemoryContext* context) noexcept
+inline bool TOwning<T>::initialise(const std::uint32_t capacity, memory::CMemoryContext* const context) noexcept
 {
     if ((capacity > k_max_capacity) || (capacity > k_token_max_capacity))
     {   //  requested capacity not supported

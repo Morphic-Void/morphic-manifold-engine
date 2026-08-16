@@ -94,8 +94,8 @@ public:
     [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* const context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
     void destroy_and_deallocate() noexcept;
@@ -183,8 +183,7 @@ template<typename T>
 template<typename... TArgs>
 inline TInstance<T> TInstance<T>::create(TArgs&&... args) noexcept
 {
-    static_assert(std::is_nothrow_constructible_v<T, TArgs&&...>,
-        "TInstance<T>::create(...) requires T to be nothrow constructible.");
+    static_assert(std::is_nothrow_constructible_v<T, TArgs&&...>, "TInstance<T>::create(...) requires T to be nothrow constructible.");
 
     TInstance owner;
     (void)owner.emplace(std::forward<TArgs>(args)...);
@@ -195,8 +194,7 @@ template<typename T>
 template<typename... TArgs>
 inline bool TInstance<T>::emplace(TArgs&&... args) noexcept
 {
-    static_assert(std::is_nothrow_constructible_v<T, TArgs&&...>,
-        "TInstance<T>::emplace(...) requires T to be nothrow constructible.");
+    static_assert(std::is_nothrow_constructible_v<T, TArgs&&...>, "TInstance<T>::emplace(...) requires T to be nothrow constructible.");
 
     T* ptr = object_ptr();
     if (ptr != nullptr)
@@ -259,13 +257,13 @@ inline std::uint64_t TInstance<T>::memory_allocation_size() const noexcept
 }
 
 template<typename T>
-inline bool TInstance<T>::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+inline bool TInstance<T>::can_reattribute_to(memory::CMemoryContext* const context) const noexcept
 {
     return m_token.can_reattribute_to(context);
 }
 
 template<typename T>
-inline bool TInstance<T>::reattribute(memory::CMemoryContext* context) noexcept
+inline bool TInstance<T>::reattribute(memory::CMemoryContext* const context) noexcept
 {
     return m_token.reattribute(context);
 }

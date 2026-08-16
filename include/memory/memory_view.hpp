@@ -78,12 +78,9 @@ class CMemoryView
 {
 public:
     CMemoryView() noexcept = default;
-    CMemoryView(void* data, std::size_t count, std::size_t stride, std::size_t storage_alignment = 0u) noexcept
-    {
-        (void)set(data, count, stride, storage_alignment);
-    }
+    CMemoryView(void* const data, const std::size_t count, const std::size_t stride, const std::size_t storage_alignment = 0u) noexcept;
 
-    [[nodiscard]] bool set(void* data, std::size_t count, std::size_t stride, std::size_t storage_alignment = 0u) noexcept;
+    [[nodiscard]] bool set(void* const data, const std::size_t count, const std::size_t stride, const std::size_t storage_alignment = 0u) noexcept;
     void reset() noexcept;
 
     [[nodiscard]] bool is_valid() const noexcept { return m_data != nullptr; }
@@ -97,12 +94,12 @@ public:
     [[nodiscard]] std::size_t storage_alignment() const noexcept;
     [[nodiscard]] std::size_t element_alignment() const noexcept;
 
-    [[nodiscard]] bool contains_index(std::size_t index) const noexcept { return index < count(); }
-    [[nodiscard]] bool contains_range(std::size_t index, std::size_t range_count) const noexcept;
-    [[nodiscard]] void* index_ptr(std::size_t index) const noexcept;
+    [[nodiscard]] bool contains_index(const std::size_t index) const noexcept { return index < count(); }
+    [[nodiscard]] bool contains_range(const std::size_t index, const std::size_t range_count) const noexcept;
+    [[nodiscard]] void* index_ptr(const std::size_t index) const noexcept;
 
-    [[nodiscard]] CMemoryView subview(std::size_t index = 0u) const noexcept;
-    [[nodiscard]] CMemoryView subview(std::size_t index, std::size_t subview_count) const noexcept;
+    [[nodiscard]] CMemoryView subview(const std::size_t index = 0u) const noexcept;
+    [[nodiscard]] CMemoryView subview(const std::size_t index, const std::size_t subview_count) const noexcept;
     [[nodiscard]] CMemoryConstView const_view() const noexcept;
 
 private:
@@ -116,16 +113,13 @@ class CMemoryConstView
 {
 public:
     CMemoryConstView() noexcept = default;
-    CMemoryConstView(const void* data, std::size_t count, std::size_t stride, std::size_t storage_alignment = 0u) noexcept
-    {
-        (void)set(data, count, stride, storage_alignment);
-    }
+    CMemoryConstView(const void* const data, const std::size_t count, const std::size_t stride, const std::size_t storage_alignment = 0u) noexcept;
     CMemoryConstView(const CMemoryView& view) noexcept;
 
     CMemoryConstView& operator=(const CMemoryView& view) noexcept;
 
-    [[nodiscard]] bool set(const void* data, std::size_t count, std::size_t stride,
-        std::size_t storage_alignment = 0u) noexcept;
+    [[nodiscard]] bool set(const void* const data, const std::size_t count, const std::size_t stride,
+        const std::size_t storage_alignment = 0u) noexcept;
     [[nodiscard]] bool set(const CMemoryView& view) noexcept;
     void reset() noexcept;
 
@@ -140,12 +134,12 @@ public:
     [[nodiscard]] std::size_t storage_alignment() const noexcept;
     [[nodiscard]] std::size_t element_alignment() const noexcept;
 
-    [[nodiscard]] bool contains_index(std::size_t index) const noexcept { return index < count(); }
-    [[nodiscard]] bool contains_range(std::size_t index, std::size_t range_count) const noexcept;
-    [[nodiscard]] const void* index_ptr(std::size_t index) const noexcept;
+    [[nodiscard]] bool contains_index(const std::size_t index) const noexcept { return index < count(); }
+    [[nodiscard]] bool contains_range(const std::size_t index, const std::size_t range_count) const noexcept;
+    [[nodiscard]] const void* index_ptr(const std::size_t index) const noexcept;
 
-    [[nodiscard]] CMemoryConstView subview(std::size_t index = 0u) const noexcept;
-    [[nodiscard]] CMemoryConstView subview(std::size_t index, std::size_t subview_count) const noexcept;
+    [[nodiscard]] CMemoryConstView subview(const std::size_t index = 0u) const noexcept;
+    [[nodiscard]] CMemoryConstView subview(const std::size_t index, const std::size_t subview_count) const noexcept;
 
 private:
     const void*   m_data{ nullptr };
@@ -166,8 +160,17 @@ static_assert(std::is_trivially_copyable_v<CMemoryConstView> && std::is_triviall
     "CMemoryConstView must remain a trivial non-owning descriptor");
 
 //==============================================================================
-//  CMemoryView implementation
+//  CMemoryView out of class function bodies
 //==============================================================================
+
+inline CMemoryView::CMemoryView(
+    void* const data,
+    const std::size_t count,
+    const std::size_t stride,
+    const std::size_t storage_alignment) noexcept
+{
+    (void)set(data, count, stride, storage_alignment);
+}
 
 inline bool CMemoryView::set(void* const data, const std::size_t count, const std::size_t stride, const std::size_t storage_alignment) noexcept
 {
@@ -242,8 +245,17 @@ inline CMemoryConstView CMemoryView::const_view() const noexcept
 }
 
 //==============================================================================
-//  CMemoryConstView implementation
+//  CMemoryConstView out of class function bodies
 //==============================================================================
+
+inline CMemoryConstView::CMemoryConstView(
+    const void* const data,
+    const std::size_t count,
+    const std::size_t stride,
+    const std::size_t storage_alignment) noexcept
+{
+    (void)set(data, count, stride, storage_alignment);
+}
 
 inline CMemoryConstView::CMemoryConstView(const CMemoryView& view) noexcept
 {

@@ -74,8 +74,7 @@ template<typename T>
 
     const std::uintptr_t storage_address = reinterpret_cast<std::uintptr_t>(storage);
     const std::uintptr_t ptr_address = reinterpret_cast<std::uintptr_t>(ptr);
-    return (ptr_address >= storage_address) &&
-        ((ptr_address - storage_address) < (capacity * sizeof(T)));
+    return (ptr_address >= storage_address) && ((ptr_address - storage_address) < (capacity * sizeof(T)));
 }
 
 //==============================================================================
@@ -223,8 +222,8 @@ public:
     [[nodiscard]] std::uint32_t memory_token_count() const noexcept;
     [[nodiscard]] std::uint32_t memory_allocation_count() const noexcept;
     [[nodiscard]] std::uint64_t memory_allocation_size() const noexcept;
-    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* context = nullptr) const noexcept;
-    [[nodiscard]] bool reattribute(memory::CMemoryContext* context = nullptr) noexcept;
+    [[nodiscard]] bool can_reattribute_to(memory::CMemoryContext* const context = nullptr) const noexcept;
+    [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
     template<typename> friend class TPodUnorderedSlotsStorage;
@@ -235,15 +234,9 @@ private:
 
     static constexpr std::size_t k_max_bytes = k_max_elements * k_element_size;
 
-    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept
-    {
-        return m_token.owns_storage() ? m_token.context() : nullptr;
-    }
+    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept;
     void unsafe_replace_memory_context_without_accounting(
-        memory::CMemoryContext* expected_source, memory::CMemoryContext* target) noexcept
-    {
-        m_token.unsafe_replace_context_without_accounting(expected_source, target);
-    }
+        memory::CMemoryContext* const expected_source, memory::CMemoryContext* const target) noexcept;
 
     [[nodiscard]] T* raw_data() noexcept { return static_cast<T*>(m_token.data()); }
     [[nodiscard]] const T* raw_data() const noexcept { return static_cast<const T*>(m_token.data()); }
@@ -285,7 +278,7 @@ public:
     //  View state
     TPodView& set(const CByteView& view) noexcept;
     TPodView& set(T* const data, const std::size_t size) noexcept;
-    TPodView& set(const memory::CMemoryView& view, std::size_t size) noexcept;
+    TPodView& set(const memory::CMemoryView& view, const std::size_t size) noexcept;
     TPodView& reset() noexcept { m_view.reset(); return *this; }
 
     //  Status
@@ -315,7 +308,7 @@ public:
 private:
     static constexpr std::size_t k_max_bytes = k_max_elements * k_element_size;
 
-    static_assert(k_element_size <= 0xffffu, "TPodView<T> element size exceeds the memory view stride field.");
+    static_assert((k_element_size <= 0xffffu), "TPodView<T> element size exceeds the memory view stride field.");
 
     memory::CMemoryView m_view{};
 };
@@ -351,8 +344,8 @@ public:
     TPodConstView& set(const CByteView& view) noexcept;
     TPodConstView& set(const CByteConstView& view) noexcept;
     TPodConstView& set(const T* const data, const std::size_t size) noexcept;
-    TPodConstView& set(const memory::CMemoryView& view, std::size_t size) noexcept;
-    TPodConstView& set(const memory::CMemoryConstView& view, std::size_t size) noexcept;
+    TPodConstView& set(const memory::CMemoryView& view, const std::size_t size) noexcept;
+    TPodConstView& set(const memory::CMemoryConstView& view, const std::size_t size) noexcept;
     TPodConstView& reset() noexcept { m_view.reset(); return *this; }
 
     //  Status
@@ -429,6 +422,20 @@ template<typename T>
 inline bool TPodVector<T>::is_ready() const noexcept
 {
     return is_valid() && (raw_data() != nullptr);
+}
+
+template<typename T>
+inline memory::CMemoryContext* TPodVector<T>::memory_source_context() const noexcept
+{
+    return m_token.owns_storage() ? m_token.context() : nullptr;
+}
+
+template<typename T>
+inline void TPodVector<T>::unsafe_replace_memory_context_without_accounting(
+    memory::CMemoryContext* const expected_source,
+    memory::CMemoryContext* const target) noexcept
+{
+    m_token.unsafe_replace_context_without_accounting(expected_source, target);
 }
 
 template<typename T>
@@ -757,13 +764,13 @@ inline std::uint64_t TPodVector<T>::memory_allocation_size() const noexcept
 }
 
 template<typename T>
-inline bool TPodVector<T>::can_reattribute_to(memory::CMemoryContext* context) const noexcept
+inline bool TPodVector<T>::can_reattribute_to(memory::CMemoryContext* const context) const noexcept
 {
     return m_token.can_reattribute_to(context);
 }
 
 template<typename T>
-inline bool TPodVector<T>::reattribute(memory::CMemoryContext* context) noexcept
+inline bool TPodVector<T>::reattribute(memory::CMemoryContext* const context) noexcept
 {
     return m_token.reattribute(context);
 }
@@ -812,9 +819,7 @@ inline TPodView<T>& TPodView<T>::set(T* const data, const std::size_t size) noex
 }
 
 template<typename T>
-inline TPodView<T>& TPodView<T>::set(
-    const memory::CMemoryView& view,
-    const std::size_t size) noexcept
+inline TPodView<T>& TPodView<T>::set(const memory::CMemoryView& view, const std::size_t size) noexcept
 {
     if (view.is_valid() && (view.stride() == k_element_size) &&
         (view.element_alignment() >= k_align) && view.contains_range(0u, size))
@@ -884,9 +889,7 @@ inline TPodConstView<T>& TPodConstView<T>::set(const T* const data, const std::s
 }
 
 template<typename T>
-inline TPodConstView<T>& TPodConstView<T>::set(
-    const memory::CMemoryView& view,
-    const std::size_t size) noexcept
+inline TPodConstView<T>& TPodConstView<T>::set(const memory::CMemoryView& view, const std::size_t size) noexcept
 {
     if (view.is_valid() && (view.stride() == k_element_size) &&
         (view.element_alignment() >= k_align) && view.contains_range(0u, size))
@@ -898,9 +901,7 @@ inline TPodConstView<T>& TPodConstView<T>::set(
 }
 
 template<typename T>
-inline TPodConstView<T>& TPodConstView<T>::set(
-    const memory::CMemoryConstView& view,
-    const std::size_t size) noexcept
+inline TPodConstView<T>& TPodConstView<T>::set(const memory::CMemoryConstView& view, const std::size_t size) noexcept
 {
     if (view.is_valid() && (view.stride() == k_element_size) &&
         (view.element_alignment() >= k_align) && view.contains_range(0u, size))
