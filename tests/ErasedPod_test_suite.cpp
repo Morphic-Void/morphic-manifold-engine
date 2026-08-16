@@ -272,7 +272,8 @@ void test_thread_message_copy_boundary(TTestContext& ctx)
     static_assert(CErasedPodMsg::is_payload_compatible_with<SAlignedPod>());
     static_assert(CErasedPodMsg::is_payload_compatible_with<CCanonicalValue>());
     static_assert(CErasedPodMsg::is_payload_compatible_with<FileSaveRequest>());
-    static_assert(CErasedPodMsg::is_payload_compatible_with<TgaSaveRequest>());
+    static_assert(!CErasedPodMsg::is_payload_compatible_with<TgaLoadRequest>());
+    static_assert(!CErasedPodMsg::is_payload_compatible_with<TgaSaveRequest>());
     static_assert(CErasedPodMsg::is_payload_compatible_with<TgaEncodeRequest>());
     static_assert(CErasedPodMsg::is_payload_compatible_with<TgaDecodeRequest>());
     static_assert(!CErasedPodMsg::is_payload_compatible_with<CNonTriviallyCopyable>());
@@ -334,9 +335,7 @@ void test_local_thread_message_carrier(TTestContext& ctx)
 void test_thread_message_clears_previous_representation(TTestContext& ctx)
 {
     threading::CErasedPodMsg reused;
-    const TgaSaveRequest larger{
-        nullptr, CAssetId{},
-        { image::codec::tga::image_encode_src::AutoTrue32, true, true, false } };
+    const TgaEncodeRequest larger{};
     reused.assign_payload(larger);
 
     const UnrecognisedMsg small{ system_type_ids::file_save_result };
@@ -380,7 +379,8 @@ void test_concrete_erased_pod_transport_admission(TTestContext& ctx)
 
     threading::CErasedPodMsg local_source;
     local_source.set_async_slot(18);
-    local_source.assign_payload(host::SHostTgaFileSaveState{ 18, CAssetId{} });
+    local_source.assign_payload(host::SHostTgaFileSaveState{
+        18, CAssetId{}, CAssetId{} });
     const threading::CErasedPodMsg local_snapshot = local_source;
 
     threading::transports::CErasedPodMsgTransport local_same_component(
@@ -488,7 +488,7 @@ void test_concrete_erased_pod_transport_diagnostics(TTestContext& ctx)
 
     threading::CErasedPodMsg local_message;
     local_message.assign_payload(
-        host::SHostTgaFileSaveState{ 22, CAssetId{} });
+        host::SHostTgaFileSaveState{ 22, CAssetId{}, CAssetId{} });
     threading::transports::CErasedPodMsgTransport local_cross_component(
         module_ids::executive);
     TEST_EXPECT(ctx, local_cross_component.initialise_fixed(1u));

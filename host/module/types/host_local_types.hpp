@@ -24,8 +24,7 @@ namespace host
 struct SHostTgaFileLoadState
 {
     std::int32_t executive_slot;
-    const char* file;
-    bool vflip;
+    CAssetId request;
 };
 
 struct SHostTgaDecodeState
@@ -38,14 +37,14 @@ struct SHostTgaEncodeState
 {
     std::int32_t executive_slot;
     CAssetId source;
-    const char* file;
-    image::codec::tga::EncodeOptions options;
+    CAssetId request;
 };
 
 struct SHostTgaFileSaveState
 {
     std::int32_t executive_slot;
     CAssetId encoded_file;
+    CAssetId request;
 };
 
 }   //  namespace host

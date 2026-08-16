@@ -235,8 +235,7 @@ void CHost::run() noexcept
         return executive_package.post(outbound_msg);
     };
 
-    const auto post_tga_save_result = [&executive_package](
-        const std::int32_t executive_slot, const bool success) noexcept
+    const auto post_tga_save_result = [&executive_package](const std::int32_t executive_slot, const bool success) noexcept
     {
         TgaSaveResult result;
         result.success = success;
@@ -282,84 +281,10 @@ void CHost::run() noexcept
                         }
 
                         const std::int32_t executive_slot = state->executive_slot;
+                        const CAssetId request = state->request;
                         (void)post_tga_save_result(executive_slot, result.success);
+                        (void)assets.erase(request);
                         (void)async_states.release(async_slot);
-                        break;
-                    }
-                    case k_type_id_v<TgaLoadRequest>.raw_value():
-                    {
-                        MV_DETAIL("Host: Recieved a TGA load request");
-
-                        TgaLoadRequest tga_load_request;
-                        (void)inbound_msg.copy_payload_to(tga_load_request);
-                        const std::int32_t executive_slot = inbound_msg.query_async_slot();
-                        const std::int32_t async_slot = async_states.acquire<SHostTgaFileLoadState>();
-                        SHostTgaFileLoadState* const state = async_states.payload<SHostTgaFileLoadState>(async_slot);
-                        if (state == nullptr)
-                        {
-                            MV_CRITICAL_EVENT("Host: Failed to acquire TGA load state");
-                            (void)post_tga_load_result(executive_slot, CAssetId{}, image::codec::tga::decoded_image_desc::RGBA, false);
-                            break;
-                        }
-                        state->executive_slot = executive_slot;
-                        state->file = tga_load_request.file;
-                        state->vflip = tga_load_request.vflip;
-
-                        threading::CThreadPackage& outbound_package = *thread_package(EWorkerThreadID::bg_file_io);
-                        FileLoadRequest file_load_request;
-                        file_load_request.file = state->file;
-                        threading::CErasedPodMsg outbound_msg;
-                        outbound_msg.set_async_slot(async_slot);
-                        outbound_msg.assign_payload(file_load_request);
-                        if (!outbound_package.post(outbound_msg))
-                        {
-                            (void)async_states.release(async_slot);
-                            (void)post_tga_load_result(executive_slot, CAssetId{}, image::codec::tga::decoded_image_desc::RGBA, false);
-                        }
-                        break;
-                    }
-                    case k_type_id_v<TgaSaveRequest>.raw_value():
-                    {
-                        MV_DETAIL("Host: Recieved a TGA save request");
-
-                        TgaSaveRequest tga_save_request;
-                        (void)inbound_msg.copy_payload_to(tga_save_request);
-                        const CAssetRecord* const source_record = assets.resolve(tga_save_request.source);
-                        const DecodedTga* const source = (source_record != nullptr) ? source_record->payload<DecodedTga>() : nullptr;
-                        if ((source == nullptr) || !source->buffer.is_ready())
-                        {
-                            MV_CRITICAL_EVENT("Host: TGA save request has invalid source asset");
-                            (void)post_tga_save_result(inbound_msg.query_async_slot(), false);
-                            break;
-                        }
-
-                        const std::int32_t executive_slot = inbound_msg.query_async_slot();
-                        const std::int32_t async_slot = async_states.acquire<SHostTgaEncodeState>();
-                        SHostTgaEncodeState* const state = async_states.payload<SHostTgaEncodeState>(async_slot);
-                        if (state == nullptr)
-                        {
-                            MV_CRITICAL_EVENT("Host: Failed to acquire TGA encode state");
-                            (void)post_tga_save_result(executive_slot, false);
-                            break;
-                        }
-                        state->executive_slot = executive_slot;
-                        state->source = tga_save_request.source;
-                        state->file = tga_save_request.file;
-                        state->options = tga_save_request.options;
-
-                        const CByteRectConstView source_view = source->buffer.const_view();
-                        threading::CThreadPackage& outbound_package = *thread_package(EWorkerThreadID::bg_conditioning);
-                        TgaEncodeRequest tga_encode_request;
-                        tga_encode_request.view = source_view;
-                        tga_encode_request.options = state->options;
-                        threading::CErasedPodMsg outbound_msg;
-                        outbound_msg.set_async_slot(async_slot);
-                        outbound_msg.assign_payload(tga_encode_request);
-                        if (!outbound_package.post(outbound_msg))
-                        {
-                            (void)async_states.release(async_slot);
-                            (void)post_tga_save_result(executive_slot, false);
-                        }
                         break;
                     }
                     case k_type_id_v<UnrecognisedMsg>.raw_value():
@@ -373,11 +298,9 @@ void CHost::run() noexcept
                     default:
                     {
                         system_type_id unrecognised_id;
-                        if (inbound_msg.query_message_type_id().try_system_type_id(
-                                unrecognised_id))
+                        if (inbound_msg.query_message_type_id().try_system_type_id(unrecognised_id))
                         {
-                            MV_DETAIL("Host: Recieved an unrecognised message type {}",
-                                unrecognised_id);
+                            MV_DETAIL("Host: Recieved an unrecognised message type {}", unrecognised_id);
                         }
                         else
                         {
@@ -396,6 +319,121 @@ void CHost::run() noexcept
                 CErasedOwner content = inbound_owned_msg.take_owner();
                 switch (inbound_owned_msg.query_message_type_id().raw_value())
                 {
+                    case k_type_id_v<TgaLoadRequest>.raw_value():
+                    {
+                        MV_DETAIL("Host: Recieved an owned TGA load request");
+
+                        const std::int32_t executive_slot = inbound_owned_msg.query_async_slot();
+                        TgaLoadRequest* const incoming_request = content.payload<TgaLoadRequest>();
+                        if ((incoming_request == nullptr) || (incoming_request->file.length() == 0u))
+                        {
+                            MV_CRITICAL_EVENT("Host: TGA load request has invalid owned content");
+                            (void)post_tga_load_result(executive_slot, CAssetId{},
+                                image::codec::tga::decoded_image_desc::RGBA, false);
+                            break;
+                        }
+
+                        const std::int32_t async_slot = async_states.acquire<SHostTgaFileLoadState>();
+                        SHostTgaFileLoadState* const state = async_states.payload<SHostTgaFileLoadState>(async_slot);
+                        if (state == nullptr)
+                        {
+                            MV_CRITICAL_EVENT("Host: Failed to acquire TGA load state");
+                            (void)post_tga_load_result(executive_slot, CAssetId{},
+                                image::codec::tga::decoded_image_desc::RGBA,
+                                false);
+                            break;
+                        }
+
+                        const CAssetId request = assets.insert(std::move(content));
+                        const CAssetRecord* const request_record = assets.resolve(request);
+                        const TgaLoadRequest* const stored_request = (request_record != nullptr) ? request_record->payload<TgaLoadRequest>() : nullptr;
+                        if (stored_request == nullptr)
+                        {
+                            MV_CRITICAL_EVENT("Host: Failed to retain TGA load request");
+                            (void)assets.erase(request);
+                            (void)async_states.release(async_slot);
+                            (void)post_tga_load_result(executive_slot, CAssetId{},
+                                image::codec::tga::decoded_image_desc::RGBA, false);
+                            break;
+                        }
+
+                        state->executive_slot = executive_slot;
+                        state->request = request;
+
+                        threading::CThreadPackage& outbound_package = *thread_package(EWorkerThreadID::bg_file_io);
+                        FileLoadRequest file_load_request;
+                        file_load_request.file = stored_request->file.cstring();
+                        threading::CErasedPodMsg outbound_msg;
+                        outbound_msg.set_async_slot(async_slot);
+                        outbound_msg.assign_payload(file_load_request);
+                        if (!outbound_package.post(outbound_msg))
+                        {
+                            (void)assets.erase(request);
+                            (void)async_states.release(async_slot);
+                            (void)post_tga_load_result(executive_slot, CAssetId{},
+                                image::codec::tga::decoded_image_desc::RGBA, false);
+                        }
+                        break;
+                    }
+                    case k_type_id_v<TgaSaveRequest>.raw_value():
+                    {
+                        MV_DETAIL("Host: Recieved an owned TGA save request");
+
+                        const std::int32_t executive_slot = inbound_owned_msg.query_async_slot();
+                        TgaSaveRequest* const incoming_request = content.payload<TgaSaveRequest>();
+                        const CAssetRecord* const source_record = (incoming_request != nullptr) ? assets.resolve(incoming_request->source) : nullptr;
+                        const DecodedTga* const source = (source_record != nullptr) ? source_record->payload<DecodedTga>() : nullptr;
+                        if ((incoming_request == nullptr) ||
+                            (incoming_request->file.length() == 0u) ||
+                            (source == nullptr) || !source->buffer.is_ready())
+                        {
+                            MV_CRITICAL_EVENT("Host: TGA save request has invalid owned content or source asset");
+                            (void)post_tga_save_result(executive_slot, false);
+                            break;
+                        }
+
+                        const std::int32_t async_slot = async_states.acquire<SHostTgaEncodeState>();
+                        SHostTgaEncodeState* const state = async_states.payload<SHostTgaEncodeState>(async_slot);
+                        if (state == nullptr)
+                        {
+                            MV_CRITICAL_EVENT("Host: Failed to acquire TGA encode state");
+                            (void)post_tga_save_result(executive_slot, false);
+                            break;
+                        }
+
+                        const CAssetId source_asset = incoming_request->source;
+                        const CAssetId request = assets.insert(std::move(content));
+                        const CAssetRecord* const request_record = assets.resolve(request);
+                        const TgaSaveRequest* const stored_request = (request_record != nullptr) ? request_record->payload<TgaSaveRequest>() : nullptr;
+                        if (stored_request == nullptr)
+                        {
+                            MV_CRITICAL_EVENT("Host: Failed to retain TGA save request");
+                            (void)assets.erase(request);
+                            (void)async_states.release(async_slot);
+                            (void)post_tga_save_result(executive_slot, false);
+                            break;
+                        }
+
+                        state->executive_slot = executive_slot;
+                        state->source = source_asset;
+                        state->request = request;
+
+                        const CByteRectConstView source_view = source->buffer.const_view();
+                        threading::CThreadPackage& outbound_package = *thread_package(EWorkerThreadID::bg_conditioning);
+                        TgaEncodeRequest tga_encode_request;
+                        tga_encode_request.view = source_view;
+                        tga_encode_request.options = stored_request->options;
+                        threading::CErasedPodMsg outbound_msg;
+                        outbound_msg.set_async_slot(async_slot);
+                        outbound_msg.assign_payload(tga_encode_request);
+                        if (!outbound_package.post(outbound_msg))
+                        {
+                            (void)assets.erase(request);
+                            (void)async_states.release(async_slot);
+                            (void)post_tga_save_result(executive_slot, false);
+                        }
+                        break;
+                    }
                     case k_type_id_v<FileLoadResult>.raw_value():
                     {
                         MV_DETAIL("Host: Took ownership of a loaded file buffer");
@@ -409,10 +447,23 @@ void CHost::run() noexcept
                         }
 
                         const std::int32_t executive_slot = load_state->executive_slot;
-                        const bool vflip = load_state->vflip;
+                        const CAssetId request = load_state->request;
+                        const CAssetRecord* const request_record = assets.resolve(request);
+                        const TgaLoadRequest* const load_request = (request_record != nullptr) ? request_record->payload<TgaLoadRequest>() : nullptr;
+                        const bool vflip = (load_request != nullptr) && load_request->vflip;
                         if ((result == nullptr) || !result->buffer.is_ready())
                         {
                             (void)post_tga_load_result(executive_slot, CAssetId{}, image::codec::tga::decoded_image_desc::RGBA, false);
+                            (void)assets.erase(request);
+                            (void)async_states.release(async_slot);
+                            break;
+                        }
+                        if (load_request == nullptr)
+                        {
+                            MV_CRITICAL_EVENT("Host: TGA load state has invalid request asset");
+                            (void)post_tga_load_result(executive_slot, CAssetId{},
+                                image::codec::tga::decoded_image_desc::RGBA, false);
+                            (void)assets.erase(request);
                             (void)async_states.release(async_slot);
                             break;
                         }
@@ -423,9 +474,12 @@ void CHost::run() noexcept
                         if (loaded == nullptr)
                         {
                             (void)post_tga_load_result(executive_slot, CAssetId{}, image::codec::tga::decoded_image_desc::RGBA, false);
+                            (void)assets.erase(request);
                             (void)async_states.release(async_slot);
                             break;
                         }
+
+                        (void)assets.erase(request);
 
                         SHostTgaDecodeState* const decode_state = async_states.redefine<SHostTgaDecodeState>(async_slot);
                         decode_state->executive_slot = executive_slot;
@@ -459,10 +513,21 @@ void CHost::run() noexcept
                         }
 
                         const std::int32_t executive_slot = encode_state->executive_slot;
-                        const char* const file = encode_state->file;
+                        const CAssetId request = encode_state->request;
+                        const CAssetRecord* const request_record = assets.resolve(request);
+                        const TgaSaveRequest* const save_request = (request_record != nullptr) ? request_record->payload<TgaSaveRequest>() : nullptr;
                         if ((result == nullptr) || !result->buffer.is_ready())
                         {
                             (void)post_tga_save_result(executive_slot, false);
+                            (void)assets.erase(request);
+                            (void)async_states.release(async_slot);
+                            break;
+                        }
+                        if (save_request == nullptr)
+                        {
+                            MV_CRITICAL_EVENT("Host: TGA encode state has invalid request asset");
+                            (void)post_tga_save_result(executive_slot, false);
+                            (void)assets.erase(request);
                             (void)async_states.release(async_slot);
                             break;
                         }
@@ -473,6 +538,7 @@ void CHost::run() noexcept
                         if (encoded == nullptr)
                         {
                             (void)post_tga_save_result(executive_slot, false);
+                            (void)assets.erase(request);
                             (void)async_states.release(async_slot);
                             break;
                         }
@@ -480,11 +546,12 @@ void CHost::run() noexcept
                         SHostTgaFileSaveState* const save_state = async_states.redefine<SHostTgaFileSaveState>(async_slot);
                         save_state->executive_slot = executive_slot;
                         save_state->encoded_file = encoded_file;
+                        save_state->request = request;
 
                         const CByteConstView encoded_view = encoded->buffer.const_view();
                         threading::CThreadPackage& outbound_package = *thread_package(EWorkerThreadID::bg_file_io);
                         FileSaveRequest file_save_request;
-                        file_save_request.file = file;
+                        file_save_request.file = save_request->file.cstring();
                         file_save_request.view = encoded_view;
                         threading::CErasedPodMsg outbound_msg;
                         outbound_msg.set_async_slot(async_slot);
@@ -492,6 +559,7 @@ void CHost::run() noexcept
                         if (!outbound_package.post(outbound_msg))
                         {
                             (void)post_tga_save_result(executive_slot, false);
+                            (void)assets.erase(request);
                             (void)async_states.release(async_slot);
                         }
                         break;
@@ -526,12 +594,10 @@ void CHost::run() noexcept
                     default:
                     {
                         system_type_id unrecognised_id;
-                        if (inbound_owned_msg.query_message_type_id().try_system_type_id(
-                                unrecognised_id))
+                        if (inbound_owned_msg.query_message_type_id().try_system_type_id(unrecognised_id))
                         {
                             MV_CRITICAL_EVENT(
-                                "Host: Recieved an unknown owning message type {}",
-                                unrecognised_id);
+                                "Host: Recieved an unknown owning message type {}", unrecognised_id);
                         }
                         else
                         {

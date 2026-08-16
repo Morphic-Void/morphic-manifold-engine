@@ -23,9 +23,13 @@ backlog:
 
 - Add command-line selection of named tests and test groups without requiring
   the complete aggregate suite.
-- After the current module, ID-system, debug-transport, and layout work, audit
-  and complete the Manifold-to-Morphic rebrand, including the legacy backlog
-  filename, local working directory, GitHub repository, references, and links.
+- After the current layout and consolidation work, add a tool-independent
+  build description that preserves Core as per-consumer shared source, attempt
+  Linux compilation, and distinguish portable-Core issues from missing Linux
+  platform implementations.
+- After that build-portability pass, audit and complete the
+  Manifold-to-Morphic rebrand, including the legacy backlog filename, local
+  working directory, GitHub repository, references, and links.
 - Build a pre-build code policy validator once the new layout and component
   rules are stable, covering approved allocation paths, STL and exception
   restrictions, ID registration, includes, and dependency direction.

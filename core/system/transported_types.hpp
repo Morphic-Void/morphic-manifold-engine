@@ -26,13 +26,18 @@ struct UnrecognisedMsg { system_type_id msg_id; };
 
 struct FileLoadRequest { const char* file; };
 struct FileSaveRequest { const char* file; CByteConstView view; };
-struct TgaLoadRequest { const char* file; bool vflip; };
+
+struct TgaLoadRequest
+{
+    CSimpleString file;
+    bool vflip{ false };
+};
 
 struct TgaSaveRequest
 {
-    const char* file;
-    CAssetId source;
-    image::codec::tga::EncodeOptions options;
+    CSimpleString file;
+    CAssetId source{};
+    image::codec::tga::EncodeOptions options{};
 };
 
 struct TgaEncodeRequest

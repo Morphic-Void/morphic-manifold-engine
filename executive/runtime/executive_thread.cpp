@@ -10,6 +10,7 @@
 
 #include <cstdint>      //  std::int32_t, std::uint32_t, std::uint64_t
 #include <cstring>      //  std::strcmp
+#include <utility>      //  std::move
 
 #include "executive/runtime/executive_thread.hpp"
 #include "executive/module/types/executive_local_type_registry.hpp"
@@ -103,10 +104,8 @@ bool CExecutiveThread::startup() noexcept
 
 bool CExecutiveThread::initialise() noexcept
 {
-    const char* const registry_name =
-        system_id_registry::lookup_type_name(system_type_ids::file_load_request);
-    if ((registry_name == nullptr) ||
-        (std::strcmp(registry_name, "file_load_request") != 0))
+    const char* const registry_name = system_id_registry::lookup_type_name(system_type_ids::file_load_request);
+    if ((registry_name == nullptr) || (std::strcmp(registry_name, "file_load_request") != 0))
     {
         fail(1u);
         return false;
@@ -129,13 +128,20 @@ bool CExecutiveThread::initialise() noexcept
         return false;
     }
 
-    TgaLoadRequest tga_load_request;
-    tga_load_request.file = "test_data/input/files/test_input.tga";
-    tga_load_request.vflip = false;
-    threading::CErasedPodMsg initial_msg;
+    CErasedOwner tga_load_owner = CErasedOwner::create<TgaLoadRequest>();
+    TgaLoadRequest* const tga_load_request = tga_load_owner.payload<TgaLoadRequest>();
+    if ((tga_load_request == nullptr) || !tga_load_request->file.set("test_data/input/files/test_input.tga"))
+    {
+        (void)m_async_states.release(tga_slot);
+        fail(1u);
+        return false;
+    }
+    tga_load_request->vflip = false;
+    threading::CErasedOwnerMsg initial_msg;
+    initial_msg.set_message_type<TgaLoadRequest>();
     initial_msg.set_async_slot(tga_slot);
-    initial_msg.assign_payload(tga_load_request);
-    if (!m_context.post(initial_msg))
+    initial_msg.set_owner(std::move(tga_load_owner));
+    if (!m_context.post(std::move(initial_msg)))
     {
         (void)m_async_states.release(tga_slot);
         fail(1u);
@@ -193,21 +199,28 @@ void CExecutiveThread::operate() noexcept
                     SExecutiveTgaSaveState* const save_state = m_async_states.redefine<SExecutiveTgaSaveState>(async_slot);
                     save_state->source = tga_load_result.asset;
 
-                    TgaSaveRequest tga_save_request;
-                    tga_save_request.file = "test_data/output/files/test_output.tga";
-                    tga_save_request.source = save_state->source;
-                    tga_save_request.options.src =
+                    CErasedOwner tga_save_owner = CErasedOwner::create<TgaSaveRequest>();
+                    TgaSaveRequest* const tga_save_request = tga_save_owner.payload<TgaSaveRequest>();
+                    if ((tga_save_request == nullptr) || !tga_save_request->file.set("test_data/output/files/test_output.tga"))
+                    {
+                        (void)m_async_states.release(async_slot);
+                        fail(3u);
+                        break;
+                    }
+                    tga_save_request->source = save_state->source;
+                    tga_save_request->options.src =
                         (tga_load_result.desc == image::codec::tga::decoded_image_desc::Gray) ?
                         image::codec::tga::image_encode_src::Gray :
                         image::codec::tga::image_encode_src::AutoTrue32;
-                    tga_save_request.options.allow_clut = true;
-                    tga_save_request.options.allow_rle = true;
-                    tga_save_request.options.vflip = false;
+                    tga_save_request->options.allow_clut = true;
+                    tga_save_request->options.allow_rle = true;
+                    tga_save_request->options.vflip = false;
 
-                    threading::CErasedPodMsg outbound_msg;
+                    threading::CErasedOwnerMsg outbound_msg;
+                    outbound_msg.set_message_type<TgaSaveRequest>();
                     outbound_msg.set_async_slot(async_slot);
-                    outbound_msg.assign_payload(tga_save_request);
-                    if (!m_context.post(outbound_msg))
+                    outbound_msg.set_owner(std::move(tga_save_owner));
+                    if (!m_context.post(std::move(outbound_msg)))
                     {
                         (void)m_async_states.release(async_slot);
                         fail(3u);
@@ -241,8 +254,7 @@ void CExecutiveThread::operate() noexcept
                 default:
                 {
                     system_type_id unrecognised_id;
-                    if (!inbound_msg.query_message_type_id().try_system_type_id(
-                            unrecognised_id))
+                    if (!inbound_msg.query_message_type_id().try_system_type_id(unrecognised_id))
                     {
                         MV_DETAIL("Executive: Unrecognised LOCAL message type");
                         break;

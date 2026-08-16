@@ -220,6 +220,13 @@ public:
     [[nodiscard]] bool reattribute(memory::CMemoryContext* const context = nullptr) noexcept;
 
 private:
+    friend class CErasedOwner;
+
+    [[nodiscard]] memory::CMemoryContext* memory_source_context() const noexcept;
+    void unsafe_replace_memory_context_without_accounting(
+        memory::CMemoryContext* const expected_source,
+        memory::CMemoryContext* const target) noexcept;
+
     bool private_allocate(const std::uint8_t* const string, const std::size_t length) noexcept;
 
     memory::CMemoryToken m_string{ 1u, 1u };
@@ -534,6 +541,18 @@ inline void CSimpleString::deallocate() noexcept
 {
     m_string.deallocate();
     m_length = 0u;
+}
+
+inline memory::CMemoryContext* CSimpleString::memory_source_context() const noexcept
+{
+    return m_string.owns_storage() ? m_string.context() : nullptr;
+}
+
+inline void CSimpleString::unsafe_replace_memory_context_without_accounting(
+    memory::CMemoryContext* const expected_source,
+    memory::CMemoryContext* const target) noexcept
+{
+    m_string.unsafe_replace_context_without_accounting(expected_source, target);
 }
 
 inline std::uint32_t CSimpleString::memory_token_count() const noexcept
