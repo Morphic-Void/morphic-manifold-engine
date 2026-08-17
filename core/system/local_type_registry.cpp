@@ -45,7 +45,7 @@ static bool s_view_installed{ false };
 
 bool validate_view(const SLocalTypeRegistryView& view) noexcept
 {
-    if ((view.type_count > local_type_ids::k_capacity) ||
+    if ((view.type_count > local_type_ids::ops::k_capacity) ||
         ((view.type_count == 0u) != (view.types == nullptr)))
     {
         return false;
@@ -54,10 +54,10 @@ bool validate_view(const SLocalTypeRegistryView& view) noexcept
     for (std::uint32_t index = 0u; index < view.type_count; ++index)
     {
         const SLocalTypeRegistration& registration = view.types[index];
-        if (!local_type_ids::is_valid_id(registration.id) ||
-            !local_type_ids::is_valid_index(registration.index) ||
+        if (!local_type_ids::ops::is_valid_id(registration.id) ||
+            !local_type_ids::ops::is_valid_index(registration.index) ||
             (registration.index != index) ||
-            (local_type_ids::encode_id(registration.index) != registration.id) ||
+            (local_type_ids::ops::encode_id(registration.index) != registration.id) ||
             !validate_name(registration.short_name))
         {
             return false;
@@ -91,14 +91,14 @@ const SLocalTypeRegistration* find_type(
     const SLocalTypeRegistryView* const view,
     const local_type_id id) noexcept
 {
-    if ((view == nullptr) || !local_type_ids::is_valid_id(id) ||
-        (view->type_count > local_type_ids::k_capacity) ||
+    if ((view == nullptr) || !local_type_ids::ops::is_valid_id(id) ||
+        (view->type_count > local_type_ids::ops::k_capacity) ||
         !((view->type_count == 0u) ? (view->types == nullptr) : (view->types != nullptr)))
     {
         return nullptr;
     }
 
-    const local_type_ids::index_type index = local_type_ids::decode_id(id);
+    const local_type_ids::index_type index = local_type_ids::ops::decode_id(id);
     if (index >= view->type_count)
     {
         return nullptr;

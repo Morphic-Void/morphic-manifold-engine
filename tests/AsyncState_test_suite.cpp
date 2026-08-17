@@ -21,7 +21,7 @@ struct SLocalState { std::uint32_t value; };
 
 MV_REGISTER_LOCAL_TYPE(
     async_state_test_types::SLocalState,
-    local_type_ids::encode_id(local_type_ids::encode_index(1235u)));
+    local_type_ids::ops::encode_id(local_type_ids::ops::encode_index(1235u)));
 
 namespace
 {

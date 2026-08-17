@@ -26,13 +26,13 @@ make_system_operations() noexcept
     std::array<SRegistration, system_type_ids::k_count> result{};
 
 #define MV_ERASED_OWNER_PAYLOAD(type) \
-    result[system_type_ids::decode_index( \
-        system_type_ids::decode_id(k_system_type_id_v<type>))] = \
+    result[system_type_ids::ops::decode_index( \
+        system_type_ids::ops::decode_id(k_system_type_id_v<type>))] = \
         SRegistration{ k_type_id_v<type>, \
             TDefaultOperationsFactory<type>::make() };
 #define MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE(type, member) \
-    result[system_type_ids::decode_index( \
-        system_type_ids::decode_id(k_system_type_id_v<type>))] = \
+    result[system_type_ids::ops::decode_index( \
+        system_type_ids::ops::decode_id(k_system_type_id_v<type>))] = \
         SRegistration{ k_type_id_v<type>, \
             TNestedOperationsFactory<type, &type::member>::make() };
 #include "system/system_erased_owner_payloads.def"
@@ -50,7 +50,7 @@ bool s_view_installed{ false };
 
 [[nodiscard]] bool validate_category_view(const SCategoryView& view, const ETypeIdCategory category) noexcept
 {
-    if ((view.count > system_type_ids::k_capacity) ||
+    if ((view.count > system_type_ids::ops::k_capacity) ||
         ((view.count == 0u) != (view.registrations == nullptr)))
     {
         return false;
@@ -78,7 +78,7 @@ bool s_view_installed{ false };
         {
             system_type_id identity;
             if (!registration.identity.try_system_type_id(identity) ||
-                (system_type_ids::decode_index(system_type_ids::decode_id(identity)) != index))
+                (system_type_ids::ops::decode_index(system_type_ids::ops::decode_id(identity)) != index))
             {
                 return false;
             }
@@ -87,7 +87,7 @@ bool s_view_installed{ false };
         {
             local_type_id identity;
             if (!registration.identity.try_local_type_id(identity) ||
-                (local_type_ids::decode_index(local_type_ids::decode_id(identity)) != index))
+                (local_type_ids::ops::decode_index(local_type_ids::ops::decode_id(identity)) != index))
             {
                 return false;
             }
@@ -149,7 +149,7 @@ const SRegistration* find(const SRegistryView* const view, const type_id identit
     system_type_id system_identity;
     if (identity.try_system_type_id(system_identity))
     {
-        const std::uint32_t index = system_type_ids::decode_index(system_type_ids::decode_id(system_identity));
+        const std::uint32_t index = system_type_ids::ops::decode_index(system_type_ids::ops::decode_id(system_identity));
         return internal::find_in_category(view->system, identity, index);
     }
 
@@ -158,7 +158,7 @@ const SRegistration* find(const SRegistryView* const view, const type_id identit
     {
         return nullptr;
     }
-    const std::uint32_t index = local_type_ids::decode_index(local_type_ids::decode_id(local_identity));
+    const std::uint32_t index = local_type_ids::ops::decode_index(local_type_ids::ops::decode_id(local_identity));
     return internal::find_in_category(view->local, identity, index);
 }
 

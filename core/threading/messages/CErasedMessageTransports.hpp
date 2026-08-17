@@ -140,12 +140,12 @@ inline CErasedPodMsgTransport::CErasedPodMsgTransport(const module_ids::id_type 
 
 inline bool CErasedPodMsgTransport::posting_is_valid() const noexcept
 {
-    return module_ids::is_valid_id(m_destination_module_id) && m_transport.posting_is_valid();
+    return module_ids::ops::is_valid_id(m_destination_module_id) && m_transport.posting_is_valid();
 }
 
 inline bool CErasedPodMsgTransport::posting_is_ready() const noexcept
 {
-    return module_ids::is_valid_id(m_destination_module_id) && m_transport.posting_is_ready();
+    return module_ids::ops::is_valid_id(m_destination_module_id) && m_transport.posting_is_ready();
 }
 
 inline bool CErasedPodMsgTransport::posting_poisoned() const noexcept
@@ -160,12 +160,12 @@ inline bool CErasedPodMsgTransport::post_would_reallocate(const std::uint32_t co
 
 inline bool CErasedPodMsgTransport::reading_is_valid() const noexcept
 {
-    return module_ids::is_valid_id(m_destination_module_id) && m_transport.reading_is_valid();
+    return module_ids::ops::is_valid_id(m_destination_module_id) && m_transport.reading_is_valid();
 }
 
 inline bool CErasedPodMsgTransport::reading_is_ready() const noexcept
 {
-    return module_ids::is_valid_id(m_destination_module_id) && m_transport.reading_is_ready();
+    return module_ids::ops::is_valid_id(m_destination_module_id) && m_transport.reading_is_ready();
 }
 
 inline bool CErasedPodMsgTransport::read(threading::CErasedPodMsg& msg) noexcept
@@ -185,12 +185,12 @@ inline std::uint32_t CErasedPodMsgTransport::refresh_readable_count() noexcept
 
 inline bool CErasedPodMsgTransport::initialise_fixed(const std::uint32_t capacity, const bool allow_discard) noexcept
 {
-    return module_ids::is_valid_id(m_destination_module_id) && m_transport.initialise_fixed(capacity, allow_discard);
+    return module_ids::ops::is_valid_id(m_destination_module_id) && m_transport.initialise_fixed(capacity, allow_discard);
 }
 
 inline bool CErasedPodMsgTransport::initialise_growable(const std::uint32_t capacity, const std::uint32_t max_capacity) noexcept
 {
-    return module_ids::is_valid_id(m_destination_module_id) && m_transport.initialise_growable(capacity, max_capacity);
+    return module_ids::ops::is_valid_id(m_destination_module_id) && m_transport.initialise_growable(capacity, max_capacity);
 }
 
 inline memory::CMemoryContext* CErasedPodMsgTransport::memory_context() const noexcept

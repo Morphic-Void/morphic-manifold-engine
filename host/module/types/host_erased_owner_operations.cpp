@@ -24,10 +24,10 @@ constexpr std::array<erased_owner_operations::SRegistration, host_local_type_ids
     std::array<erased_owner_operations::SRegistration, host_local_type_ids::k_count> result{};
 
 #define MV_ERASED_OWNER_PAYLOAD(type) \
-    result[local_type_ids::decode_index(local_type_ids::decode_id(k_local_type_id_v<type>))] = \
+    result[local_type_ids::ops::decode_index(local_type_ids::ops::decode_id(k_local_type_id_v<type>))] = \
         erased_owner_operations::SRegistration{ k_type_id_v<type>, erased_owner_operations::TDefaultOperationsFactory<type>::make() };
 #define MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE(type, member) \
-    result[local_type_ids::decode_index(local_type_ids::decode_id(k_local_type_id_v<type>))] = \
+    result[local_type_ids::ops::decode_index(local_type_ids::ops::decode_id(k_local_type_id_v<type>))] = \
         erased_owner_operations::SRegistration{ k_type_id_v<type>, erased_owner_operations::TNestedOperationsFactory<type, &type::member>::make() };
 #include "host/module/types/host_erased_owner_payloads.def"
 #undef MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE

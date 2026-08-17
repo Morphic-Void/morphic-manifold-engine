@@ -31,7 +31,7 @@ struct TTypeIdBindingCategory<T> \
 template<> \
 struct TLocalTypeId<T> \
 { \
-    static_assert(local_type_ids::is_valid_id(type_id_value), \
+    static_assert(local_type_ids::ops::is_valid_id(type_id_value), \
         "MV_REGISTER_LOCAL_TYPE requires a valid local type id."); \
     static constexpr local_type_id value = type_id_value; \
 }

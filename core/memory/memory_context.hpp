@@ -203,8 +203,8 @@ inline std::uint64_t CMemoryContext::get_live_allocated_bytes() const noexcept
 
 inline bool CMemoryContext::belongs_to_module(const module_ids::id_type module_id) const noexcept
 {
-    return module_ids::is_valid_id(module_id) && system_ids::is_valid_id(m_system_id) &&
-        (system_ids::get_module_id(m_system_id) == module_id);
+    return module_ids::ops::is_valid_id(module_id) && system_ids::ops::is_valid_id(m_system_id) &&
+        (system_ids::ops::get_module_id(m_system_id) == module_id);
 }
 
 inline bool CMemoryContext::is_attribution_empty() const noexcept

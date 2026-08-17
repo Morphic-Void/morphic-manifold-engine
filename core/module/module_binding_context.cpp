@@ -44,8 +44,8 @@ bool CModuleBindingContext::is_thread_context_ready(const void* const provisioni
     return is_ready() &&
         (provisioning != nullptr) &&
         (t_thread_provisioning == provisioning) &&
-        module_ids::is_valid_id(system_context::get_ambient_module_id()) &&
-        thread_ids::is_valid_id(system_context::get_ambient_thread_id()) &&
+        module_ids::ops::is_valid_id(system_context::get_ambient_module_id()) &&
+        thread_ids::ops::is_valid_id(system_context::get_ambient_thread_id()) &&
         (memory::get_ambient_memory_context() != nullptr) &&
         (debug_system::get_service() != nullptr);
 }
@@ -56,7 +56,7 @@ EBindingResult CModuleBindingContext::bootstrap(SBootstrapFunctions* const funct
         (m_config.query_local_type_registry_view == nullptr) ||
         (m_config.query_local_erased_owner_operations_view == nullptr) ||
         !is_valid_advertised_identity(m_config.advertised_identity) ||
-        !module_ids::is_valid_id(m_config.compatible_advertised_peer_id) ||
+        !module_ids::ops::is_valid_id(m_config.compatible_advertised_peer_id) ||
         (m_config.minimum_peer_version_major > m_config.maximum_peer_version_major))
     {
         return EBindingResult::invalid_argument;
@@ -137,7 +137,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_peer_identity(cons
 
 EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_module_id(const module_ids::id_type module_id) noexcept
 {
-    if ((s_active_binding == nullptr) || !module_ids::is_valid_id(module_id))
+    if ((s_active_binding == nullptr) || !module_ids::ops::is_valid_id(module_id))
     {
         return EBindingResult::invalid_argument;
     }
@@ -171,7 +171,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_module_memory_cont
     if ((s_active_binding == nullptr) ||
         s_active_binding->m_module_memory_context_installed ||
         (context == nullptr) || !context->is_usable() ||
-        !module_ids::is_valid_id(ambient_module_id) ||
+        !module_ids::ops::is_valid_id(ambient_module_id) ||
         !context->belongs_to_module(ambient_module_id) ||
         !context->is_attribution_empty())
     {
@@ -205,7 +205,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_debug_service(debu
 EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_ambient_thread_id(const thread_ids::id_type thread_id) noexcept
 {
     if ((s_active_binding == nullptr) || !s_active_binding->is_ready() ||
-        !thread_ids::is_valid_id(thread_id))
+        !thread_ids::ops::is_valid_id(thread_id))
     {
         return EBindingResult::invalid_argument;
     }
@@ -220,7 +220,7 @@ EBindingResult MV_STD_ABI_CALL CModuleBindingContext::install_thread_memory_cont
     if ((s_active_binding == nullptr) || !s_active_binding->is_ready() ||
         ((context != nullptr) &&
             (!context->is_usable() ||
-                !module_ids::is_valid_id(ambient_module_id) ||
+                !module_ids::ops::is_valid_id(ambient_module_id) ||
                 !context->belongs_to_module(ambient_module_id))))
     {
         return EBindingResult::invalid_argument;

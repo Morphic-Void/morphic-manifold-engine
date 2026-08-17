@@ -27,7 +27,7 @@ inline constexpr std::uint32_t k_max_system_name_size = 4096u;
 struct STypeRegistration
 {
     system_type_id id{ system_type_ids::undefined };
-    system_type_ids::index_type index{ system_type_ids::k_invalid_index };
+    system_type_ids::index_type index{ system_type_ids::ops::k_invalid_index };
     const char* name{ nullptr };
     std::uint32_t name_size{ 0u };
 };

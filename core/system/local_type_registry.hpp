@@ -52,7 +52,7 @@ constexpr SLocalTypeName make_name(const char (&name)[N]) noexcept
 struct SLocalTypeRegistration
 {
     local_type_id id{};
-    local_type_ids::index_type index{ local_type_ids::k_invalid_index };
+    local_type_ids::index_type index{ local_type_ids::ops::k_invalid_index };
     SLocalTypeName short_name{};
 };
 

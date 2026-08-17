@@ -34,13 +34,13 @@ enum : local_type_ids::index_type
 };
 #undef MV_LOCAL_TYPE
 
-static_assert(k_count <= local_type_ids::k_capacity);
+static_assert(k_count <= local_type_ids::ops::k_capacity);
 
 #define MV_LOCAL_TYPE(name, cpp_type) \
     inline constexpr local_type_ids::index_type name##_index = \
-        local_type_ids::encode_index(name##_index_value); \
+        local_type_ids::ops::encode_index(name##_index_value); \
     inline constexpr local_type_id name = \
-        local_type_ids::encode_id(name##_index);
+        local_type_ids::ops::encode_id(name##_index);
 #include "host/module/types/host_local_type_ids.def"
 #undef MV_LOCAL_TYPE
 }

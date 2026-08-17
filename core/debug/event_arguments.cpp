@@ -192,7 +192,7 @@ template<typename T>
     }
 
     char text[64]{};
-    const bool valid = system_type_ids::is_valid_id(id);
+    const bool valid = system_type_ids::ops::is_valid_id(id);
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-type:0x%08x" : "invalid-type:0x%08x",
         static_cast<unsigned int>(id.raw_value()));
@@ -203,7 +203,7 @@ template<typename T>
 [[nodiscard]] EEventFormatResult append_local_type_failure(SOutput& output, const std::uint32_t raw_value) noexcept
 {
     char text[64]{};
-    const bool valid = local_type_ids::is_valid_id(local_type_id{ raw_value });
+    const bool valid = local_type_ids::ops::is_valid_id(local_type_id{ raw_value });
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-local-type:0x%08x" : "invalid-local-type:0x%08x",
         static_cast<unsigned int>(raw_value));
@@ -221,7 +221,7 @@ template<typename T>
         return append(output, text, name_size);
     }
 
-    const bool valid = system_ids::is_valid_id(id);
+    const bool valid = system_ids::ops::is_valid_id(id);
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-system:0x%016llx" : "invalid-system:0x%016llx",
         static_cast<unsigned long long>(id.raw_value()));
@@ -237,7 +237,7 @@ template<typename T>
     }
 
     char text[64]{};
-    const bool valid = module_ids::is_valid_id(id);
+    const bool valid = module_ids::ops::is_valid_id(id);
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-module:0x%016llx" : "invalid-module:0x%016llx",
         static_cast<unsigned long long>(id.raw_value()));
@@ -254,7 +254,7 @@ template<typename T>
     }
 
     char text[64]{};
-    const bool valid = thread_ids::is_valid_id(id);
+    const bool valid = thread_ids::ops::is_valid_id(id);
     const int size = std::snprintf(text, sizeof(text),
         valid ? "unregistered-thread:0x%016llx" : "invalid-thread:0x%016llx",
         static_cast<unsigned long long>(id.raw_value()));

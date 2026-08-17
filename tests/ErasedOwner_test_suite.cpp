@@ -215,8 +215,8 @@ void test_operation_registry_failure_boundaries(TTestContext& ctx)
         &missing_view, k_type_id_v<LoadedFile>) != nullptr);
 
     auto incomplete_local_operations = missing_local_operations;
-    const std::uint32_t local_index = local_type_ids::decode_index(
-        local_type_ids::decode_id(
+    const std::uint32_t local_index = local_type_ids::ops::decode_index(
+        local_type_ids::ops::decode_id(
             k_local_type_id_v<host::SHostTgaFileLoadState>));
     incomplete_local_operations[local_index].identity =
         k_type_id_v<host::SHostTgaFileLoadState>;

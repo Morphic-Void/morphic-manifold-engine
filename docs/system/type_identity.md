@@ -45,11 +45,14 @@ always nonzero. A system ID sets the system flag; a local ID leaves it clear.
 Consequently a missing category bit cannot accidentally produce a system
 identity. Zero remains undefined for both strong types.
 
-Definition lists supply ordinary ordinals. Category-specific `encode_index`
-helpers apply the logical category bit, and `decode_index` removes it only
-after validating the category. `encode_id` accepts the resulting tagged index;
-`decode_id` returns it. This makes the former `0xfffe`/`0xffff` edge explicit:
-`0xfffe` is the last valid system index and `0xffff` is invalid.
+Definition lists supply ordinary ordinals. Named identities, their indices,
+and definition counts remain directly in each `*_ids` namespace. Encoding,
+validation, capacity, and layout operations live in the nested `*_ids::ops`
+namespace. Category-specific `ops::encode_index` helpers apply the logical
+category bit, and `ops::decode_index` removes it only after validating the
+category. `ops::encode_id` accepts the resulting tagged index;
+`ops::decode_id` returns it. This makes the former `0xfffe`/`0xffff` edge
+explicit: `0xfffe` is the last valid system index and `0xffff` is invalid.
 
 `system_type_id` and `local_type_id` are distinct strong C++ types. Their
 validators also reject raw encodings from the other category.
@@ -86,6 +89,11 @@ ordinary ordinal from zero through `payload_mask - 1` has a distinct nonzero
 encoding, and decoding every valid field reproduces its original ordinal.
 Generated mount-point, module, and thread definition counts are checked against
 those capacities at compile time.
+
+The same catalog/operation split applies to runtime identity: named values and
+indices live directly in `mount_point_ids`, `module_ids`, `thread_ids`, and
+`system_ids`, while construction, validation, decomposition, capacity, and
+layout details live beneath each category's `ops` namespace.
 
 Structural validity means that an ID is nonzero, contains no bits outside its
 declared fields, and has every required constituent field. Registration is a

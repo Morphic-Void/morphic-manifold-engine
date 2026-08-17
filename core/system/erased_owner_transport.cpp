@@ -110,7 +110,7 @@ bool CErasedOwnerTransport::attribution_is_valid() const noexcept
 {
     memory::CMemoryContext* const transport_context = memory_context();
     memory::CMemoryContext* const destination_context = (m_recipient_context != nullptr) ? m_recipient_context : transport_context;
-    return module_ids::is_valid_id(m_destination_module_id) &&
+    return module_ids::ops::is_valid_id(m_destination_module_id) &&
         (transport_context != nullptr) && (destination_context != nullptr) &&
         destination_context->belongs_to_module(m_destination_module_id) &&
         ((m_recipient_context == nullptr) || transport_context->is_compatible_with(*m_recipient_context));

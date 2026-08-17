@@ -322,8 +322,8 @@ void test_argument_encoding(TTestContext& ctx)
         debug_system::EEventArgumentType::system_type_id);
 
     const local_type_id registered_local = host_local_type_ids::host_runtime;
-    const local_type_id unresolved_local = local_type_ids::encode_id(
-        local_type_ids::encode_index(host_local_type_ids::k_count));
+    const local_type_id unresolved_local = local_type_ids::ops::encode_id(
+        local_type_ids::ops::encode_index(host_local_type_ids::k_count));
     const local_type_id invalid_local{ 0x00000002u };
     type_id malformed_generic;
     const std::uint32_t malformed_raw = 0x00000002u;
@@ -458,7 +458,7 @@ void test_argument_formatting(TTestContext& ctx)
 
     char expected_type_output[160]{};
     const system_type_id unregistered_type_id =
-        system_type_ids::encode_id(system_type_ids::encode_index(system_type_ids::k_count));
+        system_type_ids::ops::encode_id(system_type_ids::ops::encode_index(system_type_ids::k_count));
     const int expected_type_output_size = std::snprintf(
         expected_type_output,
         sizeof(expected_type_output),
@@ -479,8 +479,8 @@ void test_argument_formatting(TTestContext& ctx)
         debug_system::EEventFormatResult::success);
     TEST_EXPECT(ctx, std::strcmp(output, expected_type_output) == 0);
 
-    const local_type_id unresolved_local = local_type_ids::encode_id(
-        local_type_ids::encode_index(host_local_type_ids::k_count));
+    const local_type_id unresolved_local = local_type_ids::ops::encode_id(
+        local_type_ids::ops::encode_index(host_local_type_ids::k_count));
     char expected_local_output[192]{};
     const int expected_local_output_size = std::snprintf(
         expected_local_output,
@@ -515,13 +515,13 @@ void test_argument_formatting(TTestContext& ctx)
         debug_system::EEventFormatResult::success);
     TEST_EXPECT(ctx, std::strcmp(output, "executable:host | executable | host") == 0);
 
-    const module_ids::id_type unregistered_module = module_ids::make_id(
+    const module_ids::id_type unregistered_module = module_ids::ops::make_id(
         mount_point_ids::render,
         module_ids::executive_index);
-    const thread_ids::id_type unregistered_thread = thread_ids::make_id(
-        thread_ids::make_index(thread_ids::k_count));
+    const thread_ids::id_type unregistered_thread = thread_ids::ops::make_id(
+        thread_ids::ops::make_index(thread_ids::k_count));
     const system_ids::id_type unregistered_system =
-        system_ids::make_system_id(unregistered_module, thread_ids::host);
+        system_ids::ops::make_system_id(unregistered_module, thread_ids::host);
     char expected_runtime_output[512]{};
     const int expected_runtime_output_size = std::snprintf(
         expected_runtime_output,
@@ -728,10 +728,10 @@ void test_argument_formatting(TTestContext& ctx)
 void test_system_id_name_registry(TTestContext& ctx)
 {
     static_assert(system_type_ids::undefined.raw_value() == 0u);
-    static_assert(!system_type_ids::is_defined(system_type_ids::undefined));
-    static_assert(!system_type_ids::is_valid_id(system_type_ids::undefined));
-    static_assert(system_type_ids::is_defined(system_type_ids::byte_buffer));
-    static_assert(system_type_ids::is_valid_id(system_type_ids::byte_buffer));
+    static_assert(!system_type_ids::ops::is_defined(system_type_ids::undefined));
+    static_assert(!system_type_ids::ops::is_valid_id(system_type_ids::undefined));
+    static_assert(system_type_ids::ops::is_defined(system_type_ids::byte_buffer));
+    static_assert(system_type_ids::ops::is_valid_id(system_type_ids::byte_buffer));
 
     const system_id_registry::SSystemRegistryView* const registry =
         system_id_registry::installed_view();
@@ -835,13 +835,13 @@ void test_system_id_name_registry(TTestContext& ctx)
     TEST_EXPECT(ctx, system_id_registry::lookup_module_name({}) == nullptr);
     TEST_EXPECT(ctx, system_id_registry::lookup_thread_name({}) == nullptr);
 
-    const module_ids::id_type unregistered_module = module_ids::make_id(
+    const module_ids::id_type unregistered_module = module_ids::ops::make_id(
         mount_point_ids::render,
         module_ids::executive_index);
     const system_ids::id_type unregistered_system =
-        system_ids::make_system_id(unregistered_module, thread_ids::host);
-    TEST_EXPECT(ctx, module_ids::is_valid_id(unregistered_module));
-    TEST_EXPECT(ctx, system_ids::is_valid_id(unregistered_system));
+        system_ids::ops::make_system_id(unregistered_module, thread_ids::host);
+    TEST_EXPECT(ctx, module_ids::ops::is_valid_id(unregistered_module));
+    TEST_EXPECT(ctx, system_ids::ops::is_valid_id(unregistered_system));
     TEST_EXPECT(ctx,
         system_id_registry::find_module(unregistered_module) == nullptr);
     TEST_EXPECT(ctx,
@@ -1013,7 +1013,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             thread_ids::host)));
 
     const system_type_id unregistered_type_id =
-        system_type_ids::encode_id(system_type_ids::encode_index(system_type_ids::k_count));
+        system_type_ids::ops::encode_id(system_type_ids::ops::encode_index(system_type_ids::k_count));
     TEST_EXPECT(ctx,
         (debug_system::process_event<
             debug_system::EEventLevel::error,
@@ -1026,8 +1026,8 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             "typed {} {} {} {}",
             unregistered_type_id,
             system_type_id{ 0x00000002u },
-            local_type_ids::encode_id(
-                local_type_ids::encode_index(host_local_type_ids::k_count)),
+            local_type_ids::ops::encode_id(
+                local_type_ids::ops::encode_index(host_local_type_ids::k_count)),
             local_type_id{ 0x00000002u })));
 
     char oversized[debug_system::k_event_format_capacity + 32u];
@@ -1087,11 +1087,11 @@ void test_writer_and_direct_paths(TTestContext& ctx)
         system_context::get_ambient_module_id();
     const thread_ids::id_type previous_thread_id =
         system_context::get_ambient_thread_id();
-    const module_ids::id_type unregistered_module = module_ids::make_id(
+    const module_ids::id_type unregistered_module = module_ids::ops::make_id(
         mount_point_ids::render,
         module_ids::executive_index);
     const system_ids::id_type unregistered_system =
-        system_ids::make_system_id(unregistered_module, thread_ids::host);
+        system_ids::ops::make_system_id(unregistered_module, thread_ids::host);
     system_context::set_ambient_module_id(unregistered_module);
     system_context::set_ambient_thread_id(thread_ids::host);
     TEST_EXPECT(ctx,
@@ -1101,7 +1101,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     system_context::set_ambient_thread_id();
     const system_ids::id_type invalid_system =
         system_context::get_ambient_system_id();
-    TEST_EXPECT(ctx, !system_ids::is_valid_id(invalid_system));
+    TEST_EXPECT(ctx, !system_ids::ops::is_valid_id(invalid_system));
     TEST_EXPECT(ctx, debug_system::submit_text("invalid system identity"));
 
     system_context::set_ambient_module_id(previous_module_id);
@@ -1160,8 +1160,8 @@ void test_writer_and_direct_paths(TTestContext& ctx)
         source_line);
     TEST_EXPECT(ctx, source_marker_size > 0);
 
-    const local_type_id unresolved_local = local_type_ids::encode_id(
-        local_type_ids::encode_index(host_local_type_ids::k_count));
+    const local_type_id unresolved_local = local_type_ids::ops::encode_id(
+        local_type_ids::ops::encode_index(host_local_type_ids::k_count));
     char type_fallback_marker[256]{};
     const int type_fallback_marker_size = std::snprintf(
         type_fallback_marker,
@@ -1423,8 +1423,8 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
                 usage_point, "direct ids {} {} {} {} {} {}",
             sizeof("direct ids {} {} {} {} {} {}") - 1u,
             host_local_type_ids::host_runtime,
-            local_type_ids::encode_id(
-                local_type_ids::encode_index(host_local_type_ids::k_count)),
+            local_type_ids::ops::encode_id(
+                local_type_ids::ops::encode_index(host_local_type_ids::k_count)),
             type_id{ system_type_ids::byte_buffer },
             system_ids::host,
             module_ids::executable,

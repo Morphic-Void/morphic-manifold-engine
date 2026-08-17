@@ -32,12 +32,12 @@ struct SUnregisteredSystemPod { std::uint32_t value; };
 
 MV_REGISTER_LOCAL_TYPE(
     erased_pod_test_types::SLocalPod,
-    local_type_ids::encode_id(local_type_ids::encode_index(1234u)));
+    local_type_ids::ops::encode_id(local_type_ids::ops::encode_index(1234u)));
 
 MV_REGISTER_SYSTEM_TYPE(
     erased_pod_test_types::SUnregisteredSystemPod,
-    system_type_ids::encode_id(
-        system_type_ids::encode_index(system_type_ids::k_count)));
+    system_type_ids::ops::encode_id(
+        system_type_ids::ops::encode_index(system_type_ids::k_count)));
 
 namespace
 {

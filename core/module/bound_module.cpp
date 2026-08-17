@@ -43,7 +43,7 @@ bool CBoundModule::bind(
     const SAdvertisedIdentity& peer_identity) noexcept
 {
     if (m_native_module.is_bound() ||
-        !module_ids::is_valid_id(expected_advertised_module_id) ||
+        !module_ids::ops::is_valid_id(expected_advertised_module_id) ||
         !is_valid_advertised_identity(peer_identity) ||
         !m_native_module.bind(path))
     {
@@ -97,7 +97,7 @@ bool CBoundModule::install(
     debug_system::CDebugServiceState* const debug_service) noexcept
 {
     if (!m_native_module.is_bound() || m_installed ||
-        !module_ids::is_valid_id(ambient_module_id) ||
+        !module_ids::ops::is_valid_id(ambient_module_id) ||
         (module_memory_context == nullptr) ||
         !module_memory_context->is_usable() ||
         !module_memory_context->belongs_to_module(ambient_module_id) ||

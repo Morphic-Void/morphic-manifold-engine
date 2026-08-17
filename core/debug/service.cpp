@@ -120,12 +120,12 @@ bool CDebugServiceState::write_named_record(platform::filesystem::Log& log,
         if (source.filename_size != 0u)
         {
             return log.write("[%010u] [%s-system:%016llx] [%s:%s] [%.*s:%u] %.*s\n", incident.incident_id,
-                (system_ids::is_valid_id(source.system_id) ? "unregistered" : "invalid"), static_cast<unsigned long long>(source.system_id.raw_value()),
+                (system_ids::ops::is_valid_id(source.system_id) ? "unregistered" : "invalid"), static_cast<unsigned long long>(source.system_id.raw_value()),
                 level, type, static_cast<int>(source.filename_size), source.filename, source.line, static_cast<int>(text_size), text) >= 0;
         }
 
         return log.write("[%010u] [%s-system:%016llx] [%s:%s] %.*s\n", incident.incident_id,
-                (system_ids::is_valid_id(source.system_id) ? "unregistered" : "invalid"),
+                (system_ids::ops::is_valid_id(source.system_id) ? "unregistered" : "invalid"),
                 static_cast<unsigned long long>(source.system_id.raw_value()),
                 level, type, static_cast<int>(text_size), text) >= 0;
     }

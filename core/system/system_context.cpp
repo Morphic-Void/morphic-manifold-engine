@@ -37,7 +37,7 @@ thread_ids::id_type get_ambient_thread_id() noexcept
 
 system_ids::id_type get_ambient_system_id() noexcept
 {
-    return system_ids::make_system_id(s_module_id, t_thread_id);
+    return system_ids::ops::make_system_id(s_module_id, t_thread_id);
 }
 
 module_ids::id_type set_ambient_module_id(const module_ids::id_type module_id) noexcept

@@ -140,8 +140,8 @@ bool CErasedOwner::reattribute(memory::CMemoryContext* const target) noexcept
 
 std::uint32_t CErasedOwner::hazard_bit(const mount_point_ids::id_type mount_point_id) noexcept
 {
-    const mount_point_ids::index_type index = mount_point_ids::decode_id(mount_point_id);
-    const bool valid = mount_point_ids::is_valid_index(index) && (index.raw_value() < mount_point_ids::k_count);
+    const mount_point_ids::index_type index = mount_point_ids::ops::decode_id(mount_point_id);
+    const bool valid = mount_point_ids::ops::is_valid_index(index) && (index.raw_value() < mount_point_ids::k_count);
     MV_ASSERT(valid);
     return valid ? (std::uint32_t{ 1u } << static_cast<std::uint32_t>(index.raw_value())) : 0u;
 }
@@ -207,9 +207,9 @@ bool CErasedOwner::memory_context_belongs_to_current_component(memory::CMemoryCo
 {
     const module_ids::id_type ambient_module_id = system_context::get_ambient_module_id();
     return (context != nullptr) && context->is_usable() &&
-        module_ids::is_valid_id(ambient_module_id) &&
-        system_ids::is_valid_id(context->get_system_id()) &&
-        (system_ids::get_module_id(context->get_system_id()) == ambient_module_id);
+        module_ids::ops::is_valid_id(ambient_module_id) &&
+        system_ids::ops::is_valid_id(context->get_system_id()) &&
+        (system_ids::ops::get_module_id(context->get_system_id()) == ambient_module_id);
 }
 
 bool CErasedOwner::validate_no_nested_memory_source(const void* const payload, memory::CMemoryContext* const source) noexcept

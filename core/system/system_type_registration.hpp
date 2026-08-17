@@ -39,7 +39,7 @@ struct TTypeIdBindingCategory<T> \
 template<> \
 struct TSystemTypeId<T> \
 { \
-    static_assert(system_type_ids::is_valid_id(type_id_value), \
+    static_assert(system_type_ids::ops::is_valid_id(type_id_value), \
         "MV_REGISTER_SYSTEM_TYPE requires a valid, non-zero type id."); \
     static constexpr system_type_id value = type_id_value; \
 }

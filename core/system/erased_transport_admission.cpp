@@ -25,12 +25,12 @@ SDecision classify(const type_id identity, const module_ids::id_type destination
         ERejection::none
     };
 
-    if (!module_ids::is_valid_id(decision.source_module_id))
+    if (!module_ids::ops::is_valid_id(decision.source_module_id))
     {
         decision.rejection = ERejection::invalid_source_module;
         return decision;
     }
-    if (!module_ids::is_valid_id(destination_module_id))
+    if (!module_ids::ops::is_valid_id(destination_module_id))
     {
         decision.rejection = ERejection::invalid_destination_module;
         return decision;

@@ -57,7 +57,7 @@ struct SAdvertisedIdentity
 
 [[nodiscard]] constexpr bool is_valid_advertised_identity(const SAdvertisedIdentity& identity) noexcept
 {
-    return module_ids::is_valid_id(identity.advertised_module_id) &&
+    return module_ids::ops::is_valid_id(identity.advertised_module_id) &&
         (identity.minimum_functional_major <= identity.maximum_functional_major);
 }
 
