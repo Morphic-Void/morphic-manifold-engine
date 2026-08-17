@@ -232,7 +232,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="host\runtime\host.cpp" />
-    <ClCompile Include="host\module\binding\bound_module.cpp" />
     <ClCompile Include="host\system\host_context.cpp" />
     <ClCompile Include="host\module\types\host_erased_owner_operations.cpp" />
     <ClCompile Include="host\runtime\host_worker_thread.cpp" />
@@ -263,7 +262,6 @@
     <ClCompile Include="tests\TUnorderedSlots_test_harness.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="host\module\binding\bound_module.hpp" />
     <ClInclude Include="host\runtime\host.hpp" />
     <ClInclude Include="host\module\types\host_erased_owner_payloads.def" />
     <ClInclude Include="host\system\host_context.hpp" />

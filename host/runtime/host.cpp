@@ -75,7 +75,7 @@ bool CHost::start_threads() noexcept
     const threading::ThreadConfig thread_configs[k_thread_count]{
         {thread_ids::bg_file_io, module_ids::executable, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
         {thread_ids::bg_conditioning, module_ids::executable, platform::threading::EThreadPriority::Background, host_worker_thread_entry_point()},
-        {thread_ids::executive, module_ids::executive, platform::threading::EThreadPriority::Normal, m_executive_thread, &CBoundModule::prepare_thread, &m_executive_module} };
+        {thread_ids::executive, module_ids::executive, platform::threading::EThreadPriority::Normal, m_executive_thread, &modules::CBoundModule::prepare_thread, &m_executive_module} };
 
     for (std::size_t thread_index = 0u; thread_index < k_thread_count; ++thread_index)
     {

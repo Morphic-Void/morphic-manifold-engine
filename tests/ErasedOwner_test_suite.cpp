@@ -17,7 +17,7 @@
 #include "containers/TInstance.hpp"
 #include "debug/macros.hpp"
 #include "debug/service.hpp"
-#include "host/module/binding/bound_module.hpp"
+#include "module/bound_module.hpp"
 #include "host/system/host_context.hpp"
 #include "host/module/types/host_local_type_registry.hpp"
 #include "host/system/system_id_definitions.hpp"
@@ -264,7 +264,7 @@ void test_executive_context_and_module_unload_gate(TTestContext& ctx)
     };
     const platform::path::NativePath module_path =
         platform::path::makeNativePath("MorphicExecutive.dll");
-    host::CBoundModule module;
+    modules::CBoundModule module;
     const bool bound = module_path.is_ready() && module.bind(
         module_path, module_ids::executive, host_identity);
     TEST_EXPECT(ctx, bound);

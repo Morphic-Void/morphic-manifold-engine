@@ -41,6 +41,7 @@
     <ClInclude Include="core\memory\memory_policies.hpp" />
     <ClInclude Include="core\memory\memory_token.hpp" />
     <ClInclude Include="core\memory\memory_view.hpp" />
+    <ClInclude Include="core\module\bound_module.hpp" />
     <ClInclude Include="core\module\module_binding_context.hpp" />
     <ClInclude Include="core\module\module_binding.hpp" />
     <ClInclude Include="core\system\async_state.hpp" />
@@ -90,6 +91,7 @@
     <ClCompile Include="core\debug\service.cpp" />
     <ClCompile Include="core\image\codec\tga.cpp" />
     <ClCompile Include="core\memory\memory_context.cpp" />
+    <ClCompile Include="core\module\bound_module.cpp" />
     <ClCompile Include="core\module\module_binding_context.cpp" />
     <ClCompile Include="core\system\erased_owner_operations.cpp" />
     <ClCompile Include="core\system\erased_owner_transport.cpp" />

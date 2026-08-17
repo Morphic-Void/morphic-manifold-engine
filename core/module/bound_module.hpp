@@ -6,17 +6,17 @@
 //  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    10 Aug 26
 //
-//  Host-owned validated module binding and native module lifetime.
+//  Validated module binding and native module lifetime.
 
 #pragma once
 
-#ifndef HOST_BOUND_MODULE_HPP_INCLUDED
-#define HOST_BOUND_MODULE_HPP_INCLUDED
+#ifndef BOUND_MODULE_HPP_INCLUDED
+#define BOUND_MODULE_HPP_INCLUDED
 
 #include "module/module_binding.hpp"
 #include "platform/module/binding.hpp"
 
-namespace host
+namespace modules
 {
 
 class CBoundModule
@@ -32,7 +32,7 @@ public:
     [[nodiscard]] bool bind(
         const platform::path::NativePath& path,
         const module_ids::id_type expected_advertised_module_id,
-        const modules::SAdvertisedIdentity& host_identity) noexcept;
+        const SAdvertisedIdentity& peer_identity) noexcept;
     [[nodiscard]] bool install(
         const system_id_registry::SSystemRegistryView& system_registry,
         const module_ids::id_type ambient_module_id,
@@ -40,11 +40,11 @@ public:
         debug_system::CDebugServiceState* const debug_service) noexcept;
     [[nodiscard]] bool unbind() noexcept;
 
-    [[nodiscard]] modules::EBindingResult populate_core_functions(
-        const std::uint32_t functional_major, modules::SCoreFunctions& functions) const noexcept;
-    [[nodiscard]] bool query_function(const system_type_id function_type, modules::FModuleFunction& function) const noexcept;
-    [[nodiscard]] const modules::SAdvertisedIdentity& advertised_host_identity() const noexcept { return m_advertised_host_identity; }
-    [[nodiscard]] const modules::SAdvertisedIdentity& advertised_module_identity() const noexcept { return m_advertised_module_identity; }
+    [[nodiscard]] EBindingResult populate_core_functions(
+        const std::uint32_t functional_major, SCoreFunctions& functions) const noexcept;
+    [[nodiscard]] bool query_function(const system_type_id function_type, FModuleFunction& function) const noexcept;
+    [[nodiscard]] const SAdvertisedIdentity& advertised_peer_identity() const noexcept { return m_advertised_peer_identity; }
+    [[nodiscard]] const SAdvertisedIdentity& advertised_module_identity() const noexcept { return m_advertised_module_identity; }
     [[nodiscard]] std::uint32_t negotiated_functional_major() const noexcept { return m_negotiated_functional_major; }
     [[nodiscard]] bool is_ready() const noexcept { return m_installed; }
 
@@ -54,15 +54,15 @@ private:
     [[nodiscard]] bool prepare_thread(const thread_ids::id_type thread_id, void* const thread_resources) noexcept;
 
     platform::module::CPlatformModule m_native_module;
-    modules::SBootstrapFunctions m_bootstrap;
-    modules::SCoreFunctions m_core;
-    modules::SAdvertisedIdentity m_advertised_host_identity;
-    modules::SAdvertisedIdentity m_advertised_module_identity;
+    SBootstrapFunctions m_bootstrap;
+    SCoreFunctions m_core;
+    SAdvertisedIdentity m_advertised_peer_identity;
+    SAdvertisedIdentity m_advertised_module_identity;
     memory::CMemoryContext* m_module_memory_context{ nullptr };
     std::uint32_t m_negotiated_functional_major{ 0u };
     bool m_installed{ false };
 };
 
-}   //  namespace host
+}   //  namespace modules
 
-#endif  //  #ifndef HOST_BOUND_MODULE_HPP_INCLUDED
+#endif  //  #ifndef BOUND_MODULE_HPP_INCLUDED

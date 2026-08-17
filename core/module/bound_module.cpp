@@ -6,14 +6,14 @@
 //  Authors: Ritchie Brannan / OpenAI Codex
 //  Date:    10 Aug 26
 //
-//  Host-owned validated module binding and native module lifetime.
+//  Validated module binding and native module lifetime.
 
-#include "host/module/binding/bound_module.hpp"
+#include "module/bound_module.hpp"
 
 #include "debug/macros.hpp"
 #include "memory/memory_context.hpp"
 
-namespace host
+namespace modules
 {
 
 CBoundModule::~CBoundModule() noexcept
@@ -26,12 +26,12 @@ CBoundModule::~CBoundModule() noexcept
     }
 }
 
-modules::EBindingResult CBoundModule::populate_core_functions(const std::uint32_t functional_major, modules::SCoreFunctions& functions) const noexcept
+EBindingResult CBoundModule::populate_core_functions(const std::uint32_t functional_major, SCoreFunctions& functions) const noexcept
 {
     functions = {};
     if (m_bootstrap.populate_core_functions == nullptr)
     {
-        return modules::EBindingResult::invalid_argument;
+        return EBindingResult::invalid_argument;
     }
 
     return m_bootstrap.populate_core_functions(functional_major, &functions);
@@ -40,21 +40,21 @@ modules::EBindingResult CBoundModule::populate_core_functions(const std::uint32_
 bool CBoundModule::bind(
     const platform::path::NativePath& path,
     const module_ids::id_type expected_advertised_module_id,
-    const modules::SAdvertisedIdentity& host_identity) noexcept
+    const SAdvertisedIdentity& peer_identity) noexcept
 {
     if (m_native_module.is_bound() ||
         !module_ids::is_valid_id(expected_advertised_module_id) ||
-        !modules::is_valid_advertised_identity(host_identity) ||
+        !is_valid_advertised_identity(peer_identity) ||
         !m_native_module.bind(path))
     {
         return false;
     }
 
-    const platform::module::FModuleFunction symbol = m_native_module.find_function(modules::k_bootstrap_symbol_name);
-    const modules::FBootstrap bootstrap = reinterpret_cast<modules::FBootstrap>(symbol);
-    modules::SBootstrapFunctions bootstrap_functions;
+    const platform::module::FModuleFunction symbol = m_native_module.find_function(k_bootstrap_symbol_name);
+    const FBootstrap bootstrap = reinterpret_cast<FBootstrap>(symbol);
+    SBootstrapFunctions bootstrap_functions;
     if ((bootstrap == nullptr) ||
-        (bootstrap(&bootstrap_functions) != modules::EBindingResult::success) ||
+        (bootstrap(&bootstrap_functions) != EBindingResult::success) ||
         (bootstrap_functions.query_advertised_identity == nullptr) ||
         (bootstrap_functions.install_peer_identity == nullptr) ||
         (bootstrap_functions.populate_core_functions == nullptr))
@@ -63,21 +63,21 @@ bool CBoundModule::bind(
         return false;
     }
 
-    modules::SAdvertisedIdentity module_identity;
-    if ((bootstrap_functions.query_advertised_identity(&module_identity) != modules::EBindingResult::success) ||
-        !modules::is_valid_advertised_identity(module_identity) ||
+    SAdvertisedIdentity module_identity;
+    if ((bootstrap_functions.query_advertised_identity(&module_identity) != EBindingResult::success) ||
+        !is_valid_advertised_identity(module_identity) ||
         (module_identity.advertised_module_id != expected_advertised_module_id) ||
-        !modules::functional_ranges_overlap(host_identity, module_identity) ||
-        (bootstrap_functions.install_peer_identity(&host_identity) != modules::EBindingResult::success))
+        !functional_ranges_overlap(peer_identity, module_identity) ||
+        (bootstrap_functions.install_peer_identity(&peer_identity) != EBindingResult::success))
     {
         (void)unbind();
         return false;
     }
 
     m_bootstrap = bootstrap_functions;
-    m_negotiated_functional_major = modules::highest_common_functional_major(host_identity, module_identity);
-    modules::SCoreFunctions core_functions;
-    if ((populate_core_functions(m_negotiated_functional_major, core_functions) != modules::EBindingResult::success) ||
+    m_negotiated_functional_major = highest_common_functional_major(peer_identity, module_identity);
+    SCoreFunctions core_functions;
+    if ((populate_core_functions(m_negotiated_functional_major, core_functions) != EBindingResult::success) ||
         !core_functions.is_complete())
     {
         (void)unbind();
@@ -85,7 +85,7 @@ bool CBoundModule::bind(
     }
 
     m_core = core_functions;
-    m_advertised_host_identity = host_identity;
+    m_advertised_peer_identity = peer_identity;
     m_advertised_module_identity = module_identity;
     return true;
 }
@@ -102,15 +102,15 @@ bool CBoundModule::install(
         !module_memory_context->is_usable() ||
         !module_memory_context->belongs_to_module(ambient_module_id) ||
         !module_memory_context->is_attribution_empty() ||
-        (m_core.install_system_registry_view(&system_registry) != modules::EBindingResult::success) ||
-        (m_core.install_ambient_module_id(ambient_module_id) != modules::EBindingResult::success) ||
-        (m_core.install_module_memory_context(module_memory_context) != modules::EBindingResult::success))
+        (m_core.install_system_registry_view(&system_registry) != EBindingResult::success) ||
+        (m_core.install_ambient_module_id(ambient_module_id) != EBindingResult::success) ||
+        (m_core.install_module_memory_context(module_memory_context) != EBindingResult::success))
     {
         return false;
     }
 
     m_module_memory_context = module_memory_context;
-    if (m_core.install_debug_service(debug_service) != modules::EBindingResult::success)
+    if (m_core.install_debug_service(debug_service) != EBindingResult::success)
     {
         return false;
     }
@@ -119,7 +119,7 @@ bool CBoundModule::install(
     return true;
 }
 
-bool CBoundModule::query_function(const system_type_id function_type, modules::FModuleFunction& function) const noexcept
+bool CBoundModule::query_function(const system_type_id function_type, FModuleFunction& function) const noexcept
 {
     function = nullptr;
     if (!m_installed)
@@ -127,8 +127,8 @@ bool CBoundModule::query_function(const system_type_id function_type, modules::F
         return false;
     }
 
-    const modules::EBindingResult result = m_core.query_function(function_type, m_negotiated_functional_major, &function);
-    return (result == modules::EBindingResult::success) && (function != nullptr);
+    const EBindingResult result = m_core.query_function(function_type, m_negotiated_functional_major, &function);
+    return (result == EBindingResult::success) && (function != nullptr);
 }
 
 bool MV_STD_ABI_CALL CBoundModule::prepare_thread(void* const context, const thread_ids::id_type thread_id, void* const thread_resources) noexcept
@@ -140,9 +140,9 @@ bool MV_STD_ABI_CALL CBoundModule::prepare_thread(void* const context, const thr
 bool CBoundModule::prepare_thread(const thread_ids::id_type thread_id, void* const thread_resources) noexcept
 {
     return m_installed &&
-        (m_core.install_ambient_thread_id(thread_id) == modules::EBindingResult::success) &&
-        (m_core.install_thread_provisioning(thread_resources) == modules::EBindingResult::success) &&
-        (m_core.install_thread_memory_context(nullptr) == modules::EBindingResult::success);
+        (m_core.install_ambient_thread_id(thread_id) == EBindingResult::success) &&
+        (m_core.install_thread_provisioning(thread_resources) == EBindingResult::success) &&
+        (m_core.install_thread_memory_context(nullptr) == EBindingResult::success);
 }
 
 bool CBoundModule::unbind() noexcept
@@ -160,11 +160,11 @@ bool CBoundModule::unbind() noexcept
     m_installed = false;
     m_module_memory_context = nullptr;
     m_negotiated_functional_major = 0u;
-    m_advertised_host_identity = {};
+    m_advertised_peer_identity = {};
     m_advertised_module_identity = {};
     m_core = {};
     m_bootstrap = {};
     return true;
 }
 
-}   //  namespace host
+}   //  namespace modules

@@ -83,6 +83,7 @@
     <ClInclude Include="core\memory\memory_policies.hpp"><Filter>Core\include\memory</Filter></ClInclude>
     <ClInclude Include="core\memory\memory_token.hpp"><Filter>Core\include\memory</Filter></ClInclude>
     <ClInclude Include="core\memory\memory_view.hpp"><Filter>Core\include\memory</Filter></ClInclude>
+    <ClInclude Include="core\module\bound_module.hpp"><Filter>Core\include\module</Filter></ClInclude>
     <ClInclude Include="core\module\module_binding_context.hpp"><Filter>Core\include\module</Filter></ClInclude>
     <ClInclude Include="core\module\module_binding.hpp"><Filter>Core\include\module</Filter></ClInclude>
     <ClInclude Include="core\platform\filesystem\file.hpp"><Filter>Core\include\platform\filesystem</Filter></ClInclude>
@@ -152,6 +153,7 @@
     <ClCompile Include="core\debug\service.cpp"><Filter>Core\src\debug</Filter></ClCompile>
     <ClCompile Include="core\image\codec\tga.cpp"><Filter>Core\src\image\codec</Filter></ClCompile>
     <ClCompile Include="core\memory\memory_context.cpp"><Filter>Core\src\memory</Filter></ClCompile>
+    <ClCompile Include="core\module\bound_module.cpp"><Filter>Core\src\module</Filter></ClCompile>
     <ClCompile Include="core\module\module_binding_context.cpp"><Filter>Core\src\module</Filter></ClCompile>
     <ClCompile Include="core\platform\filesystem\file.cpp"><Filter>Core\src\platform\filesystem</Filter></ClCompile>
     <ClCompile Include="core\platform\filesystem\internal\file_utils.cpp"><Filter>Core\src\platform\filesystem\internal</Filter></ClCompile>

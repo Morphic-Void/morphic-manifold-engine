@@ -24,7 +24,7 @@
 #include "containers/TInstance.hpp"
 #include "containers/TUnorderedCollection.hpp"
 #include "debug/service.hpp"
-#include "host/module/binding/bound_module.hpp"
+#include "module/bound_module.hpp"
 #include "executive/module/binding/executive_binding.hpp"
 #include "platform/system/performance_counter.hpp"
 #include "system/async_state.hpp"
@@ -80,7 +80,7 @@ private:
     CAssetRepository m_assets;
     CASyncStates m_async_states;
     platform::system::CPerfCountConversion m_perf_count_conversion;
-    CBoundModule m_executive_module;
+    modules::CBoundModule m_executive_module;
     executive::FExecutiveThread m_executive_thread{ nullptr };
     std::int32_t m_thread_slots[k_thread_count]{ -1, -1, -1 };
 };
