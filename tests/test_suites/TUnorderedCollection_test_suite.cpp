@@ -14,7 +14,7 @@
 #include <utility>
 
 #include "containers/TUnorderedCollection.hpp"
-#include "tests/TUnorderedCollection_test_suite.hpp"
+#include "tests/test_suites/TUnorderedCollection_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

@@ -13,7 +13,7 @@
 
 #include "assets/asset_repository.hpp"
 #include "system/transported_types.hpp"
-#include "tests/AssetRepository_test_suite.hpp"
+#include "tests/test_suites/AssetRepository_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

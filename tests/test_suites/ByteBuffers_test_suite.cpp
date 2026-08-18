@@ -17,7 +17,7 @@
 #include "containers/ByteBuffers.hpp"
 #include "memory/memory_token.hpp"
 #include "memory/memory_view.hpp"
-#include "tests/ByteBuffers_test_suite.hpp"
+#include "tests/test_suites/ByteBuffers_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

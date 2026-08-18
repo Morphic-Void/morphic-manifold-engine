@@ -2,7 +2,8 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Tests"><UniqueIdentifier>{f5c71c93-b719-4de9-8234-df9b57175b35}</UniqueIdentifier></Filter>
-    <Filter Include="Tests\entry"><UniqueIdentifier>{d59f530a-0a27-4aa6-991e-efbb37ac50c8}</UniqueIdentifier></Filter>
+    <Filter Include="Tests\main"><UniqueIdentifier>{d59f530a-0a27-4aa6-991e-efbb37ac50c8}</UniqueIdentifier></Filter>
+    <Filter Include="Tests\test_suites"><UniqueIdentifier>{3b27507b-0046-4db1-85f2-025c9eb4a6f0}</UniqueIdentifier></Filter>
     <Filter Include="Tests\environment"><UniqueIdentifier>{f63a5bb4-c43f-4921-820e-a4c0f98ce129}</UniqueIdentifier></Filter>
     <Filter Include="Tests\manual"><UniqueIdentifier>{a58b7a19-8fd4-43ee-acf5-a8bbce524749}</UniqueIdentifier></Filter>
     <Filter Include="Tests\support"><UniqueIdentifier>{8fc5b142-bef0-4591-95c7-1346641b7f42}</UniqueIdentifier></Filter>
@@ -14,7 +15,7 @@
     <Filter Include="TestData\output\logs"><UniqueIdentifier>{dddf1aa1-d222-475e-99c1-41efbd8b035b}</UniqueIdentifier></Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="tests\entry\MorphicTests.cpp"><Filter>Tests\entry</Filter></ClCompile>
+    <ClCompile Include="tests\main\MorphicTests.cpp"><Filter>Tests\main</Filter></ClCompile>
     <ClCompile Include="tests\environment\local_type_ids.cpp"><Filter>Tests\environment</Filter></ClCompile>
     <ClCompile Include="tests\environment\test_environment.cpp"><Filter>Tests\environment</Filter></ClCompile>
     <ClCompile Include="tests\environment\test_paths.cpp"><Filter>Tests\environment</Filter></ClCompile>
@@ -22,28 +23,28 @@
     <ClCompile Include="tests\manual\tga_round_trip.cpp"><Filter>Tests\manual</Filter></ClCompile>
     <ClCompile Include="tests\support\file_helpers.cpp"><Filter>Tests\support</Filter></ClCompile>
     <ClCompile Include="tests\support\test_allocator.cpp"><Filter>Tests\support</Filter></ClCompile>
-    <ClCompile Include="tests\AssetRepository_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\AsyncState_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\ByteBuffers_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\CMemoryToken_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\CMemoryView_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\DebugService_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\ErasedOwner_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\ErasedPod_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\run_tests.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\StringBuffers_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\SystemTypeIdentity_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TInstance_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TMpmcTransport_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TOrderedCollection_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TOrderedSlots_test_harness.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TOwningTransport_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TPodFifo_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TPodVector_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TQueueTransport_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TRingTransport_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TUnorderedCollection_test_suite.cpp"><Filter>Tests</Filter></ClCompile>
-    <ClCompile Include="tests\TUnorderedSlots_test_harness.cpp"><Filter>Tests</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\AssetRepository_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\AsyncState_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\ByteBuffers_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\CMemoryToken_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\CMemoryView_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\DebugService_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\ErasedOwner_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\ErasedPod_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\main\run_tests.cpp"><Filter>Tests\main</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\StringBuffers_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\SystemTypeIdentity_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TInstance_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TMpmcTransport_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TOrderedCollection_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TOrderedSlots_test_harness.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TOwningTransport_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TPodFifo_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TPodVector_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TQueueTransport_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TRingTransport_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TUnorderedCollection_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TUnorderedSlots_test_harness.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\environment\erased_owner_payloads.def"><Filter>Tests\environment</Filter></ClInclude>
@@ -56,28 +57,28 @@
     <ClInclude Include="tests\support\test_allocator.hpp"><Filter>Tests\support</Filter></ClInclude>
     <ClInclude Include="tests\support\test_context.hpp"><Filter>Tests\support</Filter></ClInclude>
     <ClInclude Include="tests\support\test_scopes.hpp"><Filter>Tests\support</Filter></ClInclude>
-    <ClInclude Include="tests\AssetRepository_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\AsyncState_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\ByteBuffers_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\CMemoryToken_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\CMemoryView_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\DebugService_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\ErasedOwner_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\ErasedPod_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\run_tests.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\StringBuffers_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\SystemTypeIdentity_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TInstance_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TMpmcTransport_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TOrderedCollection_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TOrderedSlots_test_harness.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TOwningTransport_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TPodFifo_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TPodVector_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TQueueTransport_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TRingTransport_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TUnorderedCollection_test_suite.hpp"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="tests\TUnorderedSlots_test_harness.hpp"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\AssetRepository_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\AsyncState_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\ByteBuffers_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\CMemoryToken_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\CMemoryView_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\DebugService_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\ErasedOwner_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\ErasedPod_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\main\run_tests.hpp"><Filter>Tests\main</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\StringBuffers_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\SystemTypeIdentity_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TInstance_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TMpmcTransport_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TOrderedCollection_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TOrderedSlots_test_harness.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TOwningTransport_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TPodFifo_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TPodVector_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TQueueTransport_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TRingTransport_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TUnorderedCollection_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TUnorderedSlots_test_harness.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="test_data\input\files\test_input.tga"><Filter>TestData\input\files</Filter></None>

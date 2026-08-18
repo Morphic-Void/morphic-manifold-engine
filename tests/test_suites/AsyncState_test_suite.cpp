@@ -12,7 +12,7 @@
 
 #include "system/async_state.hpp"
 #include "system/transported_types.hpp"
-#include "tests/AsyncState_test_suite.hpp"
+#include "tests/test_suites/AsyncState_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace async_state_test_types

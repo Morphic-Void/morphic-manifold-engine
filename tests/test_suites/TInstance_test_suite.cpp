@@ -14,7 +14,7 @@
 #include <utility>
 
 #include "containers/TInstance.hpp"
-#include "tests/TInstance_test_suite.hpp"
+#include "tests/test_suites/TInstance_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

@@ -19,7 +19,7 @@
 #include "system/system_id_registry.hpp"
 #include "system/transported_types.hpp"
 #include "system/type_registration.hpp"
-#include "tests/SystemTypeIdentity_test_suite.hpp"
+#include "tests/test_suites/SystemTypeIdentity_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace identity_tests

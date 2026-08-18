@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "containers/TPodVector.hpp"
-#include "tests/TPodVector_test_suite.hpp"
+#include "tests/test_suites/TPodVector_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

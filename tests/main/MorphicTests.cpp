@@ -5,7 +5,7 @@
 
 #include "tests/environment/test_environment.hpp"
 #include "tests/environment/test_paths.hpp"
-#include "tests/run_tests.hpp"
+#include "tests/main/run_tests.hpp"
 
 int main(const int argc, char** const argv)
 {

@@ -20,7 +20,7 @@
 #include "system/erased_pod.hpp"
 #include "system/system_context.hpp"
 #include "system/transported_types.hpp"
-#include "tests/ErasedPod_test_suite.hpp"
+#include "tests/test_suites/ErasedPod_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 #include "tests/support/file_helpers.hpp"
 #include "threading/messages/CErasedMessageTransports.hpp"

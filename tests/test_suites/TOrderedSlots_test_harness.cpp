@@ -36,7 +36,7 @@
 #include "containers/TPodOrderedSlots.hpp"
 #include "containers/slots/TOrderedSlots.hpp"
 #include "tests/environment/test_environment.hpp"
-#include "tests/TOrderedSlots_test_harness.hpp"
+#include "tests/test_suites/TOrderedSlots_test_harness.hpp"
 
 #ifndef TORDERED_TESTHARNESS_WITH_MAIN
 #   define TORDERED_TESTHARNESS_WITH_MAIN  1

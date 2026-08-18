@@ -16,7 +16,7 @@
 #include <utility>
 
 #include "containers/StringBuffers.hpp"
-#include "tests/StringBuffers_test_suite.hpp"
+#include "tests/test_suites/StringBuffers_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "threading/transports/TOwningTransport.hpp"
-#include "tests/TOwningTransport_test_suite.hpp"
+#include "tests/test_suites/TOwningTransport_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 #include "memory/memory_context.hpp"
 #include "debug/macros.hpp"

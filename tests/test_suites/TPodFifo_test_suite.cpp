@@ -14,7 +14,7 @@
 #include <utility>
 
 #include "containers/TPodFifo.hpp"
-#include "tests/TPodFifo_test_suite.hpp"
+#include "tests/test_suites/TPodFifo_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

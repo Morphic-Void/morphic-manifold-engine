@@ -31,7 +31,7 @@
 
 #include "containers/TPodUnorderedSlots.hpp"
 #include "containers/slots/TUnorderedSlots.hpp"
-#include "tests/TUnorderedSlots_test_harness.hpp"
+#include "tests/test_suites/TUnorderedSlots_test_harness.hpp"
 
 #ifndef TUNORDERED_TESTHARNESS_WITH_MAIN
 #define TUNORDERED_TESTHARNESS_WITH_MAIN    1

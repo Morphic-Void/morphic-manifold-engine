@@ -20,7 +20,7 @@
 #include "tests/environment/test_paths.hpp"
 #include "system/system_context.hpp"
 #include "system/system_id_registry.hpp"
-#include "tests/DebugService_test_suite.hpp"
+#include "tests/test_suites/DebugService_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 #include "tests/support/file_helpers.hpp"
 
@@ -901,7 +901,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     constexpr char source_file[] =
         "discarded/source/prefix/which/is/intentionally/longer/than/"
         "the/bounded/source/storage/available/to/the/debug/event/"
-        "tests/DebugService_test_suite.cpp";
+        "tests/test_suites/DebugService_test_suite.cpp";
     constexpr std::uint32_t source_line = 321u;
     static_assert(sizeof(source_file) >
         debug_system::k_source_file_capacity);
@@ -1341,7 +1341,7 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
         "test_data/output/logs/debug_service_equivalence_test_direct.log");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
-    constexpr char source_file[] = "tests/DebugService_test_suite.cpp";
+    constexpr char source_file[] = "tests/test_suites/DebugService_test_suite.cpp";
     const debug_system::SEventUsagePoint usage_point{
         source_file, sizeof(source_file) - 1u, 777u };
 

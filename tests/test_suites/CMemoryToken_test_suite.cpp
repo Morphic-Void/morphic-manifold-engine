@@ -13,7 +13,7 @@
 #include <new>
 
 #include "memory/memory_token.hpp"
-#include "tests/CMemoryToken_test_suite.hpp"
+#include "tests/test_suites/CMemoryToken_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

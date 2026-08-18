@@ -14,7 +14,7 @@
 #include <utility>
 
 #include "containers/TOrderedCollection.hpp"
-#include "tests/TOrderedCollection_test_suite.hpp"
+#include "tests/test_suites/TOrderedCollection_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace

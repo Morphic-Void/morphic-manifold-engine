@@ -18,7 +18,7 @@
 #include <string_view>
 
 #include "threading/transports/TQueueTransport.hpp"
-#include "tests/TQueueTransport_test_suite.hpp"
+#include "tests/test_suites/TQueueTransport_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 #include "memory/memory_context.hpp"
 #include "debug/macros.hpp"

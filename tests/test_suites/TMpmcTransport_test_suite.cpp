@@ -12,7 +12,7 @@
 #include <string>
 
 #include "threading/transports/TMpmcTransport.hpp"
-#include "tests/TMpmcTransport_test_suite.hpp"
+#include "tests/test_suites/TMpmcTransport_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 
 using threading::transports::EMpmcTransportStatus;

@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "threading/transports/TRingTransport.hpp"
-#include "tests/TRingTransport_test_suite.hpp"
+#include "tests/test_suites/TRingTransport_test_suite.hpp"
 #include "tests/support/test_context.hpp"
 #include "memory/memory_context.hpp"
 #include "debug/macros.hpp"

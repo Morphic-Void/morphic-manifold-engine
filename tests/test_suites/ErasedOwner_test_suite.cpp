@@ -27,7 +27,7 @@
 #include "system/erased_owner.hpp"
 #include "system/erased_owner_transport.hpp"
 #include "system/transported_types.hpp"
-#include "tests/ErasedOwner_test_suite.hpp"
+#include "tests/test_suites/ErasedOwner_test_suite.hpp"
 #include "tests/support/test_allocator.hpp"
 #include "tests/support/test_context.hpp"
 #include "tests/support/test_scopes.hpp"
