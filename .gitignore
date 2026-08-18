@@ -43,7 +43,7 @@ Thumbs.db
 # ================================
 *.log
 *.tmp
-/test_data/output/files/manual_tga_round_trip.tga
+/tests/data/output/files/manual_tga_round_trip.tga
 
 # ================================
 # Perforce leftovers (defensive)

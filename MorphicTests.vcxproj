@@ -154,9 +154,9 @@
     <ClInclude Include="tests\test_suites\TUnorderedSlots_test_harness.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="test_data\input\files\test_input.tga" />
-    <None Include="test_data\output\files\test_output.tga" />
-    <None Include="test_data\output\logs\.gitkeep" />
+    <None Include="tests\data\input\files\test_input.tga" />
+    <None Include="tests\data\output\files\.gitkeep" />
+    <None Include="tests\data\output\logs\.gitkeep" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

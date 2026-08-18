@@ -18,7 +18,7 @@ bool is_repository_root(const std::filesystem::path& candidate)
 {
     std::error_code error;
     return std::filesystem::is_regular_file(
-        candidate / "test_data" / "input" / "files" / "test_input.tga",
+        candidate / "tests" / "data" / "input" / "files" / "test_input.tga",
         error);
 }
 

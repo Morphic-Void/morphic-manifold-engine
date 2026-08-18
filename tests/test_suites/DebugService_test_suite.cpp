@@ -893,9 +893,9 @@ void test_provisioning_and_shared_words(TTestContext& ctx)
 void test_writer_and_direct_paths(TTestContext& ctx)
 {
     const std::string event_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_test.log");
+        "tests/data/output/logs/debug_service_test.log");
     const std::string direct_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_test_direct.log");
+        "tests/data/output/logs/debug_service_test_direct.log");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
     constexpr char source_file[] =
@@ -1163,9 +1163,9 @@ void test_writer_and_direct_paths(TTestContext& ctx)
 void test_lazy_log_opening(TTestContext& ctx)
 {
     const std::string event_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_lazy_test.log");
+        "tests/data/output/logs/debug_service_lazy_test.log");
     const std::string direct_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_lazy_test_direct.log");
+        "tests/data/output/logs/debug_service_lazy_test_direct.log");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
 
@@ -1192,9 +1192,9 @@ void test_lazy_log_opening(TTestContext& ctx)
 void test_filename_and_capacity_boundaries(TTestContext& ctx)
 {
     const std::string event_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_filename_test.log");
+        "tests/data/output/logs/debug_service_filename_test.log");
     const std::string direct_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_filename_test_direct.log");
+        "tests/data/output/logs/debug_service_filename_test_direct.log");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
     constexpr char filename31[] =
@@ -1336,9 +1336,9 @@ void test_filename_and_capacity_boundaries(TTestContext& ctx)
 void test_queued_and_direct_equivalence(TTestContext& ctx)
 {
     const std::string event_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_equivalence_test.log");
+        "tests/data/output/logs/debug_service_equivalence_test.log");
     const std::string direct_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_equivalence_test_direct.log");
+        "tests/data/output/logs/debug_service_equivalence_test_direct.log");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
     constexpr char source_file[] = "tests/test_suites/DebugService_test_suite.cpp";
@@ -1408,9 +1408,9 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
 void test_malformed_event_overlays(TTestContext& ctx)
 {
     const std::string event_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_malformed_test.log");
+        "tests/data/output/logs/debug_service_malformed_test.log");
     const std::string direct_path_storage = test_environment::repository_path(
-        "test_data/output/logs/debug_service_malformed_test_direct.log");
+        "tests/data/output/logs/debug_service_malformed_test_direct.log");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
 
