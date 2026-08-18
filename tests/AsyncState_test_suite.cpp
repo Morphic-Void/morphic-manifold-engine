@@ -13,6 +13,7 @@
 #include "system/async_state.hpp"
 #include "system/transported_types.hpp"
 #include "tests/AsyncState_test_suite.hpp"
+#include "tests/support/test_context.hpp"
 
 namespace async_state_test_types
 {
@@ -26,26 +27,7 @@ MV_REGISTER_LOCAL_TYPE(
 namespace
 {
 
-struct TTestContext
-{
-    void expect(const bool condition, const char* const expression, const int line)
-    {
-        if (condition)
-        {
-            ++passed;
-        }
-        else
-        {
-            ++failed;
-            std::cerr << "AsyncState test failure at line " << line << ": " << expression << '\n';
-        }
-    }
-
-    int passed{ 0 };
-    int failed{ 0 };
-};
-
-#define TEST_EXPECT(ctx, expression) (ctx).expect(!!(expression), #expression, __LINE__)
+using TTestContext = tests::TTestContext;
 
 void test_state_shape_and_default_repository(TTestContext& ctx)
 {

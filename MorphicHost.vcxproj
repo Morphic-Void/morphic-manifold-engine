@@ -132,7 +132,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;MV_DEVELOPMENT_BUILD=1;MV_DEBUG_DEVELOPMENT_BUILD=1;MV_COMPILED_INFORMATION_LEVEL=3;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\SuiteUTF\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -150,7 +149,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;MV_DEVELOPMENT_BUILD=0;MV_DEBUG_DEVELOPMENT_BUILD=0;MV_COMPILED_INFORMATION_LEVEL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\SuiteUTF\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -168,7 +166,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;MV_DEBUG_BUILD=1;MV_DEVELOPMENT_BUILD=1;MV_DEBUG_DEVELOPMENT_BUILD=0;MV_COMPILED_INFORMATION_LEVEL=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\SuiteUTF\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -184,7 +181,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;MV_DEVELOPMENT_BUILD=1;MV_DEBUG_DEVELOPMENT_BUILD=1;MV_COMPILED_INFORMATION_LEVEL=3;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\SuiteUTF\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -202,7 +198,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;MV_DEVELOPMENT_BUILD=0;MV_DEBUG_DEVELOPMENT_BUILD=0;MV_COMPILED_INFORMATION_LEVEL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\SuiteUTF\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -220,7 +215,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;MV_DEBUG_BUILD=1;MV_DEVELOPMENT_BUILD=1;MV_DEBUG_DEVELOPMENT_BUILD=0;MV_COMPILED_INFORMATION_LEVEL=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\SuiteUTF\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -237,28 +231,6 @@
     <ClCompile Include="host\module\types\local_type_ids.cpp" />
     <ClCompile Include="host\system\system_id_definitions.cpp" />
     <ClCompile Include="host\entry\MorphicEngine.cpp" />
-    <ClCompile Include="tests\AssetRepository_test_suite.cpp" />
-    <ClCompile Include="tests\AsyncState_test_suite.cpp" />
-    <ClCompile Include="tests\ByteBuffers_test_suite.cpp" />
-    <ClCompile Include="tests\CMemoryToken_test_suite.cpp" />
-    <ClCompile Include="tests\CMemoryView_test_suite.cpp" />
-    <ClCompile Include="tests\DebugService_test_suite.cpp" />
-    <ClCompile Include="tests\ErasedPod_test_suite.cpp" />
-    <ClCompile Include="tests\ErasedOwner_test_suite.cpp" />
-    <ClCompile Include="tests\StringBuffers_test_suite.cpp" />
-    <ClCompile Include="tests\SystemTypeIdentity_test_suite.cpp" />
-    <ClCompile Include="tests\TInstance_test_suite.cpp" />
-    <ClCompile Include="tests\TMpmcTransport_test_suite.cpp" />
-    <ClCompile Include="tests\TOrderedCollection_test_suite.cpp" />
-    <ClCompile Include="tests\TPodFifo_test_suite.cpp" />
-    <ClCompile Include="tests\TPodVector_test_suite.cpp" />
-    <ClCompile Include="tests\TUnorderedCollection_test_suite.cpp" />
-    <ClCompile Include="tests\run_tests.cpp" />
-    <ClCompile Include="tests\TOrderedSlots_test_harness.cpp" />
-    <ClCompile Include="tests\TOwningTransport_test_suite.cpp" />
-    <ClCompile Include="tests\TQueueTransport_test_suite.cpp" />
-    <ClCompile Include="tests\TRingTransport_test_suite.cpp" />
-    <ClCompile Include="tests\TUnorderedSlots_test_harness.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="host\runtime\host.hpp" />
@@ -269,38 +241,11 @@
     <ClInclude Include="host\module\types\local_type_ids.def" />
     <ClInclude Include="host\module\types\local_type_ids.hpp" />
     <ClInclude Include="host\system\system_id_definitions.hpp" />
-    <ClInclude Include="tests\AssetRepository_test_suite.hpp" />
-    <ClInclude Include="tests\AsyncState_test_suite.hpp" />
-    <ClInclude Include="tests\ByteBuffers_test_suite.hpp" />
-    <ClInclude Include="tests\CMemoryToken_test_suite.hpp" />
-    <ClInclude Include="tests\run_tests.hpp" />
-    <ClInclude Include="tests\CMemoryView_test_suite.hpp" />
-    <ClInclude Include="tests\DebugService_test_suite.hpp" />
-    <ClInclude Include="tests\ErasedPod_test_suite.hpp" />
-    <ClInclude Include="tests\ErasedOwner_test_suite.hpp" />
-    <ClInclude Include="tests\StringBuffers_test_suite.hpp" />
-    <ClInclude Include="tests\SystemTypeIdentity_test_suite.hpp" />
-    <ClInclude Include="tests\TInstance_test_suite.hpp" />
-    <ClInclude Include="tests\TMpmcTransport_test_suite.hpp" />
-    <ClInclude Include="tests\TOrderedCollection_test_suite.hpp" />
-    <ClInclude Include="tests\TPodFifo_test_suite.hpp" />
-    <ClInclude Include="tests\TPodVector_test_suite.hpp" />
-    <ClInclude Include="tests\TUnorderedCollection_test_suite.hpp" />
-    <ClInclude Include="tests\TOrderedSlots_test_harness.hpp" />
-    <ClInclude Include="tests\TOwningTransport_test_suite.hpp" />
-    <ClInclude Include="tests\TQueueTransport_test_suite.hpp" />
-    <ClInclude Include="tests\TRingTransport_test_suite.hpp" />
-    <ClInclude Include="tests\TUnorderedSlots_test_harness.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="test_data\input\files\test_input.tga" />
     <None Include="test_data\output\files\test_output.tga" />
     <None Include="test_data\output\logs\.gitkeep" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="external\SuiteUTF\SuiteUTF.vcxproj">
-      <Project>{0bf5d948-138e-45a7-915f-aa8c3d6dba08}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

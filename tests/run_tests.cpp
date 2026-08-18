@@ -28,6 +28,7 @@
 #include "tests/TMpmcTransport_test_suite.hpp"
 #include "tests/TRingTransport_test_suite.hpp"
 #include "tests/TOwningTransport_test_suite.hpp"
+#include "tests/environment/test_environment.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -76,6 +77,23 @@ bool parse_test_mode_value(const std::string& value, ETestRunMode& out_mode)
     }
     return false;
 }
+
+template<typename F>
+int run_isolated_suite(const char* const name, F&& run)
+{
+    if (!test_environment::is_clean())
+    {
+        std::cerr << name << ": dirty test environment before suite\n";
+        return 1;
+    }
+    const int result = run();
+    if (!test_environment::is_clean())
+    {
+        std::cerr << name << ": residual service or memory state after suite\n";
+        return (result == 0) ? 1 : result;
+    }
+    return result;
+}
 }
 
 bool should_print_usage(int argc, char** argv)
@@ -95,7 +113,7 @@ bool should_print_usage(int argc, char** argv)
 void print_usage()
 {
     std::cout <<
-        "Usage: MorphicEngine [options]\n"
+        "Usage: MorphicTests [options]\n"
         "\n"
         "Options:\n"
         "  -?, /?, -h, --help, -help, /help\n"
@@ -149,62 +167,25 @@ int run_tests(ETestRunMode mode)
 
     int cumulative_result = 0;
 
-    int asset_repository_test_result = run_asset_repository_tests();
-    cumulative_result += asset_repository_test_result;
-
-    int async_state_test_result = run_async_state_tests();
-    cumulative_result += async_state_test_result;
-
-    int memory_token_test_result = run_memory_token_tests();
-    cumulative_result += memory_token_test_result;
-
-    int memory_view_test_result = run_memory_view_tests();
-    cumulative_result += memory_view_test_result;
-
-    int erased_owner_test_result = run_erased_owner_tests();
-    cumulative_result += erased_owner_test_result;
-
-    int erased_pod_test_result = run_erased_pod_tests();
-    cumulative_result += erased_pod_test_result;
-
-    int pod_vector_test_result = run_pod_vector_tests();
-    cumulative_result += pod_vector_test_result;
-
-    int byte_buffer_test_result = run_byte_buffer_tests();
-    cumulative_result += byte_buffer_test_result;
-
-    int instance_test_result = run_instance_tests();
-    cumulative_result += instance_test_result;
-
-    int debug_service_test_result = run_debug_service_tests();
-    cumulative_result += debug_service_test_result;
-
-    int system_type_identity_test_result = run_system_type_identity_tests();
-    cumulative_result += system_type_identity_test_result;
-
-    int pod_fifo_test_result = run_pod_fifo_tests();
-    cumulative_result += pod_fifo_test_result;
-
-    int string_buffer_test_result = run_string_buffer_tests();
-    cumulative_result += string_buffer_test_result;
-
-    int ordered_collection_test_result = run_ordered_collection_tests();
-    cumulative_result += ordered_collection_test_result;
-
-    int unordered_collection_test_result = run_unordered_collection_tests();
-    cumulative_result += unordered_collection_test_result;
-
-    int towning_test_result = run_owning_transport_tests();
-    cumulative_result += towning_test_result;
-
-    int tqueue_test_result = run_queue_transport_tests();
-    cumulative_result += tqueue_test_result;
-
-    int tring_test_result = run_ring_transport_tests();
-    cumulative_result += tring_test_result;
-
-    int mpmc_transport_test_result = run_mpmc_transport_tests();
-    cumulative_result += mpmc_transport_test_result;
+    cumulative_result += run_isolated_suite("AssetRepository", &run_asset_repository_tests);
+    cumulative_result += run_isolated_suite("AsyncState", &run_async_state_tests);
+    cumulative_result += run_isolated_suite("CMemoryToken", &run_memory_token_tests);
+    cumulative_result += run_isolated_suite("CMemoryView", &run_memory_view_tests);
+    cumulative_result += run_isolated_suite("ErasedOwner", &run_erased_owner_tests);
+    cumulative_result += run_isolated_suite("ErasedPod", &run_erased_pod_tests);
+    cumulative_result += run_isolated_suite("TPodVector", &run_pod_vector_tests);
+    cumulative_result += run_isolated_suite("ByteBuffers", &run_byte_buffer_tests);
+    cumulative_result += run_isolated_suite("TInstance", &run_instance_tests);
+    cumulative_result += run_isolated_suite("DebugService", &run_debug_service_tests);
+    cumulative_result += run_isolated_suite("SystemTypeIdentity", &run_system_type_identity_tests);
+    cumulative_result += run_isolated_suite("TPodFifo", &run_pod_fifo_tests);
+    cumulative_result += run_isolated_suite("StringBuffers", &run_string_buffer_tests);
+    cumulative_result += run_isolated_suite("TOrderedCollection", &run_ordered_collection_tests);
+    cumulative_result += run_isolated_suite("TUnorderedCollection", &run_unordered_collection_tests);
+    cumulative_result += run_isolated_suite("TOwningTransport", &run_owning_transport_tests);
+    cumulative_result += run_isolated_suite("TQueueTransport", &run_queue_transport_tests);
+    cumulative_result += run_isolated_suite("TRingTransport", &run_ring_transport_tests);
+    cumulative_result += run_isolated_suite("TMpmcTransport", &run_mpmc_transport_tests);
 
     if (mode >= ETestRunMode::core)
     {
@@ -223,8 +204,8 @@ int run_tests(ETestRunMode mode)
             tlex_cfg.run_fuzz_lightweight = true;
         }
 
-        int tlex_test_result = run_all_tests(tlex_cfg);
-        cumulative_result += tlex_test_result;
+        cumulative_result += run_isolated_suite(
+            "TOrderedSlots", [&tlex_cfg]() { return run_all_tests(tlex_cfg); });
     }
 
     if (mode >= ETestRunMode::core)
@@ -235,8 +216,8 @@ int run_tests(ETestRunMode mode)
             tun_cfg.run_fuzz = true;
         }
 
-        int tun_test_result = run_all_tests(tun_cfg);
-        cumulative_result += tun_test_result;
+        cumulative_result += run_isolated_suite(
+            "TUnorderedSlots", [&tun_cfg]() { return run_all_tests(tun_cfg); });
     }
 
     return cumulative_result;

@@ -10,17 +10,19 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <string>
 #include <type_traits>
 
 #include "containers/TInstance.hpp"
 #include "debug/service.hpp"
-#include "host/module/types/local_type_ids.hpp"
-#include "platform/filesystem/internal/file_utils.hpp"
-#include "platform/path/native_path.hpp"
+#include "tests/environment/local_type_ids.hpp"
+#include "tests/environment/test_paths.hpp"
 #include "system/erased_pod.hpp"
 #include "system/system_context.hpp"
 #include "system/transported_types.hpp"
 #include "tests/ErasedPod_test_suite.hpp"
+#include "tests/support/test_context.hpp"
+#include "tests/support/file_helpers.hpp"
 #include "threading/messages/CErasedMessageTransports.hpp"
 #include "threading/messages/CErasedPodMsg.hpp"
 
@@ -42,76 +44,7 @@ MV_REGISTER_SYSTEM_TYPE(
 namespace
 {
 
-struct TTestContext
-{
-    void expect(const bool condition, const char* const expression, const int line)
-    {
-        if (condition)
-        {
-            ++passed;
-        }
-        else
-        {
-            ++failed;
-            std::cerr << "ErasedPod test failure at line " << line << ": " << expression << '\n';
-        }
-    }
-
-    int passed{ 0 };
-    int failed{ 0 };
-};
-
-#define TEST_EXPECT(ctx, expression) (ctx).expect(!!(expression), #expression, __LINE__)
-
-bool file_contains(const char* const path, const char* const expected)
-{
-    if ((path == nullptr) || (expected == nullptr) || (expected[0] == 0))
-    {
-        return false;
-    }
-
-    const platform::path::NativePath native_path =
-        platform::path::makeNativePath(path);
-    std::FILE* const stream = platform::filesystem::openFile(
-        native_path, platform::filesystem::EOpenMode::BinaryRead);
-    if (stream == nullptr)
-    {
-        return false;
-    }
-
-    constexpr std::size_t buffer_capacity = 8192u;
-    char buffer[buffer_capacity]{};
-    const std::size_t expected_size = std::strlen(expected);
-    if (expected_size >= buffer_capacity)
-    {
-        std::fclose(stream);
-        return false;
-    }
-
-    std::size_t retained = 0u;
-    for (;;)
-    {
-        const std::size_t read = std::fread(
-            buffer + retained, 1u,
-            buffer_capacity - retained - 1u, stream);
-        const std::size_t available = retained + read;
-        buffer[available] = 0;
-        if (std::strstr(buffer, expected) != nullptr)
-        {
-            std::fclose(stream);
-            return true;
-        }
-        if (read == 0u)
-        {
-            std::fclose(stream);
-            return false;
-        }
-
-        const std::size_t overlap = expected_size - 1u;
-        retained = (available < overlap) ? available : overlap;
-        std::memmove(buffer, buffer + available - retained, retained);
-    }
-}
+using TTestContext = tests::TTestContext;
 
 struct CCanonicalValue
 {
@@ -379,7 +312,7 @@ void test_concrete_erased_pod_transport_admission(TTestContext& ctx)
 
     threading::CErasedPodMsg local_source;
     local_source.set_async_slot(18);
-    local_source.assign_payload(host::SHostTgaFileSaveState{
+    local_source.assign_payload(test_environment::STestTgaFileSaveState{
         18, CAssetId{}, CAssetId{} });
     const threading::CErasedPodMsg local_snapshot = local_source;
 
@@ -388,7 +321,7 @@ void test_concrete_erased_pod_transport_admission(TTestContext& ctx)
     TEST_EXPECT(ctx, local_same_component.initialise_fixed(2u));
     TEST_EXPECT(ctx, local_same_component.post(local_source));
     TEST_EXPECT(ctx, local_same_component.read(received));
-    host::SHostTgaFileSaveState local_result{};
+    test_environment::STestTgaFileSaveState local_result{};
     TEST_EXPECT(ctx, received.copy_payload_to(local_result));
     TEST_EXPECT(ctx, local_result.executive_slot == 18);
     TEST_EXPECT(ctx, received.query_async_slot() == 18);
@@ -468,10 +401,12 @@ void test_concrete_erased_pod_transport_admission(TTestContext& ctx)
 
 void test_concrete_erased_pod_transport_diagnostics(TTestContext& ctx)
 {
-    constexpr const char* event_path =
-        "test_data/output/logs/erased_transport_admission_test.log";
-    constexpr const char* direct_path =
-        "test_data/output/logs/erased_transport_admission_test_direct.log";
+    const std::string event_path_storage = test_environment::repository_path(
+        "test_data/output/logs/erased_transport_admission_test.log");
+    const std::string direct_path_storage = test_environment::repository_path(
+        "test_data/output/logs/erased_transport_admission_test_direct.log");
+    const char* const event_path = event_path_storage.c_str();
+    const char* const direct_path = direct_path_storage.c_str();
 
     TInstance<debug_system::CDebugServiceState> service_owner =
         TInstance<debug_system::CDebugServiceState>::create();
@@ -488,7 +423,7 @@ void test_concrete_erased_pod_transport_diagnostics(TTestContext& ctx)
 
     threading::CErasedPodMsg local_message;
     local_message.assign_payload(
-        host::SHostTgaFileSaveState{ 22, CAssetId{}, CAssetId{} });
+        test_environment::STestTgaFileSaveState{ 22, CAssetId{}, CAssetId{} });
     threading::transports::CErasedPodMsgTransport local_cross_component(
         module_ids::executive);
     TEST_EXPECT(ctx, local_cross_component.initialise_fixed(1u));
@@ -530,8 +465,8 @@ void test_concrete_erased_pod_transport_diagnostics(TTestContext& ctx)
 
     TEST_EXPECT(ctx, service->stop());
     TEST_EXPECT(ctx, debug_system::uninstall_service(service));
-    TEST_EXPECT(ctx, file_contains(event_path, "[invalid-system:"));
-    TEST_EXPECT(ctx, file_contains(
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[invalid-system:"));
+    TEST_EXPECT(ctx, tests::file_contains(
         event_path, "Erased transport rejected POD message"));
 
     (void)system_context::set_ambient_module_id(previous_module_id);

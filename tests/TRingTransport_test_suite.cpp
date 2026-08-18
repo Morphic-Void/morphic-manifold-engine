@@ -18,6 +18,7 @@
 
 #include "threading/transports/TRingTransport.hpp"
 #include "tests/TRingTransport_test_suite.hpp"
+#include "tests/support/test_context.hpp"
 #include "memory/memory_context.hpp"
 #include "debug/macros.hpp"
 
@@ -25,76 +26,6 @@ using threading::transports::TRing;
 
 namespace tests
 {
-
-struct TTestContext
-{
-    std::uint32_t passed = 0u;
-    std::uint32_t failed = 0u;
-
-    void fail(const char* const expr,
-        const char* const file,
-        const int line,
-        const std::string& message = {},
-        const char* const case_name = nullptr)
-    {
-        ++failed;
-        std::cerr << file << '(' << line << "): FAIL: ";
-        if ((case_name != nullptr) && (case_name[0] != '\0'))
-        {
-            std::cerr << '[' << case_name << "] ";
-        }
-        std::cerr << expr;
-        if (!message.empty())
-        {
-            std::cerr << " : " << message;
-        }
-        std::cerr << '\n';
-    }
-
-    void pass() noexcept
-    {
-        ++passed;
-    }
-
-    [[nodiscard]] int exit_code() const noexcept
-    {
-        return (failed == 0u) ? EXIT_SUCCESS : EXIT_FAILURE;
-    }
-};
-
-#define TEST_EXPECT_TRUE(ctx, expr) \
-    do { if (expr) { (ctx).pass(); } else { (ctx).fail(#expr, __FILE__, __LINE__); } } while (false)
-
-#define TEST_EXPECT_FALSE(ctx, expr) \
-    do { if (!(expr)) { (ctx).pass(); } else { (ctx).fail("!(" #expr ")", __FILE__, __LINE__); } } while (false)
-
-#define TEST_EXPECT_EQ(ctx, lhs, rhs) \
-    do { \
-        const auto test_lhs_value = (lhs); \
-        const auto test_rhs_value = (rhs); \
-        if (test_lhs_value == test_rhs_value) { \
-            (ctx).pass(); \
-        } else { \
-            (ctx).fail(#lhs " == " #rhs, __FILE__, __LINE__); \
-        } \
-    } while (false)
-
-#define TEST_CASE_EXPECT_TRUE(ctx, case_name, expr) \
-    do { if (expr) { (ctx).pass(); } else { (ctx).fail(#expr, __FILE__, __LINE__, {}, (case_name)); } } while (false)
-
-#define TEST_CASE_EXPECT_FALSE(ctx, case_name, expr) \
-    do { if (!(expr)) { (ctx).pass(); } else { (ctx).fail("!(" #expr ")", __FILE__, __LINE__, {}, (case_name)); } } while (false)
-
-#define TEST_CASE_EXPECT_EQ(ctx, case_name, lhs, rhs) \
-    do { \
-        const auto test_lhs_value = (lhs); \
-        const auto test_rhs_value = (rhs); \
-        if (test_lhs_value == test_rhs_value) { \
-            (ctx).pass(); \
-        } else { \
-            (ctx).fail(#lhs " == " #rhs, __FILE__, __LINE__, {}, (case_name)); \
-        } \
-    } while (false)
 
 inline std::string make_repeated_string(const char c, const std::uint32_t count)
 {

@@ -19,9 +19,6 @@
     <Filter Include="TestData\output"><UniqueIdentifier>{04228b5f-ad7d-fb9a-dd04-2e5d7730f096}</UniqueIdentifier></Filter>
     <Filter Include="TestData\output\files"><UniqueIdentifier>{73a6fb72-efef-392c-cb51-c2279ac65c87}</UniqueIdentifier></Filter>
     <Filter Include="TestData\output\logs"><UniqueIdentifier>{e047485a-ae84-44ec-8e56-4604874c7c6f}</UniqueIdentifier></Filter>
-    <Filter Include="Tests"><UniqueIdentifier>{e5c9d703-0bad-a2fe-792a-d7e4a26ca443}</UniqueIdentifier></Filter>
-    <Filter Include="Tests\include"><UniqueIdentifier>{b764e3e7-4af7-560d-9e63-1301a6d71c4d}</UniqueIdentifier></Filter>
-    <Filter Include="Tests\src"><UniqueIdentifier>{a4722b90-1d15-81a3-b33a-2d93114ac046}</UniqueIdentifier></Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="host\module\types\erased_owner_payloads.def"><Filter>Host\include\module\types</Filter></ClInclude>
@@ -32,28 +29,6 @@
     <ClInclude Include="host\runtime\host.hpp"><Filter>Host\include\runtime</Filter></ClInclude>
     <ClInclude Include="host\system\host_context.hpp"><Filter>Host\include\system</Filter></ClInclude>
     <ClInclude Include="host\system\system_id_definitions.hpp"><Filter>Host\include\system</Filter></ClInclude>
-    <ClInclude Include="tests\AssetRepository_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\AsyncState_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\ByteBuffers_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\CMemoryToken_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\CMemoryView_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\DebugService_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\ErasedOwner_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\ErasedPod_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\run_tests.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\StringBuffers_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\SystemTypeIdentity_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TInstance_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TMpmcTransport_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TOrderedCollection_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TOrderedSlots_test_harness.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TOwningTransport_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TPodFifo_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TPodVector_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TQueueTransport_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TRingTransport_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TUnorderedCollection_test_suite.hpp"><Filter>Tests\include</Filter></ClInclude>
-    <ClInclude Include="tests\TUnorderedSlots_test_harness.hpp"><Filter>Tests\include</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="host\entry\MorphicEngine.cpp"><Filter>Host\src\entry</Filter></ClCompile>
@@ -62,28 +37,6 @@
     <ClCompile Include="host\runtime\host.cpp"><Filter>Host\src\runtime</Filter></ClCompile>
     <ClCompile Include="host\system\host_context.cpp"><Filter>Host\src\system</Filter></ClCompile>
     <ClCompile Include="host\system\system_id_definitions.cpp"><Filter>Host\src\system</Filter></ClCompile>
-    <ClCompile Include="tests\AssetRepository_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\AsyncState_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\ByteBuffers_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\CMemoryToken_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\CMemoryView_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\DebugService_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\ErasedOwner_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\ErasedPod_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\run_tests.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\StringBuffers_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\SystemTypeIdentity_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TInstance_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TMpmcTransport_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TOrderedCollection_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TOrderedSlots_test_harness.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TOwningTransport_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TPodFifo_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TPodVector_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TQueueTransport_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TRingTransport_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TUnorderedCollection_test_suite.cpp"><Filter>Tests\src</Filter></ClCompile>
-    <ClCompile Include="tests\TUnorderedSlots_test_harness.cpp"><Filter>Tests\src</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="test_data\input\files\test_input.tga"><Filter>TestData\input\files</Filter></None>

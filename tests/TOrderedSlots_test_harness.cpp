@@ -35,7 +35,7 @@
 
 #include "containers/TPodOrderedSlots.hpp"
 #include "containers/slots/TOrderedSlots.hpp"
-#include "host/system/host_context.hpp"
+#include "tests/environment/test_environment.hpp"
 #include "tests/TOrderedSlots_test_harness.hpp"
 
 #ifndef TORDERED_TESTHARNESS_WITH_MAIN
@@ -1665,7 +1665,7 @@ int run_all_tests(const TOrderedConfig& cfg_in)
 #if TORDERED_TESTHARNESS_WITH_MAIN
 int main(int argc, char** argv)
 {
-    if (!host::host_context_install())
+    if (!test_environment::install())
     {
         return 1;
     }

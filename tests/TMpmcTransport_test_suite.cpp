@@ -13,6 +13,7 @@
 
 #include "threading/transports/TMpmcTransport.hpp"
 #include "tests/TMpmcTransport_test_suite.hpp"
+#include "tests/support/test_context.hpp"
 
 using threading::transports::EMpmcTransportStatus;
 using threading::transports::TAcquiredArenaSlot;
@@ -23,53 +24,6 @@ using threading::transports::TReservedArenaSlot;
 
 namespace tests
 {
-
-struct TTestContext
-{
-    std::uint32_t passed = 0u;
-    std::uint32_t failed = 0u;
-
-    void fail(const char* const expr,
-        const char* const file,
-        const int line,
-        const std::string& message = {})
-    {
-        ++failed;
-        std::cerr << file << '(' << line << "): FAIL: " << expr;
-        if (!message.empty())
-        {
-            std::cerr << " : " << message;
-        }
-        std::cerr << '\n';
-    }
-
-    void pass() noexcept
-    {
-        ++passed;
-    }
-
-    [[nodiscard]] int exit_code() const noexcept
-    {
-        return (failed == 0u) ? EXIT_SUCCESS : EXIT_FAILURE;
-    }
-};
-
-#define TEST_EXPECT_TRUE(ctx, expr) \
-    do { if (expr) { (ctx).pass(); } else { (ctx).fail(#expr, __FILE__, __LINE__); } } while (false)
-
-#define TEST_EXPECT_FALSE(ctx, expr) \
-    do { if (!(expr)) { (ctx).pass(); } else { (ctx).fail("!(" #expr ")", __FILE__, __LINE__); } } while (false)
-
-#define TEST_EXPECT_EQ(ctx, lhs, rhs) \
-    do { \
-        const auto test_lhs_value = (lhs); \
-        const auto test_rhs_value = (rhs); \
-        if (test_lhs_value == test_rhs_value) { \
-            (ctx).pass(); \
-        } else { \
-            (ctx).fail(#lhs " == " #rhs, __FILE__, __LINE__); \
-        } \
-    } while (false)
 
 static void print_summary(const char* const suite_name, const TTestContext& ctx)
 {

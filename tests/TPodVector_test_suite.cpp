@@ -14,30 +14,12 @@
 
 #include "containers/TPodVector.hpp"
 #include "tests/TPodVector_test_suite.hpp"
+#include "tests/support/test_context.hpp"
 
 namespace
 {
 
-struct TTestContext
-{
-    void expect(const bool condition, const char* const expression, const int line)
-    {
-        if (condition)
-        {
-            ++passed;
-        }
-        else
-        {
-            ++failed;
-            std::cerr << "TPodVector test failure at line " << line << ": " << expression << '\n';
-        }
-    }
-
-    int passed{ 0 };
-    int failed{ 0 };
-};
-
-#define TEST_EXPECT(ctx, expression) (ctx).expect(!!(expression), #expression, __LINE__)
+using TTestContext = tests::TTestContext;
 
 void test_constness_and_limits(TTestContext& ctx)
 {

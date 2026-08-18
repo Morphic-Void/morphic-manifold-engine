@@ -10,17 +10,19 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <string>
 #include <type_traits>
 
 #include "containers/TInstance.hpp"
 #include "debug/macros.hpp"
 #include "debug/service.hpp"
-#include "host/module/types/local_type_ids.hpp"
-#include "platform/filesystem/internal/file_utils.hpp"
-#include "platform/path/native_path.hpp"
+#include "tests/environment/local_type_ids.hpp"
+#include "tests/environment/test_paths.hpp"
 #include "system/system_context.hpp"
 #include "system/system_id_registry.hpp"
 #include "tests/DebugService_test_suite.hpp"
+#include "tests/support/test_context.hpp"
+#include "tests/support/file_helpers.hpp"
 
 namespace debug_system
 {
@@ -39,27 +41,7 @@ struct SDebugServiceTestAccess
 namespace debug_service_tests
 {
 
-struct TTestContext
-{
-    void expect(const bool condition, const char* const expression, const int line)
-    {
-        if (condition)
-        {
-            ++passed;
-        }
-        else
-        {
-            ++failed;
-            std::cerr << "DebugService test failure at line " << line
-                << ": " << expression << '\n';
-        }
-    }
-
-    int passed{ 0 };
-    int failed{ 0 };
-};
-
-#define TEST_EXPECT(ctx, expression) (ctx).expect(!!(expression), #expression, __LINE__)
+using TTestContext = tests::TTestContext;
 
 void compile_public_macro_interface(const bool execute)
 {
@@ -94,56 +76,6 @@ void compile_public_macro_interface(const bool execute)
         debug_system::k_event_format_capacity);
     MV_INFO(maximum_transport_format);
     MV_PANIC("panic");
-}
-
-bool file_contains(const char* const path, const char* const expected)
-{
-    if ((path == nullptr) || (expected == nullptr) || (expected[0] == 0))
-    {
-        return false;
-    }
-
-    const platform::path::NativePath native_path =
-        platform::path::makeNativePath(path);
-    std::FILE* const stream = platform::filesystem::openFile(
-        native_path, platform::filesystem::EOpenMode::BinaryRead);
-    if (stream == nullptr)
-    {
-        return false;
-    }
-
-    constexpr std::size_t buffer_capacity = 8192u;
-    char buffer[buffer_capacity]{};
-    const std::size_t expected_size = std::strlen(expected);
-    if (expected_size >= buffer_capacity)
-    {
-        std::fclose(stream);
-        return false;
-    }
-
-    std::size_t retained = 0u;
-    for (;;)
-    {
-        const std::size_t read = std::fread(
-            buffer + retained, 1u,
-            buffer_capacity - retained - 1u, stream);
-        const std::size_t available = retained + read;
-        buffer[available] = 0;
-        if (std::strstr(buffer, expected) != nullptr)
-        {
-            std::fclose(stream);
-            return true;
-        }
-        if (read == 0u)
-        {
-            std::fclose(stream);
-            return false;
-        }
-
-        const std::size_t overlap = expected_size - 1u;
-        retained = (available < overlap) ? available : overlap;
-        std::memmove(buffer, buffer + available - retained, retained);
-    }
 }
 
 debug_system::EEventArgumentType argument_type(
@@ -321,7 +253,7 @@ void test_argument_encoding(TTestContext& ctx)
         argument_type(system_id_arguments, 0u) ==
         debug_system::EEventArgumentType::system_type_id);
 
-    const local_type_id registered_local = local_type_ids::host_runtime;
+    const local_type_id registered_local = local_type_ids::test_runtime;
     const local_type_id unresolved_local = local_type_ids::ops::encode_id(
         local_type_ids::ops::encode_index(local_type_ids::k_count));
     const local_type_id invalid_local{ 0x00000002u };
@@ -485,7 +417,7 @@ void test_argument_formatting(TTestContext& ctx)
     const int expected_local_output_size = std::snprintf(
         expected_local_output,
         sizeof(expected_local_output),
-        "host_runtime | unregistered-local-type:0x%08x | invalid-local-type:0x%08x",
+        "test_runtime | unregistered-local-type:0x%08x | invalid-local-type:0x%08x",
         static_cast<unsigned int>(unresolved_local.raw_value()),
         0x00000002u);
     TEST_EXPECT(ctx, expected_local_output_size > 0);
@@ -495,7 +427,7 @@ void test_argument_formatting(TTestContext& ctx)
             sizeof(output),
             "{} | {} | {}",
             debug_system::encode_event_arguments(
-                local_type_ids::host_runtime,
+                local_type_ids::test_runtime,
                 unresolved_local,
                 local_type_id{ 0x00000002u }),
             output_size) ==
@@ -960,8 +892,12 @@ void test_provisioning_and_shared_words(TTestContext& ctx)
 
 void test_writer_and_direct_paths(TTestContext& ctx)
 {
-    constexpr const char* event_path = "test_data/output/logs/debug_service_test.log";
-    constexpr const char* direct_path = "test_data/output/logs/debug_service_test_direct.log";
+    const std::string event_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_test.log");
+    const std::string direct_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_test_direct.log");
+    const char* const event_path = event_path_storage.c_str();
+    const char* const direct_path = direct_path_storage.c_str();
     constexpr char source_file[] =
         "discarded/source/prefix/which/is/intentionally/longer/than/"
         "the/bounded/source/storage/available/to/the/debug/event/"
@@ -1006,7 +942,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             std::int32_t{ -7 },
             system_type_ids::file_load_request,
             debug_system::CInlineText16{ "payload" },
-            local_type_ids::host_runtime,
+            local_type_ids::test_runtime,
             type_id{ local_type_ids::tga_file_load },
             system_ids::host,
             module_ids::executable,
@@ -1128,9 +1064,9 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             system_ids::host.raw_value()));
     TEST_EXPECT(ctx, system_marker_size == 18);
     TEST_EXPECT(ctx,
-        file_contains(event_path, "[executable:host]"));
+        tests::file_contains(event_path, "[executable:host]"));
     TEST_EXPECT(ctx,
-        file_contains(direct_path, "[executable:host]"));
+        tests::file_contains(direct_path, "[executable:host]"));
 
     char unregistered_marker[64]{};
     const int unregistered_marker_size = std::snprintf(
@@ -1154,7 +1090,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     const int source_marker_size = std::snprintf(
         source_marker,
         sizeof(source_marker),
-        "[%s:%u] typed -7 file_load_request payload host_runtime tga_file_load "
+        "[%s:%u] typed -7 file_load_request payload test_runtime tga_file_load "
         "executable:host executable host",
         source_suffix,
         source_line);
@@ -1176,58 +1112,62 @@ void test_writer_and_direct_paths(TTestContext& ctx)
         0x00000002u);
     TEST_EXPECT(ctx, type_fallback_marker_size > 0);
 
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000001]"));
-    TEST_EXPECT(ctx, !file_contains(event_path, system_marker));
-    TEST_EXPECT(ctx, file_contains(event_path, "[info:event]"));
-    TEST_EXPECT(ctx, file_contains(event_path, "first transported event"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000002]"));
-    TEST_EXPECT(ctx, file_contains(event_path, "second transported event"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000003]"));
-    TEST_EXPECT(ctx, file_contains(event_path, "literal {braces}"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000004]"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[error:event]"));
-    TEST_EXPECT(ctx, file_contains(event_path, source_marker));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000005]"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[error:event]"));
-    TEST_EXPECT(ctx, file_contains(event_path, type_fallback_marker));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000006]"));
-    TEST_EXPECT(ctx, !file_contains(direct_path, system_marker));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000007]"));
-    TEST_EXPECT(ctx, file_contains(event_path, "rich report 42 3.5"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000008]"));
-    TEST_EXPECT(ctx, file_contains(event_path, report447));
-    TEST_EXPECT(ctx, !file_contains(event_path, report448));
-    TEST_EXPECT(ctx, !file_contains(event_path, "immediate report 17"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000009]"));
-    TEST_EXPECT(ctx, file_contains(direct_path, report448));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000010]"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "immediate report 17"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000011]"));
-    TEST_EXPECT(ctx, file_contains(direct_path, maximum_report));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000012]"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "Invalid rich debug report"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000013]"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[panic:event]"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "panic substrate record"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000014]"));
-    TEST_EXPECT(ctx, file_contains(event_path, unregistered_marker));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000001]"));
+    TEST_EXPECT(ctx, !tests::file_contains(event_path, system_marker));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[info:event]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "first transported event"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000002]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "second transported event"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000003]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "literal {braces}"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000004]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[error:event]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, source_marker));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000005]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[error:event]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, type_fallback_marker));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "[0000000006]"));
+    TEST_EXPECT(ctx, !tests::file_contains(direct_path, system_marker));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000007]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "rich report 42 3.5"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000008]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, report447));
+    TEST_EXPECT(ctx, !tests::file_contains(event_path, report448));
+    TEST_EXPECT(ctx, !tests::file_contains(event_path, "immediate report 17"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "[0000000009]"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, report448));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "[0000000010]"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "immediate report 17"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "[0000000011]"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, maximum_report));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "[0000000012]"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "Invalid rich debug report"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "[0000000013]"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "[panic:event]"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "panic substrate record"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000014]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, unregistered_marker));
     TEST_EXPECT(ctx,
-        file_contains(event_path, "unregistered system identity"));
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000015]"));
-    TEST_EXPECT(ctx, file_contains(event_path, invalid_marker));
-    TEST_EXPECT(ctx, file_contains(event_path, "invalid system identity"));
+        tests::file_contains(event_path, "unregistered system identity"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000015]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, invalid_marker));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "invalid system identity"));
 #if MV_DEVELOPMENT_BUILD
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000016]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000016]"));
     TEST_EXPECT(ctx,
-        file_contains(event_path,
+        tests::file_contains(event_path,
             "Assertion failed: std::uint32_t{} == 1u"));
 #endif
 }
 
 void test_lazy_log_opening(TTestContext& ctx)
 {
-    constexpr const char* event_path = "test_data/output/logs/debug_service_lazy_test.log";
-    constexpr const char* direct_path = "test_data/output/logs/debug_service_lazy_test_direct.log";
+    const std::string event_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_lazy_test.log");
+    const std::string direct_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_lazy_test_direct.log");
+    const char* const event_path = event_path_storage.c_str();
+    const char* const direct_path = direct_path_storage.c_str();
 
     TInstance<debug_system::CDebugServiceState> owner =
         TInstance<debug_system::CDebugServiceState>::create();
@@ -1246,13 +1186,17 @@ void test_lazy_log_opening(TTestContext& ctx)
 
     TEST_EXPECT(ctx, service->stop());
     TEST_EXPECT(ctx, debug_system::uninstall_service(service));
-    TEST_EXPECT(ctx, file_contains(direct_path, "[0000000001] "));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "[0000000001] "));
 }
 
 void test_filename_and_capacity_boundaries(TTestContext& ctx)
 {
-    constexpr const char* event_path = "test_data/output/logs/debug_service_filename_test.log";
-    constexpr const char* direct_path = "test_data/output/logs/debug_service_filename_test_direct.log";
+    const std::string event_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_filename_test.log");
+    const std::string direct_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_filename_test_direct.log");
+    const char* const event_path = event_path_storage.c_str();
+    const char* const direct_path = direct_path_storage.c_str();
     constexpr char filename31[] =
         "root\\mixed/path/1234567890123456789012345678901";
     constexpr char filename32[] =
@@ -1368,31 +1312,35 @@ void test_filename_and_capacity_boundaries(TTestContext& ctx)
 
     TEST_EXPECT(ctx, service->stop());
     TEST_EXPECT(ctx,
-        file_contains(event_path,
+        tests::file_contains(event_path,
             "[1234567890123456789012345678901:701] filename-31"));
     TEST_EXPECT(ctx,
-        file_contains(event_path,
+        tests::file_contains(event_path,
             "[...5678901234567890123456789012:702] filename-32"));
     TEST_EXPECT(ctx,
-        file_contains(event_path,
+        tests::file_contains(event_path,
             "[...123456789012345678901234567:703] filename-utf8"));
     TEST_EXPECT(ctx,
-        file_contains(event_path, "[plain.cpp:704] filename-plain"));
+        tests::file_contains(event_path, "[plain.cpp:704] filename-plain"));
     TEST_EXPECT(ctx,
-        file_contains(event_path, "[error:event] trailing-separator"));
+        tests::file_contains(event_path, "[error:event] trailing-separator"));
     TEST_EXPECT(ctx,
-        file_contains(event_path, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"));
+        tests::file_contains(event_path, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"));
     TEST_EXPECT(ctx,
-        file_contains(event_path, "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"));
+        tests::file_contains(event_path, "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"));
     TEST_EXPECT(ctx,
-        file_contains(event_path,
+        tests::file_contains(event_path,
             "[plain.cpp:710] Assertion failed: split | value 42"));
 }
 
 void test_queued_and_direct_equivalence(TTestContext& ctx)
 {
-    constexpr const char* event_path = "test_data/output/logs/debug_service_equivalence_test.log";
-    constexpr const char* direct_path = "test_data/output/logs/debug_service_equivalence_test_direct.log";
+    const std::string event_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_equivalence_test.log");
+    const std::string direct_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_equivalence_test_direct.log");
+    const char* const event_path = event_path_storage.c_str();
+    const char* const direct_path = direct_path_storage.c_str();
     constexpr char source_file[] = "tests/DebugService_test_suite.cpp";
     const debug_system::SEventUsagePoint usage_point{
         source_file, sizeof(source_file) - 1u, 777u };
@@ -1422,7 +1370,7 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
             debug_system::EEventType::event>(
                 usage_point, "direct ids {} {} {} {} {} {}",
             sizeof("direct ids {} {} {} {} {} {}") - 1u,
-            local_type_ids::host_runtime,
+            local_type_ids::test_runtime,
             local_type_ids::ops::encode_id(
                 local_type_ids::ops::encode_index(local_type_ids::k_count)),
             type_id{ system_type_ids::byte_buffer },
@@ -1437,14 +1385,14 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
     TEST_EXPECT(ctx, service->stop());
     constexpr const char* reconstructed =
         "[info:event] [DebugService_test_suite.cpp:777] equivalence 42";
-    TEST_EXPECT(ctx, file_contains(event_path, reconstructed));
-    TEST_EXPECT(ctx, file_contains(direct_path,
-        "[DebugService_test_suite.cpp:777] direct ids host_runtime "
+    TEST_EXPECT(ctx, tests::file_contains(event_path, reconstructed));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path,
+        "[DebugService_test_suite.cpp:777] direct ids test_runtime "
         "unregistered-local-type:"));
-    TEST_EXPECT(ctx, file_contains(direct_path, "byte_buffer"));
-    TEST_EXPECT(ctx, file_contains(direct_path,
+    TEST_EXPECT(ctx, tests::file_contains(direct_path, "byte_buffer"));
+    TEST_EXPECT(ctx, tests::file_contains(direct_path,
         "byte_buffer executable:host executable host"));
-    TEST_EXPECT(ctx, file_contains(direct_path,
+    TEST_EXPECT(ctx, tests::file_contains(direct_path,
         "[DebugService_test_suite.cpp:778] full report fallback"));
     TEST_EXPECT(ctx, debug_system::report(
         debug_system::SEventUsagePoint{
@@ -1453,14 +1401,18 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
     TEST_EXPECT(ctx, debug_system::uninstall_service(service));
     owner.reset();
 
-    TEST_EXPECT(ctx, file_contains(direct_path,
+    TEST_EXPECT(ctx, tests::file_contains(direct_path,
         "[DebugService_test_suite.cpp:779] closed report fallback"));
 }
 
 void test_malformed_event_overlays(TTestContext& ctx)
 {
-    constexpr const char* event_path = "test_data/output/logs/debug_service_malformed_test.log";
-    constexpr const char* direct_path = "test_data/output/logs/debug_service_malformed_test_direct.log";
+    const std::string event_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_malformed_test.log");
+    const std::string direct_path_storage = test_environment::repository_path(
+        "test_data/output/logs/debug_service_malformed_test_direct.log");
+    const char* const event_path = event_path_storage.c_str();
+    const char* const direct_path = direct_path_storage.c_str();
 
     TInstance<debug_system::CDebugServiceState> owner =
         TInstance<debug_system::CDebugServiceState>::create();
@@ -1534,18 +1486,18 @@ void test_malformed_event_overlays(TTestContext& ctx)
 
     TEST_EXPECT(ctx, service->start());
     TEST_EXPECT(ctx, service->stop());
-    TEST_EXPECT(ctx, file_contains(event_path, "[0000000001]"));
-    TEST_EXPECT(ctx, file_contains(event_path, "abc"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "[0000000001]"));
+    TEST_EXPECT(ctx, tests::file_contains(event_path, "abc"));
     for (std::uint32_t incident = 2u; incident <= 8u; ++incident)
     {
         char marker[32]{};
         const int marker_size = std::snprintf(
             marker, sizeof(marker), "[%010u]", incident);
         TEST_EXPECT(ctx, marker_size == 12);
-        TEST_EXPECT(ctx, file_contains(direct_path, marker));
+        TEST_EXPECT(ctx, tests::file_contains(direct_path, marker));
     }
     TEST_EXPECT(ctx,
-        file_contains(direct_path, "Invalid transported debug event"));
+        tests::file_contains(direct_path, "Invalid transported debug event"));
 }
 
 }   //  namespace debug_service_tests

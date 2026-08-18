@@ -14,6 +14,7 @@
 
 #include "memory/memory_token.hpp"
 #include "tests/CMemoryToken_test_suite.hpp"
+#include "tests/support/test_context.hpp"
 
 namespace
 {
@@ -25,26 +26,7 @@ constexpr std::size_t k_stable_alignment = alignof(std::uint32_t);
 constexpr std::size_t k_buffer_capacity_hint = 3u;
 constexpr std::size_t k_buffer_capacity = 4u;
 
-struct TTestContext
-{
-    void expect(const bool condition, const char* const expression, const int line)
-    {
-        if (condition)
-        {
-            ++passed;
-        }
-        else
-        {
-            ++failed;
-            std::cerr << "CMemoryToken test failure at line " << line << ": " << expression << '\n';
-        }
-    }
-
-    int passed{ 0 };
-    int failed{ 0 };
-};
-
-#define TEST_EXPECT(ctx, expression) (ctx).expect(!!(expression), #expression, __LINE__)
+using TTestContext = tests::TTestContext;
 
 void* MV_STD_ABI_CALL test_allocate(
     void*,

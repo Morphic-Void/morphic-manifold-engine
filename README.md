@@ -4,6 +4,19 @@ A C++17 game engine developed by Morphic Void. It is being built from first prin
 
 This repository currently contains the initial project structure and test infrastructure. Additional systems and documentation will be added as the engine evolves.
 
+## Tests
+
+`MorphicTests` is the standalone Core test executable. It is built by default
+with `MorphicEngine.sln`; running `MorphicEngine.exe` does not run it. Invoke
+`MorphicTests.exe -t1` for the ordinary suites, `-t2` for the moderate harness
+work (the default), or `-t3` for the full expensive modes. Test data and log
+paths are resolved from the repository, so the executable can be launched from
+Visual Studio, the repository root, or its build-output directory.
+
+The Executive-driven TGA load/decode/encode/save path remains a Host integration
+exercise. The separate direct TGA round-trip helper is compiled into
+`MorphicTests` as a manual test but is intentionally not registered or invoked.
+
 This repository is developed using a mixed human/AI workflow. The project's
 direction, specifications, architectural decisions, and final acceptance are
 owned by Ritchie Brannan / Morphic Void Limited. AI tools are used in varying

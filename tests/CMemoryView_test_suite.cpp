@@ -16,6 +16,7 @@
 #include "memory/memory_token.hpp"
 #include "memory/memory_view.hpp"
 #include "tests/CMemoryView_test_suite.hpp"
+#include "tests/support/test_context.hpp"
 
 namespace
 {
@@ -24,26 +25,7 @@ using memory::CMemoryConstView;
 using memory::CMemoryToken;
 using memory::CMemoryView;
 
-struct TTestContext
-{
-    void expect(const bool condition, const char* const expression, const int line)
-    {
-        if (condition)
-        {
-            ++passed;
-        }
-        else
-        {
-            ++failed;
-            std::cerr << "CMemoryView test failure at line " << line << ": " << expression << '\n';
-        }
-    }
-
-    int passed{ 0 };
-    int failed{ 0 };
-};
-
-#define TEST_EXPECT(ctx, expression) (ctx).expect(!!(expression), #expression, __LINE__)
+using TTestContext = tests::TTestContext;
 
 void* MV_STD_ABI_CALL test_allocate(
     void*,
