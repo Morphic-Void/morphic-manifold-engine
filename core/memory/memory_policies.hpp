@@ -213,7 +213,7 @@ inline std::size_t default_growth_policy(
 }
 
 constexpr std::size_t byte_alignment_policy(const std::size_t align) noexcept
-{   //  transitional alignment policy name
+{   //  retained size-returning alternative to alignment_policy
     return condition_alignment(align);
 }
 

@@ -5,9 +5,8 @@ Status: active priorities only. Completed-task history is intentionally omitted.
 This file is a short navigation layer rather than an independent detailed
 backlog:
 
-- `manifold_engine_interim_backlog.md` contains the broader engine backlog and
-  subsystem dependencies. Its legacy filename is retained temporarily and is
-  included in the deferred Morphic rebranding audit.
+- `morphic_engine_interim_backlog.md` contains the broader engine backlog and
+  subsystem dependencies.
 - `../project/future_work_notes.md` retains useful cross-task context that is
   not an active priority.
 - `../project/completed_milestones.md` records completed cross-cutting work.
@@ -28,8 +27,8 @@ backlog:
   Linux compilation, and distinguish portable-Core issues from missing Linux
   platform implementations.
 - After that build-portability pass, audit and complete the
-  Manifold-to-Morphic rebrand, including the legacy backlog filename, local
-  working directory, GitHub repository, references, and links.
+  Manifold-to-Morphic rebrand, including the local working directory, GitHub
+  repository, references, and links.
 - Build a pre-build code policy validator once the new layout and component
   rules are stable, covering approved allocation paths, STL and exception
   restrictions, ID registration, includes, and dependency direction.

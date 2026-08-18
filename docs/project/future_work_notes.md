@@ -17,7 +17,7 @@ contracts.
 Use:
 
 - `docs/backlog/current_scope_backlog.md` for active priorities;
-- `docs/backlog/manifold_engine_interim_backlog.md` for the broader backlog;
+- `docs/backlog/morphic_engine_interim_backlog.md` for the broader backlog;
 - `completed_milestones.md` for completed cross-cutting work;
 - subsystem documents for implemented behavior.
 

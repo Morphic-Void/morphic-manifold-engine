@@ -52,6 +52,8 @@
 
 #include "tests/run_tests.hpp"
 
+//  Retained for later extraction into a standalone TGA test; the current host
+//  runtime exercises the module-driven TGA flow instead.
 bool test_tga()
 {
     bool success = false;

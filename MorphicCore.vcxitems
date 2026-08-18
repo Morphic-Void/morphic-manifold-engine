@@ -153,7 +153,7 @@
     <None Include="$(MSBuildThisFileDirectory).gitignore" />
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\architectural-principles.md" />
     <None Include="$(MSBuildThisFileDirectory)docs\backlog\current_scope_backlog.md" />
-    <None Include="$(MSBuildThisFileDirectory)docs\backlog\manifold_engine_interim_backlog.md" />
+    <None Include="$(MSBuildThisFileDirectory)docs\backlog\morphic_engine_interim_backlog.md" />
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\codebase-ethos-primer.md" />
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\codebase-model.md" />
     <None Include="$(MSBuildThisFileDirectory)docs\containers\ByteBuffers.md" />

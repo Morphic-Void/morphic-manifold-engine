@@ -1,7 +1,7 @@
 Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited  
 License: MIT (see LICENSE file in repository root)  
 
-File:   manifold_engine_interim_backlog.md  
+File:   morphic_engine_interim_backlog.md  
 Author: Ritchie Brannan  
 Drafting and editorial assistance: OpenAI tools  
 Date:   Updated 11 Aug 26
@@ -991,8 +991,7 @@ Rename the public infrastructure to avoid confusion with *Manifold Garden*.
 
 - Use the selected Morphic naming consistently in place of the former Manifold
   naming.
-- Audit filenames and document navigation references, including the current
-  `manifold_engine_interim_backlog.md` filename.
+- Audit remaining filenames and document navigation references.
 - Audit remaining source, project, solution, binary, namespace, documentation,
   log, and visible branding references to the old name.
 - Rename public repository names where appropriate.

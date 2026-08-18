@@ -193,7 +193,7 @@
     <None Include="$(MSBuildThisFileDirectory).gitignore"><Filter>Docs</Filter></None>
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\architectural-principles.md"><Filter>Docs\architecture</Filter></None>
     <None Include="$(MSBuildThisFileDirectory)docs\backlog\current_scope_backlog.md"><Filter>Docs\backlog</Filter></None>
-    <None Include="$(MSBuildThisFileDirectory)docs\backlog\manifold_engine_interim_backlog.md"><Filter>Docs\backlog</Filter></None>
+    <None Include="$(MSBuildThisFileDirectory)docs\backlog\morphic_engine_interim_backlog.md"><Filter>Docs\backlog</Filter></None>
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\codebase-ethos-primer.md"><Filter>Docs\architecture</Filter></None>
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\codebase-model.md"><Filter>Docs\architecture</Filter></None>
     <None Include="$(MSBuildThisFileDirectory)docs\containers\ByteBuffers.md"><Filter>Docs\containers</Filter></None>
