@@ -26,9 +26,6 @@ backlog:
   build description that preserves Core as per-consumer shared source, attempt
   Linux compilation, and distinguish portable-Core issues from missing Linux
   platform implementations.
-- After that build-portability pass, audit and complete the
-  Manifold-to-Morphic rebrand, including the local working directory, GitHub
-  repository, references, and links.
 - Build a pre-build code policy validator once the new layout and component
   rules are stable, covering approved allocation paths, STL and exception
   restrictions, ID registration, includes, and dependency direction.

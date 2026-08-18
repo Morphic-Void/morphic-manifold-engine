@@ -975,46 +975,6 @@ complete aggregate suite.
 - Keep aggregate pass/fail exit behaviour suitable for automation.
 - Consider listing available tests and groups from the executable.
 
----
-
-## 13.4 Public infrastructure rebranding
-
-**Status:** Open
-**Scale:** Medium
-**Domain:** Codebase hygiene / project identity
-
-### Purpose
-
-Rename the public infrastructure to avoid confusion with *Manifold Garden*.
-
-### Scope
-
-- Use the selected Morphic naming consistently in place of the former Manifold
-  naming.
-- Audit remaining filenames and document navigation references.
-- Audit remaining source, project, solution, binary, namespace, documentation,
-  log, and visible branding references to the old name.
-- Rename public repository names where appropriate.
-- Rename the local working directory when it will no longer disrupt active
-  Codex tasks associated with the existing path.
-- Update repository links and other public references.
-- Update project, solution, binary, namespace, documentation, and visible
-  branding references according to the chosen migration boundary.
-- Identify compatibility or redirect requirements before changing public
-  locations.
-- Verify that package, build, CI, badge, and external integration references
-  remain valid after migration.
-
-### Ordering
-
-Complete the current module, ID-system, debug-transport, and layout work before
-renaming the local directory or GitHub repository. Those location changes can
-disrupt active Codex tasks and other tooling bound to the current workspace or
-remote name. Perform the naming audit first, then execute the rename as a
-deliberate coordinated migration.
-
----
-
 # 14. Higher-level consumer systems
 
 These remain placeholders. They are intentionally not decomposed yet.
