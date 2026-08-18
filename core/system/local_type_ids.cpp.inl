@@ -24,26 +24,21 @@
 
 #include "system/erased_owner.hpp"
 
-static constexpr local_type_registry::SLocalTypeRegistration
-    s_local_type_registrations[] =
+static constexpr local_type_registry::SLocalTypeRegistration s_local_type_registrations[] =
 {
 #define MV_LOCAL_TYPE(name, cpp_type) \
-    { local_type_ids::name, local_type_ids::name##_index, \
-        local_type_registry::make_name(#name) },
+    { local_type_ids::name, local_type_ids::name##_index, local_type_registry::make_name(#name) },
     MV_LOCAL_TYPES(MV_LOCAL_TYPE)
 #undef MV_LOCAL_TYPE
 };
 
-static constexpr local_type_registry::SLocalTypeRegistryView
-    s_local_type_registry_view{
-        s_local_type_registrations,
-        static_cast<std::uint32_t>(local_type_ids::k_count) };
+static constexpr local_type_registry::SLocalTypeRegistryView s_local_type_registry_view{
+    s_local_type_registrations,
+    static_cast<std::uint32_t>(local_type_ids::k_count) };
 
-static constexpr std::array<erased_owner_operations::SRegistration,
-    local_type_ids::k_count> make_local_erased_owner_operations() noexcept
+static constexpr std::array<erased_owner_operations::SRegistration, local_type_ids::k_count> make_local_erased_owner_operations() noexcept
 {
-    std::array<erased_owner_operations::SRegistration,
-        local_type_ids::k_count> result{};
+    std::array<erased_owner_operations::SRegistration, local_type_ids::k_count> result{};
 
 #define MV_ERASED_OWNER_PAYLOAD(type) \
     result[local_type_ids::ops::decode_index( \
@@ -65,12 +60,10 @@ static constexpr std::array<erased_owner_operations::SRegistration,
     return result;
 }
 
-static constexpr auto s_local_erased_owner_operations =
-    make_local_erased_owner_operations();
-static constexpr erased_owner_operations::SCategoryView
-    s_local_erased_owner_operations_view{
-        s_local_erased_owner_operations.data(),
-        static_cast<std::uint32_t>(s_local_erased_owner_operations.size()) };
+static constexpr auto s_local_erased_owner_operations = make_local_erased_owner_operations();
+static constexpr erased_owner_operations::SCategoryView s_local_erased_owner_operations_view{
+    s_local_erased_owner_operations.data(),
+    static_cast<std::uint32_t>(s_local_erased_owner_operations.size()) };
 
 namespace local_type_registry
 {

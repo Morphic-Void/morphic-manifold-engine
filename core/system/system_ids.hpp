@@ -713,10 +713,12 @@ constexpr mount_point_ids::index_type get_mount_point_index(const id_type system
 namespace system_type_ids
 {
 
+#include "system/system_type_ids.def"
+
 #define MV_SYSTEM_TYPE(name) name##_index_value,
 enum : index_type
 {
-#include "system/system_type_ids.def"
+    MV_SYSTEM_TYPES(MV_SYSTEM_TYPE)
     k_count
 };
 #undef MV_SYSTEM_TYPE
@@ -726,8 +728,9 @@ static_assert((k_count <= ops::k_capacity), "The system type definition count ex
 #define MV_SYSTEM_TYPE(name) \
 constexpr index_type name##_index = ops::encode_index(name##_index_value); \
 constexpr system_type_id name = ops::encode_id(name##_index);
-#include "system/system_type_ids.def"
+MV_SYSTEM_TYPES(MV_SYSTEM_TYPE)
 #undef MV_SYSTEM_TYPE
+#undef MV_SYSTEM_TYPES
 
 }   //  namespace system_type_ids
 

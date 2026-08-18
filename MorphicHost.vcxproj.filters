@@ -4,14 +4,12 @@
     <Filter Include="Host"><UniqueIdentifier>{4a823118-b9ba-8baa-2f47-489c0716f527}</UniqueIdentifier></Filter>
     <Filter Include="Host\include"><UniqueIdentifier>{2cd7888d-e5ad-42d5-bf41-896687579fcb}</UniqueIdentifier></Filter>
     <Filter Include="Host\include\module"><UniqueIdentifier>{97134e4f-c972-4c26-a0a3-3a058ef616f5}</UniqueIdentifier></Filter>
-    <Filter Include="Host\include\module\binding"><UniqueIdentifier>{a59a14f8-9134-f8f9-9fdb-f104537dda82}</UniqueIdentifier></Filter>
     <Filter Include="Host\include\module\types"><UniqueIdentifier>{65b24ad9-a28c-549d-2fc2-826d704ca740}</UniqueIdentifier></Filter>
     <Filter Include="Host\include\runtime"><UniqueIdentifier>{8e82bcc9-2ad3-b13e-473a-b78052ba8354}</UniqueIdentifier></Filter>
     <Filter Include="Host\include\system"><UniqueIdentifier>{75dcd30d-d12b-27a1-9c19-2977d62b3577}</UniqueIdentifier></Filter>
     <Filter Include="Host\src"><UniqueIdentifier>{16671863-2769-4aae-a3a8-9ea9b15f5e67}</UniqueIdentifier></Filter>
     <Filter Include="Host\src\entry"><UniqueIdentifier>{46949e7d-f13b-94e8-1104-a62df2ef60b4}</UniqueIdentifier></Filter>
     <Filter Include="Host\src\module"><UniqueIdentifier>{ae9c6f67-ffe1-4603-a444-df10de27690d}</UniqueIdentifier></Filter>
-    <Filter Include="Host\src\module\binding"><UniqueIdentifier>{d75c0a69-e32f-d20f-9404-87e8ecbdb2ab}</UniqueIdentifier></Filter>
     <Filter Include="Host\src\module\types"><UniqueIdentifier>{ee34383d-a37f-b0a8-cba0-d09cb066dd8c}</UniqueIdentifier></Filter>
     <Filter Include="Host\src\runtime"><UniqueIdentifier>{3e9a656f-34cb-dfed-bcab-7ad8ba4b9a72}</UniqueIdentifier></Filter>
     <Filter Include="Host\src\system"><UniqueIdentifier>{c191b9c4-2263-1c55-f7ba-7fc3034e22cb}</UniqueIdentifier></Filter>

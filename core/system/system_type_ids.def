@@ -1,26 +1,26 @@
-//  Built-in transported type identity declarations.
-//  Include this file with:
-//  - MV_SYSTEM_TYPE(name)
+//  Built-in transported type identity catalog.
+//  Defines MV_SYSTEM_TYPES(type_macro).
 
-MV_SYSTEM_TYPE(byte_buffer)
-MV_SYSTEM_TYPE(byte_rect_buffer)
-MV_SYSTEM_TYPE(simple_string)
-MV_SYSTEM_TYPE(string_buffer)
-MV_SYSTEM_TYPE(stable_strings)
-MV_SYSTEM_TYPE(unrecognised_msg)
-MV_SYSTEM_TYPE(file_load_request)
-MV_SYSTEM_TYPE(file_save_request)
-MV_SYSTEM_TYPE(tga_load_request)
-MV_SYSTEM_TYPE(tga_save_request)
-MV_SYSTEM_TYPE(tga_encode_request)
-MV_SYSTEM_TYPE(tga_decode_request)
-MV_SYSTEM_TYPE(file_load_result)
-MV_SYSTEM_TYPE(file_save_result)
-MV_SYSTEM_TYPE(tga_load_result)
-MV_SYSTEM_TYPE(tga_save_result)
-MV_SYSTEM_TYPE(tga_encode_result)
-MV_SYSTEM_TYPE(tga_decode_result)
-MV_SYSTEM_TYPE(loaded_file)
-MV_SYSTEM_TYPE(encoded_tga)
-MV_SYSTEM_TYPE(decoded_tga)
-MV_SYSTEM_TYPE(executive_thread_function)
+#define MV_SYSTEM_TYPES(type_macro) \
+    type_macro(byte_buffer) \
+    type_macro(byte_rect_buffer) \
+    type_macro(simple_string) \
+    type_macro(string_buffer) \
+    type_macro(stable_strings) \
+    type_macro(unrecognised_msg) \
+    type_macro(file_load_request) \
+    type_macro(file_save_request) \
+    type_macro(tga_load_request) \
+    type_macro(tga_save_request) \
+    type_macro(tga_encode_request) \
+    type_macro(tga_decode_request) \
+    type_macro(file_load_result) \
+    type_macro(file_save_result) \
+    type_macro(tga_load_result) \
+    type_macro(tga_save_result) \
+    type_macro(tga_encode_result) \
+    type_macro(tga_decode_result) \
+    type_macro(loaded_file) \
+    type_macro(encoded_tga) \
+    type_macro(decoded_tga) \
+    type_macro(executive_thread_function)

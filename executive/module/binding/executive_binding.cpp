@@ -8,6 +8,8 @@
 //
 //  Executive module identity, exported functions, and bootstrap entry point.
 
+#include <cstdint>      //  std::uint32_t
+
 #include "executive/module/binding/executive_binding.hpp"
 
 #include "executive/module/types/local_type_ids.hpp"
@@ -17,11 +19,17 @@
 namespace executive::module_binding
 {
 
+//  Module-local configuration.
+static constexpr module_ids::id_type k_advertised_module_id{ module_ids::executive };
+static constexpr std::uint32_t k_advertised_version_minor{ 0u };
+
 static modules::EBindingResult MV_STD_ABI_CALL query_function(
     const system_type_id function_type,
-    const std::uint32_t,
+    const std::uint32_t functional_major,
     modules::FModuleFunction* const function) noexcept
 {
+    (void)functional_major;
+
     if (function == nullptr)
     {
         return modules::EBindingResult::invalid_argument;
@@ -37,18 +45,9 @@ static modules::EBindingResult MV_STD_ABI_CALL query_function(
     return modules::EBindingResult::success;
 }
 
-constexpr modules::SModuleBindingConfig k_binding_config{
-    { module_ids::executive, { modules::k_binding_abi_major, 0u },
-        modules::k_binding_abi_major, modules::k_binding_abi_major },
-    module_ids::executable,
-    modules::k_binding_abi_major,
-    modules::k_binding_abi_major,
-    &query_function,
-    &local_type_registry::component_view,
-    &erased_owner_operations::local_operations_view
-};
+static constexpr modules::SModuleBindingConfig k_binding_config = MV_MODULE_BINDING_CONFIG();
 
-modules::CModuleBindingContext s_binding{ k_binding_config };
+static modules::CModuleBindingContext s_binding{ k_binding_config };
 
 }   //  namespace executive::module_binding
 

@@ -34,6 +34,24 @@ struct SModuleBindingConfig
     FQueryLocalErasedOwnerOperationsView query_local_erased_owner_operations_view{ nullptr };
 };
 
+//  Standard configuration for a non-Host module. The component supplies these
+//  translation-unit-local names before expanding the macro:
+//  - k_advertised_module_id
+//  - k_advertised_version_minor
+//  - query_function
+#define MV_MODULE_BINDING_CONFIG() \
+    { \
+        { k_advertised_module_id, \
+            { modules::k_binding_abi_major, k_advertised_version_minor }, \
+            modules::k_binding_abi_major, modules::k_binding_abi_major }, \
+        module_ids::executable, \
+        modules::k_binding_abi_major, \
+        modules::k_binding_abi_major, \
+        &query_function, \
+        &local_type_registry::component_view, \
+        &erased_owner_operations::local_operations_view \
+    }
+
 class CModuleBindingContext
 {
 public:

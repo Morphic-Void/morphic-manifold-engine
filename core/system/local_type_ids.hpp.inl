@@ -28,14 +28,12 @@
 
 namespace local_type_registry
 {
-[[nodiscard]] const SLocalTypeRegistryView&
-    MV_STD_ABI_CALL component_view() noexcept;
+[[nodiscard]] const SLocalTypeRegistryView& MV_STD_ABI_CALL component_view() noexcept;
 }
 
 namespace erased_owner_operations
 {
-[[nodiscard]] const SCategoryView&
-    MV_STD_ABI_CALL local_operations_view() noexcept;
+[[nodiscard]] const SCategoryView& MV_STD_ABI_CALL local_operations_view() noexcept;
 }
 
 namespace local_type_ids
@@ -51,8 +49,7 @@ enum : index_type
 static_assert(k_count <= ops::k_capacity);
 
 #define MV_LOCAL_TYPE(name, cpp_type) \
-    inline constexpr index_type name##_index = \
-        ops::encode_index(name##_index_value); \
+    inline constexpr index_type name##_index = ops::encode_index(name##_index_value); \
     inline constexpr local_type_id name = ops::encode_id(name##_index);
 MV_LOCAL_TYPES(MV_LOCAL_TYPE)
 #undef MV_LOCAL_TYPE
@@ -65,8 +62,7 @@ MV_LOCAL_TYPES(MV_LOCAL_TYPE)
 #undef MV_LOCAL_TYPE
 
 #define MV_ERASED_OWNER_PAYLOAD(type) MV_REGISTER_ERASED_OWNER_PAYLOAD(type);
-#define MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE(type, member) \
-    MV_REGISTER_ERASED_OWNER_PAYLOAD(type);
+#define MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE(type, member) MV_REGISTER_ERASED_OWNER_PAYLOAD(type);
 MV_LOCAL_ERASED_OWNER_PAYLOADS(
     MV_ERASED_OWNER_PAYLOAD,
     MV_ERASED_OWNER_PAYLOAD_WITH_STORAGE)
