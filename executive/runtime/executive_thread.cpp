@@ -13,7 +13,7 @@
 #include <utility>      //  std::move
 
 #include "executive/runtime/executive_thread.hpp"
-#include "executive/module/types/executive_local_type_registry.hpp"
+#include "executive/module/types/local_type_ids.hpp"
 #include "module/module_binding_context.hpp"
 
 #include "debug/macros.hpp"

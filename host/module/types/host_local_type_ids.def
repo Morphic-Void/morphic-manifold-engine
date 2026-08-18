@@ -1,8 +1,0 @@
-//  Host-local type identity declarations.
-//  Include with MV_LOCAL_TYPE(name, cpp_type).
-
-MV_LOCAL_TYPE(host_runtime, host::CHost)
-MV_LOCAL_TYPE(tga_file_load, host::SHostTgaFileLoadState)
-MV_LOCAL_TYPE(tga_decode, host::SHostTgaDecodeState)
-MV_LOCAL_TYPE(tga_encode, host::SHostTgaEncodeState)
-MV_LOCAL_TYPE(tga_file_save, host::SHostTgaFileSaveState)

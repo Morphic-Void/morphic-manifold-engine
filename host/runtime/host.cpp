@@ -25,7 +25,7 @@
 #include "containers/containers.hpp"
 #include "host/runtime/host.hpp"
 #include "host/system/host_context.hpp"
-#include "host/module/types/host_local_type_registry.hpp"
+#include "host/module/types/local_type_ids.hpp"
 #include "host/runtime/host_worker_thread.hpp"
 #include "host/system/system_id_definitions.hpp"
 #include "image/codec/tga.hpp"

@@ -1,6 +1,0 @@
-//  Executive-module-local type identity declarations.
-//  Include with MV_LOCAL_TYPE(name, cpp_type).
-
-MV_LOCAL_TYPE(executive, executive::CExecutiveModuleTag)
-MV_LOCAL_TYPE(tga_load_state, executive::SExecutiveTgaLoadState)
-MV_LOCAL_TYPE(tga_save_state, executive::SExecutiveTgaSaveState)

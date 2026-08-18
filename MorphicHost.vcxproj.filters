@@ -26,10 +26,10 @@
     <Filter Include="Tests\src"><UniqueIdentifier>{a4722b90-1d15-81a3-b33a-2d93114ac046}</UniqueIdentifier></Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="host\module\types\host_erased_owner_payloads.def"><Filter>Host\include\module\types</Filter></ClInclude>
-    <ClInclude Include="host\module\types\host_local_type_ids.def"><Filter>Host\include\module\types</Filter></ClInclude>
-    <ClInclude Include="host\module\types\host_local_type_registry.hpp"><Filter>Host\include\module\types</Filter></ClInclude>
-    <ClInclude Include="host\module\types\host_local_types.hpp"><Filter>Host\include\module\types</Filter></ClInclude>
+    <ClInclude Include="host\module\types\erased_owner_payloads.def"><Filter>Host\include\module\types</Filter></ClInclude>
+    <ClInclude Include="host\module\types\local_type_ids.def"><Filter>Host\include\module\types</Filter></ClInclude>
+    <ClInclude Include="host\module\types\local_type_ids.hpp"><Filter>Host\include\module\types</Filter></ClInclude>
+    <ClInclude Include="host\module\types\local_types.hpp"><Filter>Host\include\module\types</Filter></ClInclude>
     <ClInclude Include="host\runtime\host_worker_thread.hpp"><Filter>Host\include\runtime</Filter></ClInclude>
     <ClInclude Include="host\runtime\host.hpp"><Filter>Host\include\runtime</Filter></ClInclude>
     <ClInclude Include="host\system\host_context.hpp"><Filter>Host\include\system</Filter></ClInclude>
@@ -59,8 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="host\entry\MorphicEngine.cpp"><Filter>Host\src\entry</Filter></ClCompile>
-    <ClCompile Include="host\module\types\host_erased_owner_operations.cpp"><Filter>Host\src\module\types</Filter></ClCompile>
-    <ClCompile Include="host\module\types\host_local_type_registry.cpp"><Filter>Host\src\module\types</Filter></ClCompile>
+    <ClCompile Include="host\module\types\local_type_ids.cpp"><Filter>Host\src\module\types</Filter></ClCompile>
     <ClCompile Include="host\runtime\host_worker_thread.cpp"><Filter>Host\src\runtime</Filter></ClCompile>
     <ClCompile Include="host\runtime\host.cpp"><Filter>Host\src\runtime</Filter></ClCompile>
     <ClCompile Include="host\system\host_context.cpp"><Filter>Host\src\system</Filter></ClCompile>

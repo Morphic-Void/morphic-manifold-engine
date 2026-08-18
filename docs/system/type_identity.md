@@ -102,16 +102,32 @@ registry.
 
 ## Local Definitions
 
-Each binary owns an immutable local definition table. The current physical
-layout keeps host definitions under `host/` and executive definitions under
-`modules/executive/`; this does not anticipate the later source-layout
-migration.
+Each binary owns an immutable local definition table. Host definitions remain
+under `host/` and Executive definitions remain under `executive/`. Both
+components use the neutral in-directory names `local_type_ids.def`,
+`erased_owner_payloads.def`, and `local_type_ids.*`.
+
+The component catalog header reopens `local_type_ids`, so ordinary component
+code uses names such as `local_type_ids::host_runtime` without an additional
+component prefix. Component catalog headers are binary-private and two
+components' catalogs must not be included in the same translation unit. Host
+tests therefore exercise only the Host catalog; Executive catalog generation
+and installation are compiled and validated in the Executive binary.
 
 Component `.def` files enumerate ordinary zero-based ordinals. Repeated
 inclusion generates IDs, C++ bindings, immutable registrations, and count
 assertions. Names come from stringified identifier tokens and contain at most
 15 bytes plus a terminator. Their complete 16-byte values are constructed at
 compile time, terminated, and zero-filled.
+
+The repeated declaration and definition bodies live in Core's
+`local_type_ids.hpp.inl` and `local_type_ids.cpp.inl`. Identical component
+wrappers include their adjacent `local_types.hpp`, `local_type_ids.def`, and
+`erased_owner_payloads.def` files before invoking those Core bodies. The
+catalogs expose list macros consumed by Core, so no component path or
+component-specific configuration macro enters the shared machinery. IDs,
+payload eligibility, query functions, and static tables remain instantiated
+separately in each binary.
 
 The component installs and validates its complete table during explicit
 bootstrap. Lookup revalidates category, decoded ordinal, range, exact entry

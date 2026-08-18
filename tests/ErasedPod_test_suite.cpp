@@ -14,7 +14,7 @@
 
 #include "containers/TInstance.hpp"
 #include "debug/service.hpp"
-#include "host/module/types/host_local_type_registry.hpp"
+#include "host/module/types/local_type_ids.hpp"
 #include "platform/filesystem/internal/file_utils.hpp"
 #include "platform/path/native_path.hpp"
 #include "system/erased_pod.hpp"

@@ -10,7 +10,7 @@
 
 #include "executive/module/binding/executive_binding.hpp"
 
-#include "executive/module/types/executive_local_type_registry.hpp"
+#include "executive/module/types/local_type_ids.hpp"
 #include "executive/runtime/executive_thread.hpp"
 #include "module/module_binding_context.hpp"
 
@@ -44,8 +44,8 @@ constexpr modules::SModuleBindingConfig k_binding_config{
     modules::k_binding_abi_major,
     modules::k_binding_abi_major,
     &query_function,
-    &executive::local_type_registry_view,
-    &executive::local_erased_owner_operations_view
+    &local_type_registry::component_view,
+    &erased_owner_operations::local_operations_view
 };
 
 modules::CModuleBindingContext s_binding{ k_binding_config };

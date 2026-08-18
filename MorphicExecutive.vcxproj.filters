@@ -15,13 +15,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="executive\module\binding\executive_binding.hpp"><Filter>Executive\include\module\binding</Filter></ClInclude>
-    <ClInclude Include="executive\module\types\executive_local_type_ids.def"><Filter>Executive\include\module\types</Filter></ClInclude>
-    <ClInclude Include="executive\module\types\executive_local_type_registry.hpp"><Filter>Executive\include\module\types</Filter></ClInclude>
+    <ClInclude Include="executive\module\types\erased_owner_payloads.def"><Filter>Executive\include\module\types</Filter></ClInclude>
+    <ClInclude Include="executive\module\types\local_type_ids.def"><Filter>Executive\include\module\types</Filter></ClInclude>
+    <ClInclude Include="executive\module\types\local_type_ids.hpp"><Filter>Executive\include\module\types</Filter></ClInclude>
+    <ClInclude Include="executive\module\types\local_types.hpp"><Filter>Executive\include\module\types</Filter></ClInclude>
     <ClInclude Include="executive\runtime\executive_thread.hpp"><Filter>Executive\include\runtime</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="executive\module\binding\executive_binding.cpp"><Filter>Executive\src\module\binding</Filter></ClCompile>
-    <ClCompile Include="executive\module\types\executive_local_type_registry.cpp"><Filter>Executive\src\module\types</Filter></ClCompile>
+    <ClCompile Include="executive\module\types\local_type_ids.cpp"><Filter>Executive\src\module\types</Filter></ClCompile>
     <ClCompile Include="executive\runtime\executive_thread.cpp"><Filter>Executive\src\runtime</Filter></ClCompile>
   </ItemGroup>
 </Project>

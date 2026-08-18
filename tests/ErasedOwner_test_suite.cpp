@@ -19,7 +19,7 @@
 #include "debug/service.hpp"
 #include "module/bound_module.hpp"
 #include "host/system/host_context.hpp"
-#include "host/module/types/host_local_type_registry.hpp"
+#include "host/module/types/local_type_ids.hpp"
 #include "host/system/system_id_definitions.hpp"
 #include "memory/memory_context.hpp"
 #include "platform/path/native_path.hpp"
@@ -160,7 +160,7 @@ void test_operation_registry(TTestContext& ctx)
 {
     const erased_owner_operations::SRegistryView expected_view{
         erased_owner_operations::system_operations_view(),
-        host::local_erased_owner_operations_view()
+        erased_owner_operations::local_operations_view()
     };
     TEST_EXPECT(ctx, erased_owner_operations::validate_view(expected_view));
     TEST_EXPECT(ctx, erased_owner_operations::view_is_installed());
@@ -202,7 +202,7 @@ void test_operation_registry(TTestContext& ctx)
 void test_operation_registry_failure_boundaries(TTestContext& ctx)
 {
     std::array<erased_owner_operations::SRegistration,
-        host_local_type_ids::k_count> missing_local_operations{};
+        local_type_ids::k_count> missing_local_operations{};
     const erased_owner_operations::SRegistryView missing_view{
         erased_owner_operations::system_operations_view(),
         { missing_local_operations.data(),

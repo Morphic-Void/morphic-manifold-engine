@@ -2,9 +2,9 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:    host_local_types.hpp
+//  File:    local_types.hpp
 //  Authors: Ritchie Brannan / OpenAI Codex
-//  Date:    14 Aug 26
+//  Date:    17 Aug 26
 //
 //  Complete definitions for host-local runtime types.
 
@@ -20,6 +20,8 @@
 
 namespace host
 {
+
+class CHost;
 
 struct SHostTgaFileLoadState
 {

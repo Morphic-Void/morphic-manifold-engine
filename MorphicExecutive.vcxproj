@@ -90,13 +90,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="executive\module\binding\executive_binding.cpp" />
-    <ClCompile Include="executive\module\types\executive_local_type_registry.cpp" />
+    <ClCompile Include="executive\module\types\local_type_ids.cpp" />
     <ClCompile Include="executive\runtime\executive_thread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="executive\module\binding\executive_binding.hpp" />
-    <ClInclude Include="executive\module\types\executive_local_type_ids.def" />
-    <ClInclude Include="executive\module\types\executive_local_type_registry.hpp" />
+    <ClInclude Include="executive\module\types\erased_owner_payloads.def" />
+    <ClInclude Include="executive\module\types\local_type_ids.def" />
+    <ClInclude Include="executive\module\types\local_type_ids.hpp" />
+    <ClInclude Include="executive\module\types\local_types.hpp" />
     <ClInclude Include="executive\runtime\executive_thread.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

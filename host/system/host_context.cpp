@@ -20,7 +20,7 @@
 #include <new>          //  std::nothrow, aligned operator new[]/delete[]
 
 #include "host/system/host_context.hpp"
-#include "host/module/types/host_local_type_registry.hpp"
+#include "host/module/types/local_type_ids.hpp"
 #include "host/system/system_id_definitions.hpp"
 #include "platform/platform_defines.hpp"
 #include "memory/memory_policies.hpp"
@@ -78,9 +78,9 @@ bool host_context_install() noexcept
 {
     const erased_owner_operations::SRegistryView owner_operations{
         erased_owner_operations::system_operations_view(),
-        local_erased_owner_operations_view() };
+        erased_owner_operations::local_operations_view() };
     if (!system_id_registry::install_view(system_registry_view()) ||
-        !local_type_registry::install_view(local_type_registry_view()) ||
+        !local_type_registry::install_view(local_type_registry::component_view()) ||
         !erased_owner_operations::install_view(owner_operations))
     {
         return false;

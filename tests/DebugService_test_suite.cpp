@@ -15,7 +15,7 @@
 #include "containers/TInstance.hpp"
 #include "debug/macros.hpp"
 #include "debug/service.hpp"
-#include "host/module/types/host_local_type_registry.hpp"
+#include "host/module/types/local_type_ids.hpp"
 #include "platform/filesystem/internal/file_utils.hpp"
 #include "platform/path/native_path.hpp"
 #include "system/system_context.hpp"
@@ -321,9 +321,9 @@ void test_argument_encoding(TTestContext& ctx)
         argument_type(system_id_arguments, 0u) ==
         debug_system::EEventArgumentType::system_type_id);
 
-    const local_type_id registered_local = host_local_type_ids::host_runtime;
+    const local_type_id registered_local = local_type_ids::host_runtime;
     const local_type_id unresolved_local = local_type_ids::ops::encode_id(
-        local_type_ids::ops::encode_index(host_local_type_ids::k_count));
+        local_type_ids::ops::encode_index(local_type_ids::k_count));
     const local_type_id invalid_local{ 0x00000002u };
     type_id malformed_generic;
     const std::uint32_t malformed_raw = 0x00000002u;
@@ -480,7 +480,7 @@ void test_argument_formatting(TTestContext& ctx)
     TEST_EXPECT(ctx, std::strcmp(output, expected_type_output) == 0);
 
     const local_type_id unresolved_local = local_type_ids::ops::encode_id(
-        local_type_ids::ops::encode_index(host_local_type_ids::k_count));
+        local_type_ids::ops::encode_index(local_type_ids::k_count));
     char expected_local_output[192]{};
     const int expected_local_output_size = std::snprintf(
         expected_local_output,
@@ -495,7 +495,7 @@ void test_argument_formatting(TTestContext& ctx)
             sizeof(output),
             "{} | {} | {}",
             debug_system::encode_event_arguments(
-                host_local_type_ids::host_runtime,
+                local_type_ids::host_runtime,
                 unresolved_local,
                 local_type_id{ 0x00000002u }),
             output_size) ==
@@ -1006,8 +1006,8 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             std::int32_t{ -7 },
             system_type_ids::file_load_request,
             debug_system::CInlineText16{ "payload" },
-            host_local_type_ids::host_runtime,
-            type_id{ host_local_type_ids::tga_file_load },
+            local_type_ids::host_runtime,
+            type_id{ local_type_ids::tga_file_load },
             system_ids::host,
             module_ids::executable,
             thread_ids::host)));
@@ -1027,7 +1027,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
             unregistered_type_id,
             system_type_id{ 0x00000002u },
             local_type_ids::ops::encode_id(
-                local_type_ids::ops::encode_index(host_local_type_ids::k_count)),
+                local_type_ids::ops::encode_index(local_type_ids::k_count)),
             local_type_id{ 0x00000002u })));
 
     char oversized[debug_system::k_event_format_capacity + 32u];
@@ -1161,7 +1161,7 @@ void test_writer_and_direct_paths(TTestContext& ctx)
     TEST_EXPECT(ctx, source_marker_size > 0);
 
     const local_type_id unresolved_local = local_type_ids::ops::encode_id(
-        local_type_ids::ops::encode_index(host_local_type_ids::k_count));
+        local_type_ids::ops::encode_index(local_type_ids::k_count));
     char type_fallback_marker[256]{};
     const int type_fallback_marker_size = std::snprintf(
         type_fallback_marker,
@@ -1422,9 +1422,9 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
             debug_system::EEventType::event>(
                 usage_point, "direct ids {} {} {} {} {} {}",
             sizeof("direct ids {} {} {} {} {} {}") - 1u,
-            host_local_type_ids::host_runtime,
+            local_type_ids::host_runtime,
             local_type_ids::ops::encode_id(
-                local_type_ids::ops::encode_index(host_local_type_ids::k_count)),
+                local_type_ids::ops::encode_index(local_type_ids::k_count)),
             type_id{ system_type_ids::byte_buffer },
             system_ids::host,
             module_ids::executable,
