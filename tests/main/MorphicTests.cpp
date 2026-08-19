@@ -14,11 +14,20 @@ int main(const int argc, char** const argv)
         print_usage();
         return 0;
     }
-    if (!test_environment::initialise_paths((argc > 0) ? argv[0] : nullptr))
+    const char* log_tag = nullptr;
+    if (!parse_log_tag(argc, argv, log_tag))
     {
-        std::cerr << "MorphicTests could not locate the repository test data.\n";
+        std::cerr <<
+            "Invalid --log-tag. Use --log-tag=<value> with 1-48 ASCII letters, digits, '.', '_' or '-'.\n";
+        return 2;
+    }
+    if (!test_environment::initialise_paths(
+        (argc > 0) ? argv[0] : nullptr, log_tag))
+    {
+        std::cerr << "MorphicTests could not initialise repository paths and log output.\n";
         return 1;
     }
+    std::cout << "MorphicTests logs: " << test_environment::log_path_pattern() << '\n';
     if (!test_environment::install())
     {
         std::cerr << "MorphicTests could not install its executable environment.\n";

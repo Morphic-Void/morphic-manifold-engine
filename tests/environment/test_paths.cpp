@@ -3,8 +3,14 @@
 
 #include "tests/environment/test_paths.hpp"
 
+#include <array>
 #include <filesystem>
+#include <string>
 #include <system_error>
+
+#include "debug/log_path.hpp"
+#include "debug/service.hpp"
+#include "platform/system/process_id.hpp"
 
 namespace test_environment
 {
@@ -12,14 +18,16 @@ namespace
 {
 std::filesystem::path s_repository_root;
 std::filesystem::path s_binary_directory;
+std::filesystem::path s_log_directory;
 std::string s_repository_root_text;
+std::string s_log_tag;
+std::string s_log_path_pattern;
+platform::system::CPlatformProcessId s_process_id;
 
 bool is_repository_root(const std::filesystem::path& candidate)
 {
     std::error_code error;
-    return std::filesystem::is_regular_file(
-        candidate / "tests" / "data" / "input" / "files" / "test_input.tga",
-        error);
+    return std::filesystem::is_regular_file(candidate / "tests" / "data" / "input" / "files" / "test_input.tga", error);
 }
 
 std::filesystem::path find_repository_root(std::filesystem::path candidate)
@@ -47,7 +55,8 @@ std::filesystem::path find_repository_root(std::filesystem::path candidate)
 }
 }
 
-bool initialise_paths(const char* const executable_argument)
+bool initialise_paths(
+    const char* const executable_argument, const char* const log_tag)
 {
     std::error_code error;
     const std::filesystem::path current = std::filesystem::current_path(error);
@@ -58,7 +67,16 @@ bool initialise_paths(const char* const executable_argument)
 
     s_repository_root.clear();
     s_binary_directory.clear();
+    s_log_directory.clear();
     s_repository_root_text.clear();
+    s_log_tag.clear();
+    s_log_path_pattern.clear();
+    s_process_id = platform::system::CPlatformProcessId();
+
+    if ((log_tag != nullptr) && !debug_system::is_valid_log_tag(log_tag))
+    {
+        return false;
+    }
 
     if ((executable_argument != nullptr) && (executable_argument[0] != 0))
     {
@@ -84,7 +102,28 @@ bool initialise_paths(const char* const executable_argument)
         return false;
     }
 
+    s_process_id = platform::system::query_current_process_id();
+    if (!s_process_id.is_valid())
+    {
+        return false;
+    }
+    if (log_tag != nullptr)
+    {
+        s_log_tag = log_tag;
+    }
+    s_log_directory = s_repository_root / "tests" / "data" / "output" / "logs";
+    std::filesystem::create_directories(s_log_directory, error);
+    if (error)
+    {
+        return false;
+    }
+
     s_repository_root_text = s_repository_root.string();
+    s_log_path_pattern = test_log_path("*");
+    if (s_log_path_pattern.empty())
+    {
+        return false;
+    }
     std::filesystem::current_path(s_repository_root, error);
     if (error)
     {
@@ -114,6 +153,30 @@ std::string binary_path(const char* const filename)
         return {};
     }
     return (s_binary_directory / std::filesystem::path(filename)).lexically_normal().string();
+}
+
+std::string test_log_path(const char* const stem)
+{
+    if ((stem == nullptr) || (stem[0] == '\0') || s_log_directory.empty() || !s_process_id.is_valid())
+    {
+        return {};
+    }
+
+    const std::string absolute_stem =
+        (s_log_directory / std::filesystem::path(stem)).lexically_normal().string();
+    std::array<char, debug_system::k_log_path_capacity> path{};
+    const char* const tag = s_log_tag.empty() ? nullptr : s_log_tag.c_str();
+    if (!debug_system::format_process_log_path(
+        path.data(), path.size(), absolute_stem.c_str(), tag, s_process_id.value()))
+    {
+        return {};
+    }
+    return path.data();
+}
+
+const std::string& log_path_pattern() noexcept
+{
+    return s_log_path_pattern;
 }
 
 }   //  namespace test_environment

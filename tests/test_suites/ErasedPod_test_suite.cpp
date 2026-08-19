@@ -402,10 +402,10 @@ void test_concrete_erased_pod_transport_admission(TTestContext& ctx)
 
 void test_concrete_erased_pod_transport_diagnostics(TTestContext& ctx)
 {
-    const std::string event_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/erased_transport_admission_test.log");
-    const std::string direct_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/erased_transport_admission_test_direct.log");
+    const std::string event_path_storage =
+        test_environment::test_log_path("erased_transport_admission_test");
+    const std::string direct_path_storage =
+        test_environment::test_log_path("erased_transport_admission_test_direct");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
 

@@ -34,6 +34,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)core\containers\TPodVector.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\containers\TUnorderedCollection.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\event_arguments.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\log_path.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\macros.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\service.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\image\codec\tga.hpp" />
@@ -90,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\event_arguments.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\log_path.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\service.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\image\codec\tga.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\memory\memory_context.cpp" />
@@ -128,6 +130,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\system\performance_counter.hpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\system\process_priority.cpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\system\process_priority.hpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\system\process_id.cpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\system\process_id.hpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\threading\exclusive_lock.cpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\threading\exclusive_lock.hpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\threading\hw_thread_count.cpp" />

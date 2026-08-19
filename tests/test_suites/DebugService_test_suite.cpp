@@ -7,6 +7,7 @@
 //  Date:    28 Jul 26
 
 #include <cstdio>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -14,6 +15,7 @@
 #include <type_traits>
 
 #include "containers/TInstance.hpp"
+#include "debug/log_path.hpp"
 #include "debug/macros.hpp"
 #include "debug/service.hpp"
 #include "tests/environment/local_type_ids.hpp"
@@ -109,6 +111,51 @@ void test_exclusive_lock_try_acquire(TTestContext& ctx)
     lock.release();
     TEST_EXPECT(ctx, lock.try_acquire());
     lock.release();
+}
+
+void test_process_log_paths(TTestContext& ctx)
+{
+    TEST_EXPECT(ctx, !debug_system::is_valid_log_tag(nullptr));
+    TEST_EXPECT(ctx, !debug_system::is_valid_log_tag(""));
+    TEST_EXPECT(ctx, !debug_system::is_valid_log_tag("-leading"));
+    TEST_EXPECT(ctx, !debug_system::is_valid_log_tag("bad/tag"));
+    TEST_EXPECT(ctx, !debug_system::is_valid_log_tag("bad tag"));
+    TEST_EXPECT(ctx, debug_system::is_valid_log_tag("a"));
+    TEST_EXPECT(ctx, debug_system::is_valid_log_tag("parallel.same_1-a"));
+
+    char maximum_tag[debug_system::k_log_tag_max_length + 1u]{};
+    for (std::size_t index = 0u; index < debug_system::k_log_tag_max_length; ++index)
+    {
+        maximum_tag[index] = 'a';
+    }
+    TEST_EXPECT(ctx, debug_system::is_valid_log_tag(maximum_tag));
+
+    char oversized_tag[debug_system::k_log_tag_max_length + 2u]{};
+    for (std::size_t index = 0u; index <= debug_system::k_log_tag_max_length; ++index)
+    {
+        oversized_tag[index] = 'a';
+    }
+    TEST_EXPECT(ctx, !debug_system::is_valid_log_tag(oversized_tag));
+
+    char path[128]{};
+    TEST_EXPECT(ctx, debug_system::format_process_log_path(
+        path, sizeof(path), "logs/example", nullptr, 42u));
+    TEST_EXPECT(ctx, std::strcmp(path, "logs/example.p42.log") == 0);
+    TEST_EXPECT(ctx, debug_system::format_process_log_path(
+        path, sizeof(path), "logs/example", "parallel-a", 42u));
+    TEST_EXPECT(ctx,
+        std::strcmp(path, "logs/example.parallel-a.p42.log") == 0);
+    TEST_EXPECT(ctx, !debug_system::format_process_log_path(
+        path, sizeof(path), "logs/example", "bad/tag", 42u));
+    TEST_EXPECT(ctx, path[0] == '\0');
+    TEST_EXPECT(ctx, !debug_system::format_process_log_path(
+        path, sizeof(path), "logs/example", nullptr, 0u));
+    TEST_EXPECT(ctx, path[0] == '\0');
+
+    char short_path[8]{};
+    TEST_EXPECT(ctx, !debug_system::format_process_log_path(
+        short_path, sizeof(short_path), "logs/example", nullptr, 42u));
+    TEST_EXPECT(ctx, short_path[0] == '\0');
 }
 
 void test_argument_encoding(TTestContext& ctx)
@@ -892,10 +939,10 @@ void test_provisioning_and_shared_words(TTestContext& ctx)
 
 void test_writer_and_direct_paths(TTestContext& ctx)
 {
-    const std::string event_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_test.log");
-    const std::string direct_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_test_direct.log");
+    const std::string event_path_storage =
+        test_environment::test_log_path("debug_service_test");
+    const std::string direct_path_storage =
+        test_environment::test_log_path("debug_service_test_direct");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
     constexpr char source_file[] =
@@ -1162,10 +1209,10 @@ void test_writer_and_direct_paths(TTestContext& ctx)
 
 void test_lazy_log_opening(TTestContext& ctx)
 {
-    const std::string event_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_lazy_test.log");
-    const std::string direct_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_lazy_test_direct.log");
+    const std::string event_path_storage =
+        test_environment::test_log_path("debug_service_lazy_test");
+    const std::string direct_path_storage =
+        test_environment::test_log_path("debug_service_lazy_test_direct");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
 
@@ -1191,10 +1238,10 @@ void test_lazy_log_opening(TTestContext& ctx)
 
 void test_filename_and_capacity_boundaries(TTestContext& ctx)
 {
-    const std::string event_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_filename_test.log");
-    const std::string direct_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_filename_test_direct.log");
+    const std::string event_path_storage =
+        test_environment::test_log_path("debug_service_filename_test");
+    const std::string direct_path_storage =
+        test_environment::test_log_path("debug_service_filename_test_direct");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
     constexpr char filename31[] =
@@ -1335,10 +1382,10 @@ void test_filename_and_capacity_boundaries(TTestContext& ctx)
 
 void test_queued_and_direct_equivalence(TTestContext& ctx)
 {
-    const std::string event_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_equivalence_test.log");
-    const std::string direct_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_equivalence_test_direct.log");
+    const std::string event_path_storage =
+        test_environment::test_log_path("debug_service_equivalence_test");
+    const std::string direct_path_storage =
+        test_environment::test_log_path("debug_service_equivalence_test_direct");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
     constexpr char source_file[] = "tests/test_suites/DebugService_test_suite.cpp";
@@ -1407,10 +1454,10 @@ void test_queued_and_direct_equivalence(TTestContext& ctx)
 
 void test_malformed_event_overlays(TTestContext& ctx)
 {
-    const std::string event_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_malformed_test.log");
-    const std::string direct_path_storage = test_environment::repository_path(
-        "tests/data/output/logs/debug_service_malformed_test_direct.log");
+    const std::string event_path_storage =
+        test_environment::test_log_path("debug_service_malformed_test");
+    const std::string direct_path_storage =
+        test_environment::test_log_path("debug_service_malformed_test_direct");
     const char* const event_path = event_path_storage.c_str();
     const char* const direct_path = direct_path_storage.c_str();
 
@@ -1507,6 +1554,7 @@ int run_debug_service_tests()
     debug_service_tests::TTestContext ctx;
     debug_service_tests::compile_public_macro_interface(false);
     debug_service_tests::test_exclusive_lock_try_acquire(ctx);
+    debug_service_tests::test_process_log_paths(ctx);
     debug_service_tests::test_argument_encoding(ctx);
     debug_service_tests::test_argument_formatting(ctx);
     debug_service_tests::test_system_id_name_registry(ctx);

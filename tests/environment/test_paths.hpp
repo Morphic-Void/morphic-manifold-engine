@@ -11,10 +11,12 @@
 namespace test_environment
 {
 
-[[nodiscard]] bool initialise_paths(const char* executable_argument);
+[[nodiscard]] bool initialise_paths(const char* executable_argument, const char* log_tag = nullptr);
 [[nodiscard]] const std::string& repository_root() noexcept;
 [[nodiscard]] std::string repository_path(const char* relative_path);
 [[nodiscard]] std::string binary_path(const char* filename);
+[[nodiscard]] std::string test_log_path(const char* stem);
+[[nodiscard]] const std::string& log_path_pattern() noexcept;
 
 }   //  namespace test_environment
 

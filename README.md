@@ -13,6 +13,12 @@ work (the default), or `-t3` for the full expensive modes. Test data and log
 paths are resolved from the repository, so the executable can be launched from
 Visual Studio, the repository root, or its build-output directory.
 
+Every test log name contains the process ID. An optional validated tag can be
+supplied for human or automation reconciliation, for example
+`MorphicTests.exe -t1 --log-tag=parallel-a`. The runner prints the resulting
+absolute log-path pattern at startup. Concurrent invocations therefore remain
+isolated even when the tag is omitted or accidentally reused.
+
 The Executive-driven TGA load/decode/encode/save path remains a Host integration
 exercise. The separate direct TGA round-trip helper is compiled into
 `MorphicTests` as a manual test but is intentionally not registered or invoked.

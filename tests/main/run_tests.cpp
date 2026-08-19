@@ -29,6 +29,7 @@
 #include "tests/test_suites/TRingTransport_test_suite.hpp"
 #include "tests/test_suites/TOwningTransport_test_suite.hpp"
 #include "tests/environment/test_environment.hpp"
+#include "debug/log_path.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -123,7 +124,34 @@ void print_usage()
         "  -t2          Run moderate tests (current default)\n"
         "  -t3          Run full expensive tests\n"
         "  --tests=<0-3>\n"
-        "               Long-form equivalent of -t0..-t3\n";
+        "               Long-form equivalent of -t0..-t3\n"
+        "  --log-tag=<value>\n"
+        "               Add a 1-48 character disambiguation tag to test logs\n";
+}
+
+bool parse_log_tag(const int argc, char** const argv, const char*& log_tag)
+{
+    constexpr char prefix[] = "--log-tag=";
+    log_tag = nullptr;
+    for (int index = 1; index < argc; ++index)
+    {
+        const char* const argument = argv[index];
+        if ((argument != nullptr) &&
+            (std::strncmp(argument, prefix, sizeof(prefix) - 1u) == 0))
+        {
+            const char* const candidate = argument + (sizeof(prefix) - 1u);
+            if ((log_tag != nullptr) || !debug_system::is_valid_log_tag(candidate))
+            {
+                return false;
+            }
+            log_tag = candidate;
+        }
+        else if ((argument != nullptr) && (std::strcmp(argument, "--log-tag") == 0))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 ETestRunMode parse_test_run_mode(int argc, char** argv)

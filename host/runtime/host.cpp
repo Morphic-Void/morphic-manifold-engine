@@ -38,7 +38,9 @@
 #include "threading/CThreadPackage.hpp"
 
 #include "debug/macros.hpp"
+#include "debug/log_path.hpp"
 #include "debug/service.hpp"
+#include "platform/system/process_id.hpp"
 
 namespace host
 {
@@ -48,16 +50,26 @@ CHost::~CHost() noexcept
     (void)shutdown();
 }
 
-void CHost::initialise_debug_service() noexcept
+void CHost::initialise_debug_service(const char* const log_tag) noexcept
 {
     m_debug_service_owner = TInstance<debug_system::CDebugServiceState>::create();
     if (m_debug_service_owner)
     {
         m_debug_service = m_debug_service_owner.operator->();
+        char event_log_path[debug_system::k_log_path_capacity]{};
+        char direct_log_path[debug_system::k_log_path_capacity]{};
+        const platform::system::CPlatformProcessId process_id = platform::system::query_current_process_id();
         const bool debug_logs_opened =
+            process_id.is_valid() &&
+            debug_system::format_process_log_path(
+                event_log_path, sizeof(event_log_path),
+                "logs/morphic_debug", log_tag, process_id.value()) &&
+            debug_system::format_process_log_path(
+                direct_log_path, sizeof(direct_log_path),
+                "logs/morphic_debug_direct", log_tag, process_id.value()) &&
             m_debug_service->configure_log_paths(
-                "logs/morphic_debug.log",
-                "logs/morphic_debug_direct.log") &&
+                event_log_path,
+                direct_log_path) &&
             m_debug_service->open_logs();
         if (debug_logs_opened)
         {
@@ -188,9 +200,9 @@ threading::CThreadPackage* CHost::thread_package(const EWorkerThreadID id) noexc
     return m_thread_packages.get_object(m_thread_slots[index]);
 }
 
-int CHost::execute() noexcept
+int CHost::execute(const char* const log_tag) noexcept
 {
-    initialise_debug_service();
+    initialise_debug_service(log_tag);
     MV_INFO("Host: Starting");
 
     const bool initialised = initialise_runtime();
@@ -671,10 +683,10 @@ bool CHost::shutdown() noexcept
     return executive_unloaded;
 }
 
-int host() noexcept
+int host(const char* const log_tag) noexcept
 {
     CHost runtime;
-    return runtime.execute();
+    return runtime.execute(log_tag);
 }
 
 }   //  namespace host

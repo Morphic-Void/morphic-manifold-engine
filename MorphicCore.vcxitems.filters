@@ -76,6 +76,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)core\containers\TPodVector.hpp"><Filter>Core\include\containers</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\containers\TUnorderedCollection.hpp"><Filter>Core\include\containers</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\event_arguments.hpp"><Filter>Core\include\debug</Filter></ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\log_path.hpp"><Filter>Core\include\debug</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\macros.hpp"><Filter>Core\include\debug</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\service.hpp"><Filter>Core\include\debug</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\image\codec\tga.hpp"><Filter>Core\include\image\codec</Filter></ClInclude>
@@ -95,6 +96,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\system\debugger.hpp"><Filter>Core\include\platform\system</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\system\performance_counter.hpp"><Filter>Core\include\platform\system</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\system\process_priority.hpp"><Filter>Core\include\platform\system</Filter></ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\system\process_id.hpp"><Filter>Core\include\platform\system</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\threading\exclusive_lock.hpp"><Filter>Core\include\platform\threading</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\threading\hw_thread_count.hpp"><Filter>Core\include\platform\threading</Filter></ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\platform\threading\native_thread_id.hpp"><Filter>Core\include\platform\threading</Filter></ClInclude>
@@ -152,6 +154,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\event_arguments.cpp"><Filter>Core\src\debug</Filter></ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\log_path.cpp"><Filter>Core\src\debug</Filter></ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\service.cpp"><Filter>Core\src\debug</Filter></ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\image\codec\tga.cpp"><Filter>Core\src\image\codec</Filter></ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\memory\memory_context.cpp"><Filter>Core\src\memory</Filter></ClCompile>
@@ -165,6 +168,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\system\debugger.cpp"><Filter>Core\src\platform\system</Filter></ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\system\performance_counter.cpp"><Filter>Core\src\platform\system</Filter></ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\system\process_priority.cpp"><Filter>Core\src\platform\system</Filter></ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\system\process_id.cpp"><Filter>Core\src\platform\system</Filter></ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\threading\exclusive_lock.cpp"><Filter>Core\src\platform\threading</Filter></ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\threading\hw_thread_count.cpp"><Filter>Core\src\platform\threading</Filter></ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\platform\threading\native_thread_id.cpp"><Filter>Core\src\platform\threading</Filter></ClCompile>

@@ -396,6 +396,18 @@ not part of this orderly checkpoint.
 - stops the service after worker shutdown;
 - removes the executable-module pointer before owner destruction.
 
+Host log names always contain the native process ID. The optional command-line
+form `--log-tag=<value>` adds a caller-selected disambiguation tag before that
+ID, producing names such as `morphic_debug.manual-a.p12345.log` and
+`morphic_debug_direct.manual-a.p12345.log`. Without the option, the names retain
+the `p12345` component. Tags are descriptive only; the process ID preserves
+concurrent uniqueness when a tag is absent or reused.
+
+`MorphicTests` applies the same naming convention to each suite-owned event and
+direct log and prints its absolute path pattern before running tests. This
+allows parallel invocations to be reconciled with captured command output
+without sharing writable files.
+
 The current TGA processing and worker-management sketch did not influence the
 service internals. Future backing-file, multi-step-operation, module-loading,
 identity, and memory-provisioning infrastructure should relocate these

@@ -11,19 +11,52 @@
 //  Program execution begins and ends here.
 
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 
+#include "debug/log_path.hpp"
 #include "host/runtime/host.hpp"
 #include "host/system/host_context.hpp"
 #include "platform/system/process_priority.hpp"
 #include "platform/threading/hw_thread_count.hpp"
 
-int main()
+[[nodiscard]] static bool parse_log_tag(const int argc, char** const argv, const char*& log_tag) noexcept
 {
+    constexpr char prefix[] = "--log-tag=";
+    log_tag = nullptr;
+    for (int index = 1; index < argc; ++index)
+    {
+        const char* const argument = argv[index];
+        if ((argument != nullptr) && (std::strncmp(argument, prefix, sizeof(prefix) - 1u) == 0))
+        {
+            const char* const candidate = argument + (sizeof(prefix) - 1u);
+            if ((log_tag != nullptr) || !debug_system::is_valid_log_tag(candidate))
+            {
+                return false;
+            }
+            log_tag = candidate;
+        }
+        else if ((argument != nullptr) && (std::strcmp(argument, "--log-tag") == 0))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+int main(const int argc, char** const argv)
+{
+    const char* log_tag = nullptr;
+    if (!parse_log_tag(argc, argv, log_tag))
+    {
+        std::fputs("Invalid --log-tag. Use --log-tag=<value> with 1-48 ASCII letters, digits, '.', '_' or '-'.\n", stderr);
+        return 2;
+    }
     if (!host::host_context_install())
     {
         return 1;
     }
-    const int host_result = host::host();
+    const int host_result = host::host(log_tag);
     platform::system::set_current_process_priority(platform::system::EProcessPriority::AboveNormal);
     const std::uint32_t hw_threads_supported = platform::threading::query_hardware_thread_count();
     (void)hw_threads_supported;

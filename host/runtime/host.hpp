@@ -43,7 +43,7 @@ public:
     CHost& operator=(CHost&&) = delete;
     ~CHost() noexcept;
 
-    [[nodiscard]] int execute() noexcept;
+    [[nodiscard]] int execute(const char* log_tag) noexcept;
 
 private:
     enum class EWorkerThreadID : std::uint8_t
@@ -56,7 +56,7 @@ private:
 
     static constexpr std::size_t k_thread_count = static_cast<std::size_t>(EWorkerThreadID::count);
 
-    void initialise_debug_service() noexcept;
+    void initialise_debug_service(const char* log_tag) noexcept;
     [[nodiscard]] bool initialise_runtime() noexcept;
     [[nodiscard]] bool bind_executive_module() noexcept;
     [[nodiscard]] bool validate_executive_module_compatibility(
@@ -85,7 +85,7 @@ private:
     std::int32_t m_thread_slots[k_thread_count]{ -1, -1, -1 };
 };
 
-int host() noexcept;
+int host(const char* log_tag = nullptr) noexcept;
 
 }   //  namespace host
 
