@@ -26,9 +26,6 @@ backlog:
   build description that preserves Core as per-consumer shared source, attempt
   Linux compilation, and distinguish portable-Core issues from missing Linux
   platform implementations.
-- Build a pre-build code policy validator once the new layout and component
-  rules are stable, covering approved allocation paths, STL and exception
-  restrictions, ID registration, includes, and dependency direction.
 - Complete allocator bootstrap ordering before removing the temporary fallback
   allocator.
 - Resume thread provisioning, TLS, and formal threading stress tests when the

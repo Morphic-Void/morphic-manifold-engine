@@ -166,3 +166,50 @@ Validation:
 - focused capacity, sequence, wrap, lifecycle, protocol, helper, and
   composition coverage;
 - full x64 and x86 test runs.
+
+## Code Policy Validator
+
+`MorphicPolicyValidator` established a standalone C++17 development-tooling
+boundary for early detection of codebase policy violations. The validator may
+use the C++ standard library and exceptions; production engine projects remain
+C++17 with exception handling disabled.
+
+The completed first version provides:
+
+- a lightweight lexical and token-aware scanner rather than regex-only checks
+  or a full C++ parser;
+- central, versioned policy configuration for source scopes, include
+  permissions, approved allocation infrastructure, identity surfaces, and
+  project classifications;
+- narrow source suppressions that name one rule, require a reason, and fail
+  when malformed, unknown, unmatched, or stale;
+- error-level checks for ordinary naked `new`, misplaced global/system identity
+  declarations and registrations, disallowed or unresolved includes, direct
+  `windows.h` use, required source roots, and Visual Studio language and
+  exception settings;
+- warning-level findings for context-dependent placement construction, raw
+  allocation primitives, ambiguous includes, apparently unused `<new>`
+  includes, macro-expanded includes, and unsupported project conditions; and
+- distinct exit behavior for policy violations and invocation or policy-loading
+  failures.
+
+Host, Executive, and MorphicTests reference the validator project and invoke it
+before compilation. Core remains per-consumer shared source through
+`MorphicCore.vcxitems`; the validator is a separate executable rather than an
+engine runtime component.
+
+The validator is deliberately a policy canary rather than a semantic proof. It
+does not preprocess source, build an abstract syntax tree, or infer arbitrary
+manual reimplementations of policy-governed macro surfaces.
+
+Permanent reference:
+
+- `docs/project/policy_validator.md`
+- `policy/morphic_policy.cfg`
+
+Validation:
+
+- clean direct validator runs with zero errors and warnings;
+- successful Debug, Development, and Release solution builds for x64 and x86;
+- exercised positive, negative, suppression, policy-loading, include-resolution,
+  allocation, identity, and project-configuration cases.
