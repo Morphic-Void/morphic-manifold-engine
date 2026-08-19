@@ -10,6 +10,7 @@
 *.hpp text eol=lf
 *.inl text eol=lf
 *.def text eol=lf
+*.cfg text eol=lf
 *.md text eol=lf
 *.txt text eol=lf
 *.vcxproj text eol=lf
