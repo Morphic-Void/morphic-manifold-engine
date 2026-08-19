@@ -52,6 +52,26 @@ exposition, or implementation detail beyond a relatively loose brief, the file
 may be marked as primarily AI-drafted or AI-implemented under human review and
 acceptance.
 
+## Tool-specific naming
+
+The attribution category and the name of the assisting tool are separate
+decisions. The category describes the substantive contribution; the tool name
+records the environment in which that contribution was made.
+
+Use `OpenAI Codex` for work performed through the repository-oriented Codex
+environment, including agentic implementation, review, testing, and drafting
+carried out directly against the codebase.
+
+Use `OpenAI tools` for work performed through ChatGPT outside a Codex
+environment, for mixed OpenAI-assisted work where a more specific product name
+would be misleading, or where the exact OpenAI tool is not usefully
+distinguished.
+
+This naming convention applies prospectively. Existing attribution should not
+be swept or mechanically rewritten merely to adopt a more specific tool name.
+It may be updated when a file is substantively revisited and the revised
+attribution remains accurate.
+
 ## Practical categories
 
 ### 1. Human-authored
@@ -78,9 +98,11 @@ iterative design contribution materially improved robustness, clarified the
 structure, or reshaped the resulting code or document to the point that it no
 longer feels honest to describe the outcome as the product of one party alone.
 
-Typical header:
+Typical header, according to the tool environment:
 
-- `Authors: Ritchie Brannan / OpenAI tools`
+- `Authors: Ritchie Brannan / OpenAI Codex` for work performed in Codex;
+- `Authors: Ritchie Brannan / OpenAI tools` for qualifying work performed
+  outside Codex.
 
 ### 3. AI-primary under human review
 
@@ -88,9 +110,18 @@ Use this where AI tools produced most of the concrete structure, exposition, or
 implementation detail, and the human role was primarily direction, review,
 correction, and acceptance.
 
-Typical header:
+Typical primary line, according to the file and tool environment:
 
-- `Primary draft: OpenAI tools`
+- `Primary implementation: OpenAI Codex` for code implemented primarily in
+  Codex;
+- `Primary draft: OpenAI Codex` for documentation drafted primarily in Codex;
+- `Primary implementation: OpenAI tools` for code implemented primarily
+  through ChatGPT or other OpenAI tooling outside Codex;
+- `Primary draft: OpenAI tools` for qualifying work performed through ChatGPT
+  or other OpenAI tooling outside Codex.
+
+The primary line is normally followed by:
+
 - `Reviewed and accepted by: Ritchie Brannan`
 
 This category is expected to apply more often to selected documentation, test

@@ -95,6 +95,17 @@ New code should:
 - respect the POD / non-POD split
 - document non-obvious invariants, semantic limits, and non-goals
 
+## Linkage and namespace guidance
+
+- Do not use anonymous namespaces.
+- Use `static` linkage for translation-unit-local declarations only when that
+  restricted linkage is independently justified.
+- Introduce a named namespace only when the grouping or scope it expresses is
+  independently useful; a namespace is not a substitute for `static` linkage.
+- Keep internal namespace names short and related to their contents, using
+  names such as `util`, `tool`, `data`, or `internal` where they are accurate.
+- Do not use `detail` as a generic namespace name.
+
 If a design appears to require:
 - exceptions
 - STL containers or ownership forms
