@@ -159,6 +159,13 @@
     <None Include="tests\data\output\files\.gitkeep" />
     <None Include="tests\data\output\logs\.gitkeep" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="MorphicPolicyValidator.vcxproj">
+      <Project>{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="MorphicPolicy.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>

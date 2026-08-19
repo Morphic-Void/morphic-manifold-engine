@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{3D554987-CDB2-45B3-9A9D-6716872D850B}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;cc</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{E3D67674-E011-4119-AF30-150B22E7D10E}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;inl</Extensions>
+    </Filter>
+    <Filter Include="Policy Files">
+      <UniqueIdentifier>{8DB39751-A091-49E4-BD26-474593C6E3EA}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="tools\policy_validator\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\policy_validator\policy_validator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="tools\policy_validator\policy_validator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <None Include="MorphicPolicy.targets">
+      <Filter>Policy Files</Filter>
+    </None>
+    <None Include="policy\morphic_policy.cfg">
+      <Filter>Policy Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -19,6 +19,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MorphicTests", "MorphicTest
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MorphicCore", "MorphicCore.vcxitems", "{A250136D-15BB-4A6C-A3BB-29C92A92E205}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MorphicPolicyValidator", "MorphicPolicyValidator.vcxproj", "{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Global
@@ -79,6 +81,18 @@ Global
 		{D5B6BE43-4A70-4C3A-BE6D-59D50BC71A24}.Release|x64.Build.0 = Release|x64
 		{D5B6BE43-4A70-4C3A-BE6D-59D50BC71A24}.Release|x86.ActiveCfg = Release|Win32
 		{D5B6BE43-4A70-4C3A-BE6D-59D50BC71A24}.Release|x86.Build.0 = Release|Win32
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Debug|x64.ActiveCfg = Debug|x64
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Debug|x64.Build.0 = Debug|x64
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Debug|x86.ActiveCfg = Debug|Win32
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Debug|x86.Build.0 = Debug|Win32
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Development|x64.ActiveCfg = Development|x64
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Development|x64.Build.0 = Development|x64
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Development|x86.ActiveCfg = Development|Win32
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Development|x86.Build.0 = Development|Win32
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Release|x64.ActiveCfg = Release|x64
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Release|x64.Build.0 = Release|x64
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Release|x86.ActiveCfg = Release|Win32
+		{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
