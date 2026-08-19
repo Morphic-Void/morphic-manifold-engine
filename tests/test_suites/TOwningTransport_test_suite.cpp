@@ -7,7 +7,6 @@
 //  Standalone test suite for threading::transports::TOwning<T>.
 
 #include <cstdint>
-#include <cstdlib>
 #include <iostream>
 #include <new>
 #include <string>

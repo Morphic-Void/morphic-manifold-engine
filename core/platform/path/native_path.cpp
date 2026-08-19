@@ -13,14 +13,17 @@
 //  - No exceptions.
 
 #include <cctype>
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
+#include <utility>
 
 #include "platform/path/native_path.hpp"
 #include "platform/platform_defines.hpp"
 
 #if MV_PLATFORM_WINDOWS
+    #include <cwchar>
     #include "platform/windows_include.hpp"
-#else   //  default, assumes _POSIX_VERSION or __APPLE__ or__linux__ or similar
-    #include <sys/types.h>
 #endif
 
 namespace platform::path
@@ -31,7 +34,7 @@ NativePath makeNativePath(const char* const utf8_path) noexcept
     NativePath std_path;
     if ((utf8_path != nullptr) && (utf8_path[0] != 0))
     {   //  input path is not nullptr or an empty string
-        std::size_t path_length = strlen(utf8_path);
+        std::size_t path_length = std::strlen(utf8_path);
         std::size_t name_index = 0;
         bool has_wildcard = false;
         TPodVector<char> cpath;
@@ -74,7 +77,7 @@ NativePath makeNativePath(const char* const utf8_path) noexcept
                     {   //  reject Windows UNC and extended-length
                         path_is_valid = false;
                     }
-                    else if ((path_length == 2) && (path_byte1 == ':') && isalpha(static_cast<unsigned char>(path_byte0)))
+                    else if ((path_length == 2) && (path_byte1 == ':') && std::isalpha(static_cast<unsigned char>(path_byte0)))
                     {   //  reject drive only
                         path_is_valid = false;
                     }
@@ -116,9 +119,9 @@ NativePath makeTempNativePath(const NativePath& std_path) noexcept
     if (!std_path.is_empty())
     {
 #if MV_PLATFORM_WINDOWS
-        std::size_t tmp_length = wcslen(std_path.data()) + 5u;
+        std::size_t tmp_length = std::wcslen(std_path.data()) + 5u;
 #else
-        std::size_t tmp_length = strlen(std_path.data()) + 5u;
+        std::size_t tmp_length = std::strlen(std_path.data()) + 5u;
 #endif
         if (tmp_path.allocate(tmp_length))
         {

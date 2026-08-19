@@ -36,6 +36,7 @@ MV_REGISTER_LOCAL_TYPE(
     erased_pod_test_types::SLocalPod,
     local_type_ids::ops::encode_id(local_type_ids::ops::encode_index(1234u)));
 
+// morphic-policy: suppress-next-line GID002 reason="negative test requires an out-of-catalogue system type binding"
 MV_REGISTER_SYSTEM_TYPE(
     erased_pod_test_types::SUnregisteredSystemPod,
     system_type_ids::ops::encode_id(

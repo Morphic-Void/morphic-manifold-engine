@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <new>
 #include <string>
 #include <type_traits>
 #include <utility>

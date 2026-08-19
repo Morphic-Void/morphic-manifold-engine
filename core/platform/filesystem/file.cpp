@@ -11,6 +11,11 @@
 //  Multi-threaded usage assumes that multiple threads will not be saving
 //  files with the same name.
 
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+
 #include "platform/filesystem/file.hpp"
 #include "platform/filesystem/internal/file_utils.hpp"
 #include "platform/path/native_path.hpp"
@@ -23,7 +28,6 @@ CByteBuffer loadFile(const char* const utf8_path, const std::size_t pad) noexcep
 {
     static const std::size_t k_align = 16u;
     CByteBuffer buffer;
-    void* data = nullptr;
     path::NativePath std_path = path::makeNativePath(utf8_path);
     if (!std_path.is_empty())
     {
@@ -37,7 +41,7 @@ CByteBuffer loadFile(const char* const utf8_path, const std::size_t pad) noexcep
                 const std::size_t aligned_size = bit_ops::round_up_to_pow2_multiple(size, k_align);
                 if (buffer.allocate(aligned_size, k_align))
                 {
-                    uint8_t* data = buffer.data();
+                    std::uint8_t* data = buffer.data();
                     std::size_t file_size = size - pad;
                     if (std::fread(data, 1, file_size, handle) == file_size)
                     {

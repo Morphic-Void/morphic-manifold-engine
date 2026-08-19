@@ -133,6 +133,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;MV_DEVELOPMENT_BUILD=1;MV_DEBUG_DEVELOPMENT_BUILD=1;MV_COMPILED_INFORMATION_LEVEL=3;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -150,6 +151,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;MV_DEVELOPMENT_BUILD=0;MV_DEBUG_DEVELOPMENT_BUILD=0;MV_COMPILED_INFORMATION_LEVEL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -167,6 +169,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;MV_DEBUG_BUILD=1;MV_DEVELOPMENT_BUILD=1;MV_DEBUG_DEVELOPMENT_BUILD=0;MV_COMPILED_INFORMATION_LEVEL=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -182,6 +185,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;MV_DEVELOPMENT_BUILD=1;MV_DEBUG_DEVELOPMENT_BUILD=1;MV_COMPILED_INFORMATION_LEVEL=3;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -199,6 +203,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;MV_DEVELOPMENT_BUILD=0;MV_DEBUG_DEVELOPMENT_BUILD=0;MV_COMPILED_INFORMATION_LEVEL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -216,6 +221,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;MV_DEBUG_BUILD=1;MV_DEVELOPMENT_BUILD=1;MV_DEBUG_DEVELOPMENT_BUILD=0;MV_COMPILED_INFORMATION_LEVEL=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

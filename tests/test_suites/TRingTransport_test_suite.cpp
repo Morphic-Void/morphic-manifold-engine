@@ -7,7 +7,6 @@
 //  Standalone test suite for threading::transports::TRing<T>.
 
 #include <cstdint>
-#include <cstdlib>
 #include <iostream>
 #include <limits>
 #include <malloc.h>

@@ -18,6 +18,8 @@
 #define FILE_UTILS_HPP_INCLUDED
 
 #include <cstddef>      //  std::size_t
+#include <cstdint>      //  std::uint8_t
+#include <cstdio>       //  std::FILE
 #include "platform/path/native_path.hpp"
 
 namespace platform::filesystem
@@ -25,7 +27,7 @@ namespace platform::filesystem
 
 enum class EOpenMode : std::uint8_t { BinaryRead = 0u, BinaryWrite, BinaryAppend, TextWrite, TextAppend };
 
-FILE* openFile(const path::NativePath& file_path, const EOpenMode mode = EOpenMode::BinaryRead) noexcept;
+std::FILE* openFile(const path::NativePath& file_path, const EOpenMode mode = EOpenMode::BinaryRead) noexcept;
 void removeFile(const path::NativePath& file_path) noexcept;
 bool renameFile(const path::NativePath& src_path, const path::NativePath& dst_path) noexcept;
 bool flushToDisk(std::FILE* const handle) noexcept;

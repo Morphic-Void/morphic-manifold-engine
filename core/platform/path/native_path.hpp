@@ -21,7 +21,6 @@
 #include "platform/platform_defines.hpp"
 
 #if MV_PLATFORM_WINDOWS
-#include <wchar.h>
 using native_char = wchar_t;
 #else
 using native_char = char;

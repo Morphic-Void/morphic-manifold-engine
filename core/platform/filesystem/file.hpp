@@ -16,7 +16,7 @@
 #ifndef FILE_HPP_INCLUDED
 #define FILE_HPP_INCLUDED
 
-#include <stddef.h>
+#include <cstddef>
 #include "containers/ByteBuffers.hpp"
 
 namespace platform::filesystem
@@ -27,7 +27,7 @@ namespace platform::filesystem
 //  Empty files are treated as failure.
 //  On failure, the buffer is empty.
 //  On success, the buffer size includes pad bytes, which are zero-filled.
-CByteBuffer loadFile(const char* const utf8_path, const size_t pad = 0) noexcept;
+CByteBuffer loadFile(const char* const utf8_path, const std::size_t pad = 0) noexcept;
 
 //  Will not write empty files.
 //  Semi-atomic file writing.
