@@ -417,6 +417,9 @@ template<typename T, typename TKey>
 template<typename... TArgs>
 inline std::int32_t TOrderedCollection<T, TKey>::emplace(const TKey& key, TArgs&&... args) noexcept
 {
+    static_assert(std::is_nothrow_constructible_v<T, TArgs&&...>,
+        "TOrderedCollection<T, TKey>::emplace(...) requires T to be nothrow constructible.");
+
     //  Acquire a slot index
     this->m_staged_key = key;
     const std::int32_t slot_index = slot_meta_class::reserve_and_acquire(-1, /* lex */ true, /* require_unique */ true);

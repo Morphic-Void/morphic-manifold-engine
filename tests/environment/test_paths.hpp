@@ -11,7 +11,7 @@
 namespace test_environment
 {
 
-[[nodiscard]] bool initialise_paths(const char* executable_argument) noexcept;
+[[nodiscard]] bool initialise_paths(const char* executable_argument);
 [[nodiscard]] const std::string& repository_root() noexcept;
 [[nodiscard]] std::string repository_path(const char* relative_path);
 [[nodiscard]] std::string binary_path(const char* filename);

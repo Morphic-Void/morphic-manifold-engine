@@ -349,6 +349,9 @@ template<typename T>
 template<typename... TArgs>
 inline std::int32_t TUnorderedCollection<T>::emplace(TArgs&&... args) noexcept
 {
+    static_assert(std::is_nothrow_constructible_v<T, TArgs&&...>,
+        "TUnorderedCollection<T>::emplace(...) requires T to be nothrow constructible.");
+
     //  Acquire a slot index
     const std::int32_t slot_index = slot_meta_class::reserve_and_acquire(-1);
     if (slot_index < 0)
