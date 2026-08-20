@@ -18,6 +18,7 @@
 #include "tests/test_suites/StringBuffers_test_suite.hpp"
 #include "tests/test_suites/SystemTypeIdentity_test_suite.hpp"
 #include "tests/test_suites/TInstance_test_suite.hpp"
+#include "tests/test_suites/LiveDocument_test_suite.hpp"
 #include "tests/test_suites/TOrderedCollection_test_suite.hpp"
 #include "tests/test_suites/TPodFifo_test_suite.hpp"
 #include "tests/test_suites/TPodVector_test_suite.hpp"
@@ -204,6 +205,7 @@ int run_tests(ETestRunMode mode)
     cumulative_result += run_isolated_suite("TPodVector", &run_pod_vector_tests);
     cumulative_result += run_isolated_suite("ByteBuffers", &run_byte_buffer_tests);
     cumulative_result += run_isolated_suite("TInstance", &run_instance_tests);
+    cumulative_result += run_isolated_suite("LiveDocument", &run_live_document_tests);
     cumulative_result += run_isolated_suite("DebugService", &run_debug_service_tests);
     cumulative_result += run_isolated_suite("SystemTypeIdentity", &run_system_type_identity_tests);
     cumulative_result += run_isolated_suite("TPodFifo", &run_pod_fifo_tests);
