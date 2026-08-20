@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
@@ -157,6 +157,7 @@
     <None Include="$(MSBuildThisFileDirectory).gitignore" />
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\architectural-principles.md" />
     <None Include="$(MSBuildThisFileDirectory)docs\backlog\current_scope_backlog.md" />
+    <None Include="$(MSBuildThisFileDirectory)docs\backlog\live_dom_design.md" />
     <None Include="$(MSBuildThisFileDirectory)docs\backlog\morphic_engine_interim_backlog.md" />
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\codebase-ethos-primer.md" />
     <None Include="$(MSBuildThisFileDirectory)docs\architecture\codebase-model.md" />
