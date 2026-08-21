@@ -94,6 +94,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)core\types\fp16data_t.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)core\data_model\live_document.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\event_arguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\log_path.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\service.cpp" />

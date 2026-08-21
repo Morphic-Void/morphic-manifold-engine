@@ -112,6 +112,48 @@ void test_final_baked_block(TTestContext& ctx)
     CBakedDocument invalid{block.bytes().data(),block.bytes().size()-1u};
     TEST_EXPECT(ctx, !invalid.is_ready());
 }
+
+void test_baked_document_promotion(TTestContext& ctx)
+{
+    CLiveDocument source;
+    TEST_EXPECT(ctx, source.initialise());
+    const CNodeKey root = source.create_object();
+    const CNodeKey values = source.create_array();
+    const CNodeKey first = source.create_integer(7);
+    const CNodeKey second = source.create_string(text("two"));
+    TEST_EXPECT(ctx, source.set_root(root));
+    TEST_EXPECT(ctx, source.add_object_child(root, text("values"), values));
+    TEST_EXPECT(ctx, source.append_array_child(values, first));
+    TEST_EXPECT(ctx, source.append_array_child(values, second));
+
+    CBakedDocumentBuilder builder;
+    TEST_EXPECT(ctx, builder.build_from(source));
+    CBakedDocumentBlock block;
+    TEST_EXPECT(ctx, block.build_from(builder));
+
+    CLiveDocument promoted;
+    TEST_EXPECT(ctx, promoted.build_from(block.document()));
+    TEST_EXPECT(ctx, promoted.check_integrity());
+    const CNodeKey promoted_values = promoted.object_child(promoted.root(), text("values"));
+    TEST_EXPECT(ctx, promoted.node_type(promoted.root()) == EJsonNodeType::object);
+    TEST_EXPECT(ctx, promoted.child_count(promoted_values) == 2u);
+    std::int64_t first_value = 0;
+    TEST_EXPECT(ctx,
+        promoted.integer_value(promoted.array_at(promoted_values, 0u), first_value) &&
+        (first_value == 7));
+    TEST_EXPECT(ctx,
+        promoted.string_value(promoted.array_at(promoted_values, 1u)).length() == 3u);
+
+    const CNodeKey appended = promoted.create_null();
+    TEST_EXPECT(ctx, promoted.append_array_child(promoted_values, appended));
+    TEST_EXPECT(ctx, promoted.child_count(promoted_values) == 3u);
+
+    const CNodeKey old_root = promoted.root();
+    const CBakedDocument invalid;
+    TEST_EXPECT(ctx, !promoted.build_from(invalid));
+    TEST_EXPECT(ctx, promoted.root() == old_root);
+    TEST_EXPECT(ctx, promoted.check_integrity());
+}
 }
 
 int run_baked_document_builder_tests()
@@ -120,6 +162,7 @@ int run_baked_document_builder_tests()
     test_bake_preserves_reachable_semantics(ctx);
     test_bake_is_atomic_and_rejects_invalid_source(ctx);
     test_final_baked_block(ctx);
+    test_baked_document_promotion(ctx);
     std::cout << "BakedDocumentBuilder: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return ctx.failed;
 }

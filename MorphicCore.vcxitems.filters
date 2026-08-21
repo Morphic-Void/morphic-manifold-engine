@@ -79,6 +79,9 @@
     <Filter Include="Core\src">
       <UniqueIdentifier>{07f791e4-bcbb-46aa-b229-8f303450a089}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Core\src\data_model">
+      <UniqueIdentifier>{ca199de1-cd60-4ff0-8d80-bf275cfd0c77}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Core\src\debug">
       <UniqueIdentifier>{f7add353-7037-1907-3fe9-78cda87ff7e6}</UniqueIdentifier>
     </Filter>
@@ -464,6 +467,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)core\data_model\live_document.cpp">
+      <Filter>Core\src\data_model</Filter>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\debug\event_arguments.cpp">
       <Filter>Core\src\debug</Filter>
     </ClCompile>
