@@ -178,6 +178,8 @@ The completed first version provides:
 
 - a lightweight lexical and token-aware scanner rather than regex-only checks
   or a full C++ parser;
+- deterministic diagnostics and project/configuration/platform-qualified
+  reports under `logs/policy_validator`;
 - central, versioned policy configuration for source scopes, include
   permissions, approved allocation infrastructure, identity surfaces, and
   project classifications;
@@ -196,11 +198,22 @@ The completed first version provides:
 Host, Executive, and MorphicTests reference the validator project and invoke it
 before compilation. Core remains per-consumer shared source through
 `MorphicCore.vcxitems`; the validator is a separate executable rather than an
-engine runtime component.
+engine runtime component. MorphicTests follows engine compilation restrictions
+because it compiles Core, while the validator retains its explicit tooling
+exemption. SuiteUTF is deliberately outside the first-version policy scope.
+
+Before enforcement was enabled, the existing source and project baseline was
+cleaned rather than silently grandfathered. Direct include ownership was made
+explicit, unused or misplaced dependencies were removed, accidental unqualified
+`size_t` use was corrected, and every applicable engine configuration now
+selects C++17 with exception handling explicitly disabled. Direct
+non-project/system includes are governed by a reviewed default-deny allowlist.
 
 The validator is deliberately a policy canary rather than a semantic proof. It
 does not preprocess source, build an abstract syntax tree, or infer arbitrary
-manual reimplementations of policy-governed macro surfaces.
+manual reimplementations of policy-governed macro surfaces. Global/system ID
+enforcement is intentionally macro-oriented, and context-dependent risks remain
+warnings until a conclusive check is justified.
 
 Permanent reference:
 
@@ -211,5 +224,7 @@ Validation:
 
 - clean direct validator runs with zero errors and warnings;
 - successful Debug, Development, and Release solution builds for x64 and x86;
+- successful standalone-project dependency ordering, with the validator built
+  before its pre-compilation invocation;
 - exercised positive, negative, suppression, policy-loading, include-resolution,
   allocation, identity, and project-configuration cases.

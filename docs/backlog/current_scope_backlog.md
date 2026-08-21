@@ -22,6 +22,11 @@ backlog:
 
 - Add command-line selection of named tests and test groups without requiring
   the complete aggregate suite.
+- Add dedicated regression fixtures for the completed code policy validator,
+  covering clean, error, warning, suppression, stale-suppression, and project
+  configuration cases without retaining deliberate violations in engine
+  source. Revisit SuiteUTF coverage only after its intended policy boundary is
+  defined.
 - After the current layout and consolidation work, add a tool-independent
   build description that preserves Core as per-consumer shared source, attempt
   Linux compilation, and distinguish portable-Core issues from missing Linux
