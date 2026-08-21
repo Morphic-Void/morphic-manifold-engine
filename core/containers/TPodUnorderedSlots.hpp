@@ -92,6 +92,9 @@ public:
     [[nodiscard]] bool is_empty() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
 
+    //  Occupied count
+    [[nodiscard]] std::uint32_t occupied_count() const noexcept;
+
     //  Accessors
     T* get_slot(const std::int32_t slot_index) noexcept;
     const T* get_slot(const std::int32_t slot_index) const noexcept;
@@ -216,6 +219,12 @@ template<typename T>
 inline bool TPodUnorderedSlots<T>::is_ready() const noexcept
 {
     return this->m_slots.is_ready();
+}
+
+template<typename T>
+inline std::uint32_t TPodUnorderedSlots<T>::occupied_count() const noexcept
+{
+    return slot_meta_class::loose_count();
 }
 
 template<typename T>
