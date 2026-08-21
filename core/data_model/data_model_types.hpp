@@ -13,6 +13,7 @@
 #include <type_traits>
 
 class CLiveDocument;
+class CBakedDocument;
 
 class CNodeKey
 {
@@ -30,6 +31,7 @@ private:
     explicit constexpr CNodeKey(const std::uint64_t value) noexcept : m_value(value) {}
     std::uint64_t m_value{ 0u };
     friend class CLiveDocument;
+    friend class CBakedDocument;
 };
 
 [[nodiscard]] constexpr bool operator==(const CNodeKey lhs, const CNodeKey rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
@@ -47,6 +49,7 @@ private:
     explicit constexpr CPropertyNameId(const std::uint32_t value) noexcept : m_value(value) {}
     std::uint32_t m_value{ 0u };
     friend class CLiveDocument;
+    friend class CBakedDocument;
 };
 
 class CStringValueId
@@ -61,12 +64,35 @@ private:
     explicit constexpr CStringValueId(const std::uint32_t value) noexcept : m_value(value) {}
     std::uint32_t m_value{ 0u };
     friend class CLiveDocument;
+    friend class CBakedDocument;
 };
 
 [[nodiscard]] constexpr bool operator==(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
 [[nodiscard]] constexpr bool operator!=(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept { return !(lhs == rhs); }
 [[nodiscard]] constexpr bool operator==(const CStringValueId lhs, const CStringValueId rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
 [[nodiscard]] constexpr bool operator!=(const CStringValueId lhs, const CStringValueId rhs) noexcept { return !(lhs == rhs); }
+
+//==============================================================================
+//  CBakedNodeIndex
+//  Dense, document-lifecycle-local index. Zero is invalid.
+//==============================================================================
+
+class CBakedNodeIndex
+{
+public:
+    constexpr CBakedNodeIndex() noexcept = default;
+    [[nodiscard]] constexpr bool is_valid() const noexcept { return m_value != 0u; }
+    [[nodiscard]] explicit constexpr operator bool() const noexcept { return is_valid(); }
+    [[nodiscard]] constexpr std::uint32_t query_value() const noexcept { return m_value; }
+
+private:
+    explicit constexpr CBakedNodeIndex(const std::uint32_t value) noexcept : m_value(value) {}
+    std::uint32_t m_value{ 0u };
+    friend class CBakedDocument;
+};
+
+[[nodiscard]] constexpr bool operator==(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
+[[nodiscard]] constexpr bool operator!=(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept { return !(lhs == rhs); }
 
 enum class EJsonNodeType : std::uint8_t
 {
@@ -121,6 +147,38 @@ struct CArrayCursor
     std::uint32_t revision{ 0u };
 };
 
+union CBakedPayload
+{
+    constexpr CBakedPayload() noexcept : unsigned_bits(0u) {}
+
+    std::uint64_t unsigned_bits;
+    std::int64_t integer_value;
+    double floating_value;
+    CStringValueId string_value;
+};
+
+struct CBakedChildRelation
+{
+    CBakedNodeIndex child;
+};
+
+//  Baked structural edges live in a separate dense relationship range. This
+//  record remains fixed at one naturally aligned 64-byte stride.
+struct CBakedNode
+{
+    CBakedNodeIndex parent;
+    CBakedNodeIndex previous_sibling;
+    CBakedNodeIndex next_sibling;
+    std::uint32_t first_child_relation;
+    std::uint32_t child_count;
+    CPropertyNameId name_in_parent;
+    EJsonNodeType type;
+    std::uint8_t flags;
+    std::uint16_t reserved;
+    CBakedPayload payload;
+    std::uint32_t padding[6];
+};
+
 static_assert(std::is_trivially_copyable_v<CNodeKey>);
 static_assert(std::is_standard_layout_v<CNodeKey>);
 static_assert(sizeof(CNodeKey) == sizeof(std::uint64_t));
@@ -129,5 +187,10 @@ static_assert(std::is_trivially_copyable_v<CJsonSlot>);
 static_assert(std::is_standard_layout_v<CJsonSlot>);
 static_assert(sizeof(CJsonSlot) == 64u);
 static_assert(alignof(CJsonSlot) >= alignof(std::uint64_t));
+static_assert(std::is_trivially_copyable_v<CBakedNodeIndex>);
+static_assert(std::is_trivially_copyable_v<CBakedNode>);
+static_assert(std::is_standard_layout_v<CBakedNode>);
+static_assert(sizeof(CBakedNode) == 64u);
+static_assert(alignof(CBakedNode) >= alignof(std::uint64_t));
 
 #endif  //  DATA_MODEL_TYPES_HPP_INCLUDED
