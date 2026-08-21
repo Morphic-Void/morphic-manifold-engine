@@ -1,7 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   live_document.hpp
+//  Author: Ritchie Brannan
+//  Date:   20 August 2026
 //  Mutable, JSON-shaped, single-threaded document construction model.
 
 #pragma once
@@ -33,9 +36,9 @@ public:
     void deallocate() noexcept;
     [[nodiscard]] bool is_valid() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
-    [[nodiscard]] bool is_empty() const noexcept { return m_nodes.is_empty(); }
+    [[nodiscard]] bool is_empty() const noexcept;
 
-    [[nodiscard]] CNodeKey root() const noexcept { return m_root; }
+    [[nodiscard]] CNodeKey root() const noexcept;
     [[nodiscard]] bool set_root(CNodeKey node) noexcept;
 
     [[nodiscard]] CNodeKey create_null() noexcept;
@@ -76,15 +79,12 @@ public:
     [[nodiscard]] bool check_integrity() const noexcept;
 
 private:
-    [[nodiscard]] static bool is_array_type(EJsonNodeType type) noexcept { return (type == EJsonNodeType::array) || (type == EJsonNodeType::recovered_duplicate_array); }
-    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept { return is_array_type(type) || (type == EJsonNodeType::object); }
-    [[nodiscard]] static bool check_stable_strings(const CStableStrings& strings) noexcept
-    {
-        return (strings.memory_allocation_count() == 0u) || strings.check_integrity();
-    }
+    [[nodiscard]] static bool is_array_type(EJsonNodeType type) noexcept;
+    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept;
+    [[nodiscard]] static bool check_stable_strings(const CStableStrings& strings) noexcept;
     [[nodiscard]] CNodeKey create_node(EJsonNodeType type) noexcept;
-    [[nodiscard]] CJsonSlot* node_slot(CNodeKey node) noexcept { return m_nodes.get_slot(node); }
-    [[nodiscard]] const CJsonSlot* node_slot(CNodeKey node) const noexcept { return m_nodes.get_slot(node); }
+    [[nodiscard]] CJsonSlot* node_slot(CNodeKey node) noexcept;
+    [[nodiscard]] const CJsonSlot* node_slot(CNodeKey node) const noexcept;
     [[nodiscard]] bool can_attach(CNodeKey parent, CNodeKey child) const noexcept;
     [[nodiscard]] bool attach_before(CNodeKey parent, CNodeKey before, CNodeKey child, CPropertyNameId name) noexcept;
     [[nodiscard]] bool object_has_name(CNodeKey object, CPropertyNameId name) const noexcept;
@@ -96,6 +96,45 @@ private:
     CNodeKey m_root;
     std::uint64_t m_next_node_key{ 1u };
 };
+
+//==============================================================================
+//  CLiveDocument out of class function bodies
+//==============================================================================
+
+inline bool CLiveDocument::is_empty() const noexcept
+{
+    return m_nodes.is_empty();
+}
+
+inline CNodeKey CLiveDocument::root() const noexcept
+{
+    return m_root;
+}
+
+inline bool CLiveDocument::is_array_type(const EJsonNodeType type) noexcept
+{
+    return (type == EJsonNodeType::array) || (type == EJsonNodeType::recovered_duplicate_array);
+}
+
+inline bool CLiveDocument::is_container_type(const EJsonNodeType type) noexcept
+{
+    return is_array_type(type) || (type == EJsonNodeType::object);
+}
+
+inline bool CLiveDocument::check_stable_strings(const CStableStrings& strings) noexcept
+{
+    return (strings.memory_allocation_count() == 0u) || strings.check_integrity();
+}
+
+inline CJsonSlot* CLiveDocument::node_slot(const CNodeKey node) noexcept
+{
+    return m_nodes.get_slot(node);
+}
+
+inline const CJsonSlot* CLiveDocument::node_slot(const CNodeKey node) const noexcept
+{
+    return m_nodes.get_slot(node);
+}
 
 inline bool CLiveDocument::initialise(const std::size_t initial_slot_count) noexcept
 {

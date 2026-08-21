@@ -1,7 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   data_model_types.hpp
+//  Author: Ritchie Brannan
+//  Date:   20 August 2026
 //  Fundamental POD types for the mutable structured-data model.
 
 #pragma once
@@ -21,16 +24,13 @@ class CNodeKey
 {
 public:
     constexpr CNodeKey() noexcept = default;
-    [[nodiscard]] constexpr bool is_valid() const noexcept { return m_value != 0u; }
-    [[nodiscard]] explicit constexpr operator bool() const noexcept { return is_valid(); }
-    [[nodiscard]] constexpr std::uint64_t query_value() const noexcept { return m_value; }
-    [[nodiscard]] constexpr std::int32_t relationship(const CNodeKey& other) const noexcept
-    {
-        return (m_value < other.m_value) ? -1 : ((m_value > other.m_value) ? 1 : 0);
-    }
+    [[nodiscard]] constexpr bool is_valid() const noexcept;
+    [[nodiscard]] explicit constexpr operator bool() const noexcept;
+    [[nodiscard]] constexpr std::uint64_t query_value() const noexcept;
+    [[nodiscard]] constexpr std::int32_t relationship(const CNodeKey& other) const noexcept;
 
 private:
-    explicit constexpr CNodeKey(const std::uint64_t value) noexcept : m_value(value) {}
+    explicit constexpr CNodeKey(std::uint64_t value) noexcept;
     std::uint64_t m_value{ 0u };
     friend class CLiveDocument;
     friend class CBakedDocumentBuilder;
@@ -45,12 +45,12 @@ class CPropertyNameId
 {
 public:
     constexpr CPropertyNameId() noexcept = default;
-    [[nodiscard]] constexpr bool is_valid() const noexcept { return m_value != 0u; }
-    [[nodiscard]] explicit constexpr operator bool() const noexcept { return is_valid(); }
-    [[nodiscard]] constexpr std::uint32_t query_value() const noexcept { return m_value; }
+    [[nodiscard]] constexpr bool is_valid() const noexcept;
+    [[nodiscard]] explicit constexpr operator bool() const noexcept;
+    [[nodiscard]] constexpr std::uint32_t query_value() const noexcept;
 
 private:
-    explicit constexpr CPropertyNameId(const std::uint32_t value) noexcept : m_value(value) {}
+    explicit constexpr CPropertyNameId(std::uint32_t value) noexcept;
     std::uint32_t m_value{ 0u };
     friend class CLiveDocument;
     friend class CBakedDocumentBuilder;
@@ -62,12 +62,12 @@ class CStringValueId
 {
 public:
     constexpr CStringValueId() noexcept = default;
-    [[nodiscard]] constexpr bool is_valid() const noexcept { return m_value != 0u; }
-    [[nodiscard]] explicit constexpr operator bool() const noexcept { return is_valid(); }
-    [[nodiscard]] constexpr std::uint32_t query_value() const noexcept { return m_value; }
+    [[nodiscard]] constexpr bool is_valid() const noexcept;
+    [[nodiscard]] explicit constexpr operator bool() const noexcept;
+    [[nodiscard]] constexpr std::uint32_t query_value() const noexcept;
 
 private:
-    explicit constexpr CStringValueId(const std::uint32_t value) noexcept : m_value(value) {}
+    explicit constexpr CStringValueId(std::uint32_t value) noexcept;
     std::uint32_t m_value{ 0u };
     friend class CLiveDocument;
     friend class CBakedDocumentBuilder;
@@ -89,12 +89,12 @@ class CBakedNodeIndex
 {
 public:
     constexpr CBakedNodeIndex() noexcept = default;
-    [[nodiscard]] constexpr bool is_valid() const noexcept { return m_value != 0u; }
-    [[nodiscard]] explicit constexpr operator bool() const noexcept { return is_valid(); }
-    [[nodiscard]] constexpr std::uint32_t query_value() const noexcept { return m_value; }
+    [[nodiscard]] constexpr bool is_valid() const noexcept;
+    [[nodiscard]] explicit constexpr operator bool() const noexcept;
+    [[nodiscard]] constexpr std::uint32_t query_value() const noexcept;
 
 private:
-    explicit constexpr CBakedNodeIndex(const std::uint32_t value) noexcept : m_value(value) {}
+    explicit constexpr CBakedNodeIndex(std::uint32_t value) noexcept;
     std::uint32_t m_value{ 0u };
     friend class CBakedDocumentBuilder;
     friend class CBakedDocument;
@@ -182,6 +182,31 @@ struct CBakedNode
     std::uint16_t reserved;
     CBakedPayload payload;
 };
+
+//==============================================================================
+//  Fundamental data-model type out of class function bodies
+//==============================================================================
+
+constexpr CNodeKey::CNodeKey(const std::uint64_t value) noexcept : m_value(value) {}
+constexpr bool CNodeKey::is_valid() const noexcept { return m_value != 0u; }
+constexpr CNodeKey::operator bool() const noexcept { return is_valid(); }
+constexpr std::uint64_t CNodeKey::query_value() const noexcept { return m_value; }
+constexpr std::int32_t CNodeKey::relationship(const CNodeKey& other) const noexcept { return (m_value < other.m_value) ? -1 : ((m_value > other.m_value) ? 1 : 0); }
+
+constexpr CPropertyNameId::CPropertyNameId(const std::uint32_t value) noexcept : m_value(value) {}
+constexpr bool CPropertyNameId::is_valid() const noexcept { return m_value != 0u; }
+constexpr CPropertyNameId::operator bool() const noexcept { return is_valid(); }
+constexpr std::uint32_t CPropertyNameId::query_value() const noexcept { return m_value; }
+
+constexpr CStringValueId::CStringValueId(const std::uint32_t value) noexcept : m_value(value) {}
+constexpr bool CStringValueId::is_valid() const noexcept { return m_value != 0u; }
+constexpr CStringValueId::operator bool() const noexcept { return is_valid(); }
+constexpr std::uint32_t CStringValueId::query_value() const noexcept { return m_value; }
+
+constexpr CBakedNodeIndex::CBakedNodeIndex(const std::uint32_t value) noexcept : m_value(value) {}
+constexpr bool CBakedNodeIndex::is_valid() const noexcept { return m_value != 0u; }
+constexpr CBakedNodeIndex::operator bool() const noexcept { return is_valid(); }
+constexpr std::uint32_t CBakedNodeIndex::query_value() const noexcept { return m_value; }
 
 static_assert(std::is_trivially_copyable_v<CNodeKey>);
 static_assert(std::is_standard_layout_v<CNodeKey>);

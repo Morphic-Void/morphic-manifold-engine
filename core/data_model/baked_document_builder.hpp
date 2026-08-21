@@ -1,7 +1,10 @@
+
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
 //  File:   baked_document_builder.hpp
+//  Author: Ritchie Brannan
+//  Date:   20 August 2026
 //  Owned dense document composition and live-to-baked conversion.
 
 #pragma once
@@ -32,13 +35,13 @@ public:
     void deallocate() noexcept;
     [[nodiscard]] bool is_valid() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
-    [[nodiscard]] bool is_empty() const noexcept { return !m_root.is_valid(); }
-    [[nodiscard]] bool is_canonical() const noexcept { return !m_contains_recovered_duplicate_arrays; }
-    [[nodiscard]] bool contains_recovered_duplicate_arrays() const noexcept { return m_contains_recovered_duplicate_arrays; }
-    [[nodiscard]] CBakedNodeIndex root() const noexcept { return m_root; }
-    [[nodiscard]] std::uint32_t node_count() const noexcept { return (m_nodes.size() > 0u) ? static_cast<std::uint32_t>(m_nodes.size() - 1u) : 0u; }
-    [[nodiscard]] std::uint32_t property_name_count() const noexcept { return m_property_name_count; }
-    [[nodiscard]] std::uint32_t string_value_count() const noexcept { return m_string_value_count; }
+    [[nodiscard]] bool is_empty() const noexcept;
+    [[nodiscard]] bool is_canonical() const noexcept;
+    [[nodiscard]] bool contains_recovered_duplicate_arrays() const noexcept;
+    [[nodiscard]] CBakedNodeIndex root() const noexcept;
+    [[nodiscard]] std::uint32_t node_count() const noexcept;
+    [[nodiscard]] std::uint32_t property_name_count() const noexcept;
+    [[nodiscard]] std::uint32_t string_value_count() const noexcept;
 
     //  The destination is changed only after a complete successful bake.
     [[nodiscard]] bool build_from(const CLiveDocument& source) noexcept;
@@ -63,12 +66,9 @@ public:
     [[nodiscard]] bool check_integrity() const noexcept;
 
 private:
-    [[nodiscard]] static bool is_array_type(EJsonNodeType type) noexcept { return (type == EJsonNodeType::array) || (type == EJsonNodeType::recovered_duplicate_array); }
-    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept { return is_array_type(type) || (type == EJsonNodeType::object); }
-    [[nodiscard]] static bool check_stable_strings(const CStableStrings& strings) noexcept
-    {
-        return (strings.memory_allocation_count() == 0u) || strings.check_integrity();
-    }
+    [[nodiscard]] static bool is_array_type(EJsonNodeType type) noexcept;
+    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept;
+    [[nodiscard]] static bool check_stable_strings(const CStableStrings& strings) noexcept;
     [[nodiscard]] const CBakedNode* node_slot(CBakedNodeIndex node) const noexcept;
     [[nodiscard]] CBakedNode* node_slot(CBakedNodeIndex node) noexcept;
     [[nodiscard]] CBakedNodeIndex append_node(const CLiveDocument& source, CNodeKey live_node, CBakedNodeIndex parent, CPropertyNameId name) noexcept;
@@ -86,6 +86,60 @@ private:
     std::uint32_t m_string_value_count{ 0u };
     bool m_contains_recovered_duplicate_arrays{ false };
 };
+
+//==============================================================================
+//  CBakedDocumentBuilder out of class function bodies
+//==============================================================================
+
+inline bool CBakedDocumentBuilder::is_empty() const noexcept
+{
+    return !m_root.is_valid();
+}
+
+inline bool CBakedDocumentBuilder::is_canonical() const noexcept
+{
+    return !m_contains_recovered_duplicate_arrays;
+}
+
+inline bool CBakedDocumentBuilder::contains_recovered_duplicate_arrays() const noexcept
+{
+    return m_contains_recovered_duplicate_arrays;
+}
+
+inline CBakedNodeIndex CBakedDocumentBuilder::root() const noexcept
+{
+    return m_root;
+}
+
+inline std::uint32_t CBakedDocumentBuilder::node_count() const noexcept
+{
+    return (m_nodes.size() > 0u) ? static_cast<std::uint32_t>(m_nodes.size() - 1u) : 0u;
+}
+
+inline std::uint32_t CBakedDocumentBuilder::property_name_count() const noexcept
+{
+    return m_property_name_count;
+}
+
+inline std::uint32_t CBakedDocumentBuilder::string_value_count() const noexcept
+{
+    return m_string_value_count;
+}
+
+inline bool CBakedDocumentBuilder::is_array_type(const EJsonNodeType type) noexcept
+{
+    return (type == EJsonNodeType::array) || (type == EJsonNodeType::recovered_duplicate_array);
+}
+
+inline bool CBakedDocumentBuilder::is_container_type(const EJsonNodeType type) noexcept
+{
+    return is_array_type(type) || (type == EJsonNodeType::object);
+}
+
+inline bool CBakedDocumentBuilder::check_stable_strings(const CStableStrings& strings) noexcept
+{
+    return (strings.memory_allocation_count() == 0u) || strings.check_integrity();
+}
 
 inline void CBakedDocumentBuilder::deallocate() noexcept
 {
