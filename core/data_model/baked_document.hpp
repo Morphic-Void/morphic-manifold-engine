@@ -75,7 +75,6 @@ private:
     [[nodiscard]] bool parent_contains_child(CBakedNodeIndex parent, CBakedNodeIndex child) const noexcept;
 
     TPodVector<CBakedNode> m_nodes;
-    TPodVector<CBakedChildRelation> m_children;
     CStableStrings m_property_names;
     CStableStrings m_string_values;
     CBakedNodeIndex m_root;
@@ -86,7 +85,6 @@ private:
 inline void CBakedDocument::deallocate() noexcept
 {
     m_nodes.deallocate();
-    m_children.deallocate();
     m_property_names.deallocate();
     m_string_values.deallocate();
     m_root = CBakedNodeIndex{};
@@ -96,7 +94,7 @@ inline void CBakedDocument::deallocate() noexcept
 
 inline bool CBakedDocument::is_valid() const noexcept
 {
-    return m_nodes.is_valid() && m_children.is_valid() &&
+    return m_nodes.is_valid() &&
         check_stable_strings(m_property_names) && check_stable_strings(m_string_values);
 }
 
@@ -181,31 +179,26 @@ inline bool CBakedDocument::build_children(
     CBakedNode* const parent_node = node_slot(baked_parent);
     if (parent_node == nullptr) return false;
 
-    const std::size_t first_relation = m_children.size();
-    if (first_relation > std::numeric_limits<std::uint32_t>::max()) return false;
-    parent_node->first_child_relation = static_cast<std::uint32_t>(first_relation);
+    const std::size_t first_child = m_nodes.size();
+    if (first_child > std::numeric_limits<std::uint32_t>::max()) return false;
+    parent_node->first_child_index = static_cast<std::uint32_t>(first_child);
     parent_node->child_count = 0u;
 
-    CBakedNodeIndex previous;
     for (CNodeKey child = source.first_child(live_parent); child.is_valid(); child = source.next_sibling(child))
     {
         const CPropertyNameId name = (parent_type == EJsonNodeType::object) ? copy_property_name(source, source.name_in_parent(child)) : CPropertyNameId{};
         if ((parent_type == EJsonNodeType::object) && !name.is_valid()) return false;
         const CBakedNodeIndex baked_child = append_node(source, child, baked_parent, name);
         if (!baked_child.is_valid()) return false;
-        if (previous.is_valid()) node_slot(previous)->next_sibling = baked_child;
-        node_slot(baked_child)->previous_sibling = previous;
-        if (!m_children.push_back(CBakedChildRelation{ baked_child })) return false;
         ++node_slot(baked_parent)->child_count;
-        previous = baked_child;
     }
 
-    CNodeKey live_child = source.first_child(live_parent);
     const std::uint32_t count = node_slot(baked_parent)->child_count;
+    CNodeKey live_child = source.first_child(live_parent);
     for (std::uint32_t offset = 0u; offset < count; ++offset)
     {
         if (!live_child.is_valid()) return false;
-        const CBakedNodeIndex baked_child = m_children[first_relation + offset].child;
+        const CBakedNodeIndex baked_child{ static_cast<std::uint32_t>(first_child + offset) };
         if (!build_children(source, live_child, baked_child)) return false;
         live_child = source.next_sibling(live_child);
     }
@@ -235,31 +228,44 @@ inline CStringView CBakedDocument::string_value(const CStringValueId value) cons
 inline CStringView CBakedDocument::property_name(const CPropertyNameId name) const noexcept { return name.is_valid() ? m_property_names.view(name.query_value()) : CStringView{}; }
 inline CBakedNodeIndex CBakedDocument::parent(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->parent : CBakedNodeIndex{}; }
 inline CPropertyNameId CBakedDocument::name_in_parent(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->name_in_parent : CPropertyNameId{}; }
-inline CBakedNodeIndex CBakedDocument::previous_sibling(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->previous_sibling : CBakedNodeIndex{}; }
-inline CBakedNodeIndex CBakedDocument::next_sibling(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->next_sibling : CBakedNodeIndex{}; }
+inline CBakedNodeIndex CBakedDocument::previous_sibling(const CBakedNodeIndex node) const noexcept
+{
+    const CBakedNode* const slot = node_slot(node);
+    const CBakedNode* const parent_slot = (slot != nullptr) ? node_slot(slot->parent) : nullptr;
+    const std::uint64_t first = (parent_slot != nullptr) ? parent_slot->first_child_index : 0u;
+    const std::uint64_t index = node.query_value();
+    return (parent_slot != nullptr) && (index > first) && (index < (first + parent_slot->child_count)) ? CBakedNodeIndex{ static_cast<std::uint32_t>(index - 1u) } : CBakedNodeIndex{};
+}
+
+inline CBakedNodeIndex CBakedDocument::next_sibling(const CBakedNodeIndex node) const noexcept
+{
+    const CBakedNode* const slot = node_slot(node);
+    const CBakedNode* const parent_slot = (slot != nullptr) ? node_slot(slot->parent) : nullptr;
+    const std::uint64_t first = (parent_slot != nullptr) ? parent_slot->first_child_index : 0u;
+    const std::uint64_t index = node.query_value();
+    return (parent_slot != nullptr) && (index >= first) && ((index + 1u) < (first + parent_slot->child_count)) ? CBakedNodeIndex{ static_cast<std::uint32_t>(index + 1u) } : CBakedNodeIndex{};
+}
 inline std::uint32_t CBakedDocument::child_count(const CBakedNodeIndex container) const noexcept { const CBakedNode* const slot = node_slot(container); return ((slot != nullptr) && is_container_type(slot->type)) ? slot->child_count : 0u; }
 
 inline CBakedNodeIndex CBakedDocument::array_at(const CBakedNodeIndex array, const std::uint32_t index) const noexcept
 {
     const CBakedNode* const slot = node_slot(array);
     if ((slot == nullptr) || (slot->type != EJsonNodeType::array) || (index >= slot->child_count)) return CBakedNodeIndex{};
-    const std::size_t relation = static_cast<std::size_t>(slot->first_child_relation) + index;
-    return (relation < m_children.size()) ? m_children[relation].child : CBakedNodeIndex{};
+    return CBakedNodeIndex{ static_cast<std::uint32_t>(slot->first_child_index + index) };
 }
 
 inline CBakedNodeIndex CBakedDocument::first_child(const CBakedNodeIndex container) const noexcept
 {
     const CBakedNode* const slot = node_slot(container);
     if ((slot == nullptr) || !is_container_type(slot->type) || (slot->child_count == 0u)) return CBakedNodeIndex{};
-    return (slot->first_child_relation < m_children.size()) ? m_children[slot->first_child_relation].child : CBakedNodeIndex{};
+    return CBakedNodeIndex{ slot->first_child_index };
 }
 
 inline CBakedNodeIndex CBakedDocument::last_child(const CBakedNodeIndex container) const noexcept
 {
     const CBakedNode* const slot = node_slot(container);
     if ((slot == nullptr) || !is_container_type(slot->type) || (slot->child_count == 0u)) return CBakedNodeIndex{};
-    const std::size_t relation = static_cast<std::size_t>(slot->first_child_relation) + slot->child_count - 1u;
-    return (relation < m_children.size()) ? m_children[relation].child : CBakedNodeIndex{};
+    return CBakedNodeIndex{ static_cast<std::uint32_t>(slot->first_child_index + slot->child_count - 1u) };
 }
 
 inline CBakedNodeIndex CBakedDocument::object_child(const CBakedNodeIndex object, const CPropertyNameId name) const noexcept
@@ -268,10 +274,9 @@ inline CBakedNodeIndex CBakedDocument::object_child(const CBakedNodeIndex object
     if ((slot == nullptr) || (slot->type != EJsonNodeType::object) || !name.is_valid()) return CBakedNodeIndex{};
     for (std::uint32_t offset = 0u; offset < slot->child_count; ++offset)
     {
-        const std::size_t relation = static_cast<std::size_t>(slot->first_child_relation) + offset;
-        if (relation >= m_children.size()) return CBakedNodeIndex{};
-        const CBakedNode* const child = node_slot(m_children[relation].child);
-        if ((child != nullptr) && (child->name_in_parent == name)) return m_children[relation].child;
+        const CBakedNodeIndex child_index{ static_cast<std::uint32_t>(slot->first_child_index + offset) };
+        const CBakedNode* const child = node_slot(child_index);
+        if ((child != nullptr) && (child->name_in_parent == name)) return child_index;
     }
     return CBakedNodeIndex{};
 }
@@ -279,8 +284,11 @@ inline CBakedNodeIndex CBakedDocument::object_child(const CBakedNodeIndex object
 inline CBakedNodeIndex CBakedDocument::object_child(const CBakedNodeIndex object, const CStringView& name) const noexcept
 {
     if (name.string() == nullptr) return CBakedNodeIndex{};
-    for (CBakedNodeIndex child = first_child(object); child.is_valid(); child = next_sibling(child))
+    const CBakedNode* const object_slot = node_slot(object);
+    if ((object_slot == nullptr) || (object_slot->type != EJsonNodeType::object)) return CBakedNodeIndex{};
+    for (std::uint32_t offset = 0u; offset < object_slot->child_count; ++offset)
     {
+        const CBakedNodeIndex child{ static_cast<std::uint32_t>(object_slot->first_child_index + offset) };
         const CStringView child_name = property_name(name_in_parent(child));
         if ((child_name.string() != nullptr) && (child_name == name)) return child;
     }
@@ -291,39 +299,34 @@ inline bool CBakedDocument::parent_contains_child(const CBakedNodeIndex parent_i
 {
     const CBakedNode* const parent_node = node_slot(parent_index);
     if ((parent_node == nullptr) || !is_container_type(parent_node->type)) return false;
-    for (std::uint32_t offset = 0u; offset < parent_node->child_count; ++offset)
-    {
-        const std::size_t relation = static_cast<std::size_t>(parent_node->first_child_relation) + offset;
-        if ((relation < m_children.size()) && (m_children[relation].child == child)) return true;
-    }
-    return false;
+    const std::uint64_t first = parent_node->first_child_index;
+    const std::uint64_t index = child.query_value();
+    return (index >= first) && (index < (first + parent_node->child_count));
 }
 
 inline bool CBakedDocument::check_container_integrity(const CBakedNodeIndex container_index) const noexcept
 {
     const CBakedNode* const container = node_slot(container_index);
     if ((container == nullptr) || !is_container_type(container->type)) return false;
-    const std::size_t first = container->first_child_relation;
-    if ((container->child_count != 0u) && ((first >= m_children.size()) || (container->child_count > (m_children.size() - first)))) return false;
-    CBakedNodeIndex previous;
+    const std::uint64_t first = container->first_child_index;
+    if ((container->child_count != 0u) && ((first >= m_nodes.size()) || (container->child_count > (m_nodes.size() - first)))) return false;
     for (std::uint32_t offset = 0u; offset < container->child_count; ++offset)
     {
-        const CBakedNodeIndex child_index = m_children[first + offset].child;
+        const CBakedNodeIndex child_index{ static_cast<std::uint32_t>(first + offset) };
         const CBakedNode* const child = node_slot(child_index);
-        if ((child == nullptr) || (child->parent != container_index) || (child->previous_sibling != previous)) return false;
+        if ((child == nullptr) || (child->parent != container_index)) return false;
         if ((container->type == EJsonNodeType::object) && !child->name_in_parent.is_valid()) return false;
         if ((container->type == EJsonNodeType::array) && child->name_in_parent.is_valid()) return false;
         if (container->type == EJsonNodeType::object)
         {
             for (std::uint32_t earlier = 0u; earlier < offset; ++earlier)
             {
-                const CBakedNode* const earlier_node = node_slot(m_children[first + earlier].child);
+                const CBakedNode* const earlier_node = node_slot(CBakedNodeIndex{ static_cast<std::uint32_t>(first + earlier) });
                 if ((earlier_node == nullptr) || (earlier_node->name_in_parent == child->name_in_parent)) return false;
             }
         }
-        previous = child_index;
     }
-    return (container->child_count == 0u) || (last_child(container_index) == previous);
+    return true;
 }
 
 inline bool CBakedDocument::check_integrity() const noexcept
@@ -336,11 +339,9 @@ inline bool CBakedDocument::check_integrity() const noexcept
         if ((node.type == EJsonNodeType::invalid) || (node.type > EJsonNodeType::object)) return false;
         if (node_index == m_root)
         {
-            if (node.parent.is_valid() || node.previous_sibling.is_valid() || node.next_sibling.is_valid() || node.name_in_parent.is_valid()) return false;
+            if (node.parent.is_valid() || node.name_in_parent.is_valid()) return false;
         }
         else if (!node.parent.is_valid() || !parent_contains_child(node.parent, node_index)) return false;
-        if (node.previous_sibling.is_valid()) { const CBakedNode* const previous = node_slot(node.previous_sibling); if ((previous == nullptr) || (previous->next_sibling != node_index) || (previous->parent != node.parent)) return false; }
-        if (node.next_sibling.is_valid()) { const CBakedNode* const next = node_slot(node.next_sibling); if ((next == nullptr) || (next->previous_sibling != node_index) || (next->parent != node.parent)) return false; }
         if (is_container_type(node.type) && !check_container_integrity(node_index)) return false;
         if ((node.type == EJsonNodeType::string) && !m_string_values.is_valid_id(node.payload.string_value.query_value())) return false;
         if (node.name_in_parent.is_valid() && !m_property_names.is_valid_id(node.name_in_parent.query_value())) return false;

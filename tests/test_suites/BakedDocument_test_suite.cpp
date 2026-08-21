@@ -16,7 +16,7 @@ CStringView text(const char* const value) noexcept { return CStringView{ value }
 
 void test_bake_preserves_reachable_semantics(TTestContext& ctx)
 {
-    static_assert(sizeof(CBakedNode) == 64u);
+    static_assert(sizeof(CBakedNode) == 32u);
     static_assert(std::is_trivially_copyable_v<CBakedNode>);
 
     CLiveDocument live;

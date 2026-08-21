@@ -157,26 +157,19 @@ union CBakedPayload
     CStringValueId string_value;
 };
 
-struct CBakedChildRelation
-{
-    CBakedNodeIndex child;
-};
-
-//  Baked structural edges live in a separate dense relationship range. This
-//  record remains fixed at one naturally aligned 64-byte stride.
+//  Direct children occupy a contiguous range in baked node storage.  A parent
+//  records the first child index and child count; sibling access is derived
+//  from that range rather than stored redundantly in every child.
 struct CBakedNode
 {
     CBakedNodeIndex parent;
-    CBakedNodeIndex previous_sibling;
-    CBakedNodeIndex next_sibling;
-    std::uint32_t first_child_relation;
+    std::uint32_t first_child_index;
     std::uint32_t child_count;
     CPropertyNameId name_in_parent;
     EJsonNodeType type;
     std::uint8_t flags;
     std::uint16_t reserved;
     CBakedPayload payload;
-    std::uint32_t padding[6];
 };
 
 static_assert(std::is_trivially_copyable_v<CNodeKey>);
@@ -190,7 +183,7 @@ static_assert(alignof(CJsonSlot) >= alignof(std::uint64_t));
 static_assert(std::is_trivially_copyable_v<CBakedNodeIndex>);
 static_assert(std::is_trivially_copyable_v<CBakedNode>);
 static_assert(std::is_standard_layout_v<CBakedNode>);
-static_assert(sizeof(CBakedNode) == 64u);
+static_assert(sizeof(CBakedNode) == 32u);
 static_assert(alignof(CBakedNode) >= alignof(std::uint64_t));
 
 #endif  //  DATA_MODEL_TYPES_HPP_INCLUDED
