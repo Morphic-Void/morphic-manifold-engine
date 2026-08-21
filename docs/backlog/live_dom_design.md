@@ -287,6 +287,12 @@ from either representation through a small virtual read-only write-source
 adapter.  This virtual adapter is confined to boundary IO and does not shape
 either DOM's native access model.
 
+JSON parsing and writing are deliberately deferred until after the baked
+document exists.  This permits one writer implementation to be verified
+against both native representations.  The parser will also depend on the
+planned low-level UTF ingester and normalisation layer; JSON IO must consume
+that layer rather than becoming an accidental substitute for it.
+
 ## Deferred layers
 
 Schema and high-level domain systems sit above the live DOM.  Schema may be
@@ -312,10 +318,13 @@ renderer, or execution-object design.
 5. Implement separate stable string pools and transactional use-count updates.
 6. Implement integrity audits and tests for slot reuse, stale-key rejection,
    ordering, pruning, collision rejection, and count consistency.
-7. Add JSON parse/write adapters, including explicit diagnostic recovery mode.
-8. Design baking from the proven live-DOM behaviour, then add pure-document
+7. Design baking from the proven live-DOM behaviour, then add pure-document
    validation, dense index construction, compaction, binary streaming, and
    promotion.
+8. Add JSON write adapters for both live and baked documents, including
+   explicit diagnostic recovery output.
+9. After the low-level UTF ingester and normalisation layer is available, add
+   the JSON parser targeting the live document.
 
 The first implementation milestone is not JSON parsing.  It is a robust live
 document that can be constructed, mutated, navigated, pruned, and audited
