@@ -105,8 +105,7 @@ private:
         const CNodeKey before,
         const CNodeKey child,
         const CPropertyNameId name) noexcept;
-    [[nodiscard]] CNodeKey append_from_baked(
-        const CBakedDocument& source, const CBakedNodeIndex source_node) noexcept;
+    [[nodiscard]] CNodeKey append_from_baked(const CBakedDocument& source, const CBakedNodeIndex source_node) noexcept;
     [[nodiscard]] bool object_has_name(const CNodeKey object, const CPropertyNameId name) const noexcept;
     [[nodiscard]] bool check_container_integrity(const CJsonSlot& container) const noexcept;
     void replace_with(CLiveDocument& source) noexcept;

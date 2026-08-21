@@ -216,38 +216,44 @@ inline CBakedNodeIndex CBakedDocumentBuilder::append_node(
 
     switch (node.type)
     {
-    case EJsonNodeType::boolean:
+        case EJsonNodeType::boolean:
         {
             bool value = false;
             if (!source.boolean_value(live_node, value)) return CBakedNodeIndex{};
             node.payload.unsigned_bits = value ? 1u : 0u;
+            break;
         }
-        break;
-    case EJsonNodeType::integer:
+        case EJsonNodeType::integer:
         {
             std::int64_t value = 0;
             if (!source.integer_value(live_node, value)) return CBakedNodeIndex{};
             node.payload.integer_value = value;
+            break;
         }
-        break;
-    case EJsonNodeType::floating_point:
+        case EJsonNodeType::floating_point:
         {
             double value = 0.0;
             if (!source.floating_point_value(live_node, value)) return CBakedNodeIndex{};
             node.payload.floating_value = value;
+            break;
         }
-        break;
-    case EJsonNodeType::string:
-        node.payload.string_value = copy_string_value(source.string_value(live_node));
-        if (!node.payload.string_value.is_valid()) return CBakedNodeIndex{};
-        break;
-    case EJsonNodeType::null_value:
-    case EJsonNodeType::array:
-    case EJsonNodeType::object:
-    case EJsonNodeType::recovered_duplicate_array:
-        break;
-    default:
-        return CBakedNodeIndex{};
+        case EJsonNodeType::string:
+        {
+            node.payload.string_value = copy_string_value(source.string_value(live_node));
+            if (!node.payload.string_value.is_valid()) return CBakedNodeIndex{};
+            break;
+        }
+        case EJsonNodeType::null_value:
+        case EJsonNodeType::array:
+        case EJsonNodeType::object:
+        case EJsonNodeType::recovered_duplicate_array:
+        {
+            break;
+        }
+        default:
+        {
+            return CBakedNodeIndex{};
+        }
     }
 
     if (!m_nodes.push_back(node)) return CBakedNodeIndex{};

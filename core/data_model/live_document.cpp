@@ -84,7 +84,10 @@ bool CLiveDocument::set_root(const CNodeKey node) noexcept
 
 CNodeKey CLiveDocument::create_node(const EJsonNodeType type) noexcept
 {
-    if (!is_ready() || (type == EJsonNodeType::invalid) || (m_next_node_key == 0u)) return CNodeKey{};
+    if (!is_ready() || (type == EJsonNodeType::invalid) || (m_next_node_key == 0u))
+    {
+        return CNodeKey{};
+    }
     const CNodeKey key{ m_next_node_key++ };
     CJsonSlot slot{};
     slot.self = key;
@@ -470,51 +473,62 @@ bool CLiveDocument::check_integrity() const noexcept
 //  Baked-document promotion
 //==============================================================================
 
-CNodeKey CLiveDocument::append_from_baked(
-    const CBakedDocument& source, const CBakedNodeIndex source_node) noexcept
+CNodeKey CLiveDocument::append_from_baked(const CBakedDocument& source, const CBakedNodeIndex source_node) noexcept
 {
     const EJsonNodeType source_type = source.node_type(source_node);
     CNodeKey destination_node;
     switch (source_type)
     {
-    case EJsonNodeType::null_value:
-        destination_node = create_null();
-        break;
-    case EJsonNodeType::boolean:
+        case EJsonNodeType::null_value:
+        {
+            destination_node = create_null();
+            break;
+        }
+        case EJsonNodeType::boolean:
         {
             bool value = false;
             if (!source.boolean_value(source_node, value)) return CNodeKey{};
             destination_node = create_boolean(value);
+            break;
         }
-        break;
-    case EJsonNodeType::integer:
+        case EJsonNodeType::integer:
         {
             std::int64_t value = 0;
             if (!source.integer_value(source_node, value)) return CNodeKey{};
             destination_node = create_integer(value);
+            break;
         }
-        break;
-    case EJsonNodeType::floating_point:
+        case EJsonNodeType::floating_point:
         {
             double value = 0.0;
             if (!source.floating_point_value(source_node, value)) return CNodeKey{};
             destination_node = create_floating_point(value);
+            break;
         }
-        break;
-    case EJsonNodeType::string:
-        destination_node = create_string(source.string_value(source_node));
-        break;
-    case EJsonNodeType::array:
-        destination_node = create_array();
-        break;
-    case EJsonNodeType::object:
-        destination_node = create_object();
-        break;
-    case EJsonNodeType::recovered_duplicate_array:
-        destination_node = create_node(EJsonNodeType::recovered_duplicate_array);
-        break;
-    default:
-        return CNodeKey{};
+        case EJsonNodeType::string:
+        {
+            destination_node = create_string(source.string_value(source_node));
+            break;
+        }
+        case EJsonNodeType::array:
+        {
+            destination_node = create_array();
+            break;
+        }
+        case EJsonNodeType::object:
+        {
+            destination_node = create_object();
+            break;
+        }
+        case EJsonNodeType::recovered_duplicate_array:
+        {
+            destination_node = create_node(EJsonNodeType::recovered_duplicate_array);
+            break;
+        }
+        default:
+        {
+            return CNodeKey{};
+        }
     }
     if (!destination_node.is_valid()) return CNodeKey{};
 
