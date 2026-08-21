@@ -5,7 +5,7 @@
 #include <iostream>
 #include <type_traits>
 
-#include "data_model/baked_document.hpp"
+#include "data_model/baked_document_builder.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace
@@ -37,8 +37,8 @@ void test_bake_preserves_reachable_semantics(TTestContext& ctx)
     TEST_EXPECT(ctx, detached_object_value.is_valid());
     TEST_EXPECT(ctx, live.check_integrity());
 
-    CBakedDocument baked;
-    TEST_EXPECT(ctx, baked.bake_from(live));
+    CBakedDocumentBuilder baked;
+    TEST_EXPECT(ctx, baked.build_from(live));
     TEST_EXPECT(ctx, baked.is_ready());
     TEST_EXPECT(ctx, baked.check_integrity());
     TEST_EXPECT(ctx, baked.node_count() == 5u);
@@ -72,31 +72,31 @@ void test_bake_is_atomic_and_rejects_invalid_source(TTestContext& ctx)
     const CNodeKey valid_root = valid.create_array();
     TEST_EXPECT(ctx, valid.set_root(valid_root));
 
-    CBakedDocument baked;
-    TEST_EXPECT(ctx, baked.bake_from(valid));
+    CBakedDocumentBuilder baked;
+    TEST_EXPECT(ctx, baked.build_from(valid));
     const CBakedNodeIndex old_root = baked.root();
     const std::uint32_t old_count = baked.node_count();
 
     CLiveDocument rootless;
     TEST_EXPECT(ctx, rootless.initialise());
     TEST_EXPECT(ctx, rootless.create_null().is_valid());
-    TEST_EXPECT(ctx, !baked.bake_from(rootless));
+    TEST_EXPECT(ctx, !baked.build_from(rootless));
     TEST_EXPECT(ctx, baked.root() == old_root);
     TEST_EXPECT(ctx, baked.node_count() == old_count);
     TEST_EXPECT(ctx, baked.check_integrity());
 
     CLiveDocument unready;
-    TEST_EXPECT(ctx, !baked.bake_from(unready));
+    TEST_EXPECT(ctx, !baked.build_from(unready));
     TEST_EXPECT(ctx, baked.root() == old_root);
     TEST_EXPECT(ctx, baked.check_integrity());
 }
 }
 
-int run_baked_document_tests()
+int run_baked_document_builder_tests()
 {
     TTestContext ctx;
     test_bake_preserves_reachable_semantics(ctx);
     test_bake_is_atomic_and_rejects_invalid_source(ctx);
-    std::cout << "BakedDocument: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
+    std::cout << "BakedDocumentBuilder: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return ctx.failed;
 }

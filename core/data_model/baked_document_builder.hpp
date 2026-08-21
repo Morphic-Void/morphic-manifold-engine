@@ -1,13 +1,13 @@
 //  Copyright (c) 2026 Ritchie Brannan / Morphic Void Limited
 //  License: MIT (see LICENSE file in repository root)
 //
-//  File:   baked_document.hpp
-//  Immutable dense document representation and live-to-baked conversion.
+//  File:   baked_document_builder.hpp
+//  Owned dense document composition and live-to-baked conversion.
 
 #pragma once
 
-#ifndef BAKED_DOCUMENT_HPP_INCLUDED
-#define BAKED_DOCUMENT_HPP_INCLUDED
+#ifndef BAKED_DOCUMENT_BUILDER_HPP_INCLUDED
+#define BAKED_DOCUMENT_BUILDER_HPP_INCLUDED
 
 #include <cstddef>
 #include <cstdint>
@@ -18,27 +18,29 @@
 #include "containers/TPodVector.hpp"
 #include "data_model/live_document.hpp"
 
-class CBakedDocument
+class CBakedDocumentBuilder
 {
 public:
-    CBakedDocument() noexcept = default;
-    CBakedDocument(const CBakedDocument&) = delete;
-    CBakedDocument& operator=(const CBakedDocument&) = delete;
-    CBakedDocument(CBakedDocument&&) noexcept = default;
-    CBakedDocument& operator=(CBakedDocument&&) noexcept = default;
-    ~CBakedDocument() noexcept = default;
+    CBakedDocumentBuilder() noexcept = default;
+    CBakedDocumentBuilder(const CBakedDocumentBuilder&) = delete;
+    CBakedDocumentBuilder& operator=(const CBakedDocumentBuilder&) = delete;
+    CBakedDocumentBuilder(CBakedDocumentBuilder&&) noexcept = default;
+    CBakedDocumentBuilder& operator=(CBakedDocumentBuilder&&) noexcept = default;
+    ~CBakedDocumentBuilder() noexcept = default;
 
     void deallocate() noexcept;
     [[nodiscard]] bool is_valid() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
     [[nodiscard]] bool is_empty() const noexcept { return !m_root.is_valid(); }
+    [[nodiscard]] bool is_canonical() const noexcept { return !m_contains_recovered_duplicate_arrays; }
+    [[nodiscard]] bool contains_recovered_duplicate_arrays() const noexcept { return m_contains_recovered_duplicate_arrays; }
     [[nodiscard]] CBakedNodeIndex root() const noexcept { return m_root; }
     [[nodiscard]] std::uint32_t node_count() const noexcept { return (m_nodes.size() > 0u) ? static_cast<std::uint32_t>(m_nodes.size() - 1u) : 0u; }
     [[nodiscard]] std::uint32_t property_name_count() const noexcept { return m_property_name_count; }
     [[nodiscard]] std::uint32_t string_value_count() const noexcept { return m_string_value_count; }
 
     //  The destination is changed only after a complete successful bake.
-    [[nodiscard]] bool bake_from(const CLiveDocument& source) noexcept;
+    [[nodiscard]] bool build_from(const CLiveDocument& source) noexcept;
 
     [[nodiscard]] EJsonNodeType node_type(CBakedNodeIndex node) const noexcept;
     [[nodiscard]] bool boolean_value(CBakedNodeIndex node, bool& value) const noexcept;
@@ -60,7 +62,8 @@ public:
     [[nodiscard]] bool check_integrity() const noexcept;
 
 private:
-    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept { return (type == EJsonNodeType::array) || (type == EJsonNodeType::object); }
+    [[nodiscard]] static bool is_array_type(EJsonNodeType type) noexcept { return (type == EJsonNodeType::array) || (type == EJsonNodeType::recovered_duplicate_array); }
+    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept { return is_array_type(type) || (type == EJsonNodeType::object); }
     [[nodiscard]] static bool check_stable_strings(const CStableStrings& strings) noexcept
     {
         return (strings.memory_allocation_count() == 0u) || strings.check_integrity();
@@ -80,9 +83,10 @@ private:
     CBakedNodeIndex m_root;
     std::uint32_t m_property_name_count{ 0u };
     std::uint32_t m_string_value_count{ 0u };
+    bool m_contains_recovered_duplicate_arrays{ false };
 };
 
-inline void CBakedDocument::deallocate() noexcept
+inline void CBakedDocumentBuilder::deallocate() noexcept
 {
     m_nodes.deallocate();
     m_property_names.deallocate();
@@ -90,32 +94,33 @@ inline void CBakedDocument::deallocate() noexcept
     m_root = CBakedNodeIndex{};
     m_property_name_count = 0u;
     m_string_value_count = 0u;
+    m_contains_recovered_duplicate_arrays = false;
 }
 
-inline bool CBakedDocument::is_valid() const noexcept
+inline bool CBakedDocumentBuilder::is_valid() const noexcept
 {
     return m_nodes.is_valid() &&
         check_stable_strings(m_property_names) && check_stable_strings(m_string_values);
 }
 
-inline bool CBakedDocument::is_ready() const noexcept
+inline bool CBakedDocumentBuilder::is_ready() const noexcept
 {
     return is_valid() && m_root.is_valid() && (m_nodes.size() > m_root.query_value());
 }
 
-inline const CBakedNode* CBakedDocument::node_slot(const CBakedNodeIndex node) const noexcept
+inline const CBakedNode* CBakedDocumentBuilder::node_slot(const CBakedNodeIndex node) const noexcept
 {
     const std::size_t index = node.query_value();
     return (node.is_valid() && (index < m_nodes.size())) ? &m_nodes[index] : nullptr;
 }
 
-inline CBakedNode* CBakedDocument::node_slot(const CBakedNodeIndex node) noexcept
+inline CBakedNode* CBakedDocumentBuilder::node_slot(const CBakedNodeIndex node) noexcept
 {
     const std::size_t index = node.query_value();
     return (node.is_valid() && (index < m_nodes.size())) ? &m_nodes[index] : nullptr;
 }
 
-inline CPropertyNameId CBakedDocument::copy_property_name(const CLiveDocument& source, const CPropertyNameId name) noexcept
+inline CPropertyNameId CBakedDocumentBuilder::copy_property_name(const CLiveDocument& source, const CPropertyNameId name) noexcept
 {
     if (!name.is_valid()) return CPropertyNameId{};
     const CStringView value = source.property_name(name);
@@ -126,7 +131,7 @@ inline CPropertyNameId CBakedDocument::copy_property_name(const CLiveDocument& s
     return ((id == CStableStrings::k_invalid_id) || (id > std::numeric_limits<std::uint32_t>::max())) ? CPropertyNameId{} : CPropertyNameId{ static_cast<std::uint32_t>(id) };
 }
 
-inline CStringValueId CBakedDocument::copy_string_value(const CStringView& value) noexcept
+inline CStringValueId CBakedDocumentBuilder::copy_string_value(const CStringView& value) noexcept
 {
     if (value.string() == nullptr) return CStringValueId{};
     const bool exists = m_string_values.find_id(value.string(), value.length()) != CStableStrings::k_invalid_id;
@@ -135,7 +140,7 @@ inline CStringValueId CBakedDocument::copy_string_value(const CStringView& value
     return ((id == CStableStrings::k_invalid_id) || (id > std::numeric_limits<std::uint32_t>::max())) ? CStringValueId{} : CStringValueId{ static_cast<std::uint32_t>(id) };
 }
 
-inline CBakedNodeIndex CBakedDocument::append_node(
+inline CBakedNodeIndex CBakedDocumentBuilder::append_node(
     const CLiveDocument& source, const CNodeKey live_node, const CBakedNodeIndex parent_index, const CPropertyNameId name) noexcept
 {
     if ((m_nodes.size() >= std::numeric_limits<std::uint32_t>::max()) || (source.node_type(live_node) == EJsonNodeType::invalid)) return CBakedNodeIndex{};
@@ -162,16 +167,18 @@ inline CBakedNodeIndex CBakedDocument::append_node(
     case EJsonNodeType::null_value:
     case EJsonNodeType::array:
     case EJsonNodeType::object:
+    case EJsonNodeType::recovered_duplicate_array:
         break;
     default:
         return CBakedNodeIndex{};
     }
 
     if (!m_nodes.push_back(node)) return CBakedNodeIndex{};
+    if (node.type == EJsonNodeType::recovered_duplicate_array) m_contains_recovered_duplicate_arrays = true;
     return CBakedNodeIndex{ static_cast<std::uint32_t>(m_nodes.size() - 1u) };
 }
 
-inline bool CBakedDocument::build_children(
+inline bool CBakedDocumentBuilder::build_children(
     const CLiveDocument& source, const CNodeKey live_parent, const CBakedNodeIndex baked_parent) noexcept
 {
     const EJsonNodeType parent_type = source.node_type(live_parent);
@@ -205,11 +212,11 @@ inline bool CBakedDocument::build_children(
     return !live_child.is_valid();
 }
 
-inline bool CBakedDocument::bake_from(const CLiveDocument& source) noexcept
+inline bool CBakedDocumentBuilder::build_from(const CLiveDocument& source) noexcept
 {
     if (!source.is_ready() || !source.is_valid() || !source.root().is_valid() || !source.check_integrity()) return false;
 
-    CBakedDocument staged;
+    CBakedDocumentBuilder staged;
     if (!staged.m_nodes.push_back(CBakedNode{})) return false; //  index zero sentinel
     const CBakedNodeIndex root = staged.append_node(source, source.root(), CBakedNodeIndex{}, CPropertyNameId{});
     if (!root.is_valid() || !staged.build_children(source, source.root(), root)) return false;
@@ -219,16 +226,16 @@ inline bool CBakedDocument::bake_from(const CLiveDocument& source) noexcept
     return true;
 }
 
-inline EJsonNodeType CBakedDocument::node_type(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->type : EJsonNodeType::invalid; }
-inline bool CBakedDocument::boolean_value(const CBakedNodeIndex node, bool& value) const noexcept { const CBakedNode* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::boolean)) return false; value = slot->payload.unsigned_bits != 0u; return true; }
-inline bool CBakedDocument::integer_value(const CBakedNodeIndex node, std::int64_t& value) const noexcept { const CBakedNode* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::integer)) return false; value = slot->payload.integer_value; return true; }
-inline bool CBakedDocument::floating_point_value(const CBakedNodeIndex node, double& value) const noexcept { const CBakedNode* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::floating_point)) return false; value = slot->payload.floating_value; return true; }
-inline CStringView CBakedDocument::string_value(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return ((slot != nullptr) && (slot->type == EJsonNodeType::string)) ? string_value(slot->payload.string_value) : CStringView{}; }
-inline CStringView CBakedDocument::string_value(const CStringValueId value) const noexcept { return value.is_valid() ? m_string_values.view(value.query_value()) : CStringView{}; }
-inline CStringView CBakedDocument::property_name(const CPropertyNameId name) const noexcept { return name.is_valid() ? m_property_names.view(name.query_value()) : CStringView{}; }
-inline CBakedNodeIndex CBakedDocument::parent(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->parent : CBakedNodeIndex{}; }
-inline CPropertyNameId CBakedDocument::name_in_parent(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->name_in_parent : CPropertyNameId{}; }
-inline CBakedNodeIndex CBakedDocument::previous_sibling(const CBakedNodeIndex node) const noexcept
+inline EJsonNodeType CBakedDocumentBuilder::node_type(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->type : EJsonNodeType::invalid; }
+inline bool CBakedDocumentBuilder::boolean_value(const CBakedNodeIndex node, bool& value) const noexcept { const CBakedNode* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::boolean)) return false; value = slot->payload.unsigned_bits != 0u; return true; }
+inline bool CBakedDocumentBuilder::integer_value(const CBakedNodeIndex node, std::int64_t& value) const noexcept { const CBakedNode* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::integer)) return false; value = slot->payload.integer_value; return true; }
+inline bool CBakedDocumentBuilder::floating_point_value(const CBakedNodeIndex node, double& value) const noexcept { const CBakedNode* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::floating_point)) return false; value = slot->payload.floating_value; return true; }
+inline CStringView CBakedDocumentBuilder::string_value(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return ((slot != nullptr) && (slot->type == EJsonNodeType::string)) ? string_value(slot->payload.string_value) : CStringView{}; }
+inline CStringView CBakedDocumentBuilder::string_value(const CStringValueId value) const noexcept { return value.is_valid() ? m_string_values.view(value.query_value()) : CStringView{}; }
+inline CStringView CBakedDocumentBuilder::property_name(const CPropertyNameId name) const noexcept { return name.is_valid() ? m_property_names.view(name.query_value()) : CStringView{}; }
+inline CBakedNodeIndex CBakedDocumentBuilder::parent(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->parent : CBakedNodeIndex{}; }
+inline CPropertyNameId CBakedDocumentBuilder::name_in_parent(const CBakedNodeIndex node) const noexcept { const CBakedNode* const slot = node_slot(node); return (slot != nullptr) ? slot->name_in_parent : CPropertyNameId{}; }
+inline CBakedNodeIndex CBakedDocumentBuilder::previous_sibling(const CBakedNodeIndex node) const noexcept
 {
     const CBakedNode* const slot = node_slot(node);
     const CBakedNode* const parent_slot = (slot != nullptr) ? node_slot(slot->parent) : nullptr;
@@ -237,7 +244,7 @@ inline CBakedNodeIndex CBakedDocument::previous_sibling(const CBakedNodeIndex no
     return (parent_slot != nullptr) && (index > first) && (index < (first + parent_slot->child_count)) ? CBakedNodeIndex{ static_cast<std::uint32_t>(index - 1u) } : CBakedNodeIndex{};
 }
 
-inline CBakedNodeIndex CBakedDocument::next_sibling(const CBakedNodeIndex node) const noexcept
+inline CBakedNodeIndex CBakedDocumentBuilder::next_sibling(const CBakedNodeIndex node) const noexcept
 {
     const CBakedNode* const slot = node_slot(node);
     const CBakedNode* const parent_slot = (slot != nullptr) ? node_slot(slot->parent) : nullptr;
@@ -245,30 +252,30 @@ inline CBakedNodeIndex CBakedDocument::next_sibling(const CBakedNodeIndex node) 
     const std::uint64_t index = node.query_value();
     return (parent_slot != nullptr) && (index >= first) && ((index + 1u) < (first + parent_slot->child_count)) ? CBakedNodeIndex{ static_cast<std::uint32_t>(index + 1u) } : CBakedNodeIndex{};
 }
-inline std::uint32_t CBakedDocument::child_count(const CBakedNodeIndex container) const noexcept { const CBakedNode* const slot = node_slot(container); return ((slot != nullptr) && is_container_type(slot->type)) ? slot->child_count : 0u; }
+inline std::uint32_t CBakedDocumentBuilder::child_count(const CBakedNodeIndex container) const noexcept { const CBakedNode* const slot = node_slot(container); return ((slot != nullptr) && is_container_type(slot->type)) ? slot->child_count : 0u; }
 
-inline CBakedNodeIndex CBakedDocument::array_at(const CBakedNodeIndex array, const std::uint32_t index) const noexcept
+inline CBakedNodeIndex CBakedDocumentBuilder::array_at(const CBakedNodeIndex array, const std::uint32_t index) const noexcept
 {
     const CBakedNode* const slot = node_slot(array);
-    if ((slot == nullptr) || (slot->type != EJsonNodeType::array) || (index >= slot->child_count)) return CBakedNodeIndex{};
+    if ((slot == nullptr) || !is_array_type(slot->type) || (index >= slot->child_count)) return CBakedNodeIndex{};
     return CBakedNodeIndex{ static_cast<std::uint32_t>(slot->first_child_index + index) };
 }
 
-inline CBakedNodeIndex CBakedDocument::first_child(const CBakedNodeIndex container) const noexcept
+inline CBakedNodeIndex CBakedDocumentBuilder::first_child(const CBakedNodeIndex container) const noexcept
 {
     const CBakedNode* const slot = node_slot(container);
     if ((slot == nullptr) || !is_container_type(slot->type) || (slot->child_count == 0u)) return CBakedNodeIndex{};
     return CBakedNodeIndex{ slot->first_child_index };
 }
 
-inline CBakedNodeIndex CBakedDocument::last_child(const CBakedNodeIndex container) const noexcept
+inline CBakedNodeIndex CBakedDocumentBuilder::last_child(const CBakedNodeIndex container) const noexcept
 {
     const CBakedNode* const slot = node_slot(container);
     if ((slot == nullptr) || !is_container_type(slot->type) || (slot->child_count == 0u)) return CBakedNodeIndex{};
     return CBakedNodeIndex{ static_cast<std::uint32_t>(slot->first_child_index + slot->child_count - 1u) };
 }
 
-inline CBakedNodeIndex CBakedDocument::object_child(const CBakedNodeIndex object, const CPropertyNameId name) const noexcept
+inline CBakedNodeIndex CBakedDocumentBuilder::object_child(const CBakedNodeIndex object, const CPropertyNameId name) const noexcept
 {
     const CBakedNode* const slot = node_slot(object);
     if ((slot == nullptr) || (slot->type != EJsonNodeType::object) || !name.is_valid()) return CBakedNodeIndex{};
@@ -281,7 +288,7 @@ inline CBakedNodeIndex CBakedDocument::object_child(const CBakedNodeIndex object
     return CBakedNodeIndex{};
 }
 
-inline CBakedNodeIndex CBakedDocument::object_child(const CBakedNodeIndex object, const CStringView& name) const noexcept
+inline CBakedNodeIndex CBakedDocumentBuilder::object_child(const CBakedNodeIndex object, const CStringView& name) const noexcept
 {
     if (name.string() == nullptr) return CBakedNodeIndex{};
     const CBakedNode* const object_slot = node_slot(object);
@@ -295,7 +302,7 @@ inline CBakedNodeIndex CBakedDocument::object_child(const CBakedNodeIndex object
     return CBakedNodeIndex{};
 }
 
-inline bool CBakedDocument::parent_contains_child(const CBakedNodeIndex parent_index, const CBakedNodeIndex child) const noexcept
+inline bool CBakedDocumentBuilder::parent_contains_child(const CBakedNodeIndex parent_index, const CBakedNodeIndex child) const noexcept
 {
     const CBakedNode* const parent_node = node_slot(parent_index);
     if ((parent_node == nullptr) || !is_container_type(parent_node->type)) return false;
@@ -304,7 +311,7 @@ inline bool CBakedDocument::parent_contains_child(const CBakedNodeIndex parent_i
     return (index >= first) && (index < (first + parent_node->child_count));
 }
 
-inline bool CBakedDocument::check_container_integrity(const CBakedNodeIndex container_index) const noexcept
+inline bool CBakedDocumentBuilder::check_container_integrity(const CBakedNodeIndex container_index) const noexcept
 {
     const CBakedNode* const container = node_slot(container_index);
     if ((container == nullptr) || !is_container_type(container->type)) return false;
@@ -316,7 +323,7 @@ inline bool CBakedDocument::check_container_integrity(const CBakedNodeIndex cont
         const CBakedNode* const child = node_slot(child_index);
         if ((child == nullptr) || (child->parent != container_index)) return false;
         if ((container->type == EJsonNodeType::object) && !child->name_in_parent.is_valid()) return false;
-        if ((container->type == EJsonNodeType::array) && child->name_in_parent.is_valid()) return false;
+        if (is_array_type(container->type) && child->name_in_parent.is_valid()) return false;
         if (container->type == EJsonNodeType::object)
         {
             for (std::uint32_t earlier = 0u; earlier < offset; ++earlier)
@@ -329,14 +336,16 @@ inline bool CBakedDocument::check_container_integrity(const CBakedNodeIndex cont
     return true;
 }
 
-inline bool CBakedDocument::check_integrity() const noexcept
+inline bool CBakedDocumentBuilder::check_integrity() const noexcept
 {
     if (!is_valid() || !m_root.is_valid() || (m_nodes.size() <= m_root.query_value())) return false;
+    bool contains_recovered_duplicate_arrays = false;
     for (std::size_t index = 1u; index < m_nodes.size(); ++index)
     {
         const CBakedNodeIndex node_index{ static_cast<std::uint32_t>(index) };
         const CBakedNode& node = m_nodes[index];
-        if ((node.type == EJsonNodeType::invalid) || (node.type > EJsonNodeType::object)) return false;
+        if ((node.type == EJsonNodeType::invalid) || (node.type > EJsonNodeType::recovered_duplicate_array)) return false;
+        contains_recovered_duplicate_arrays = contains_recovered_duplicate_arrays || (node.type == EJsonNodeType::recovered_duplicate_array);
         if (node_index == m_root)
         {
             if (node.parent.is_valid() || node.name_in_parent.is_valid()) return false;
@@ -346,7 +355,7 @@ inline bool CBakedDocument::check_integrity() const noexcept
         if ((node.type == EJsonNodeType::string) && !m_string_values.is_valid_id(node.payload.string_value.query_value())) return false;
         if (node.name_in_parent.is_valid() && !m_property_names.is_valid_id(node.name_in_parent.query_value())) return false;
     }
-    return true;
+    return contains_recovered_duplicate_arrays == m_contains_recovered_duplicate_arrays;
 }
 
-#endif  //  BAKED_DOCUMENT_HPP_INCLUDED
+#endif  //  BAKED_DOCUMENT_BUILDER_HPP_INCLUDED

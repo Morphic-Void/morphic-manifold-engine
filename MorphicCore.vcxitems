@@ -34,7 +34,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)core\containers\TPodVector.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\containers\TUnorderedCollection.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\data_model\data_model_types.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)core\data_model\baked_document.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)core\data_model\baked_document_builder.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\data_model\live_document.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\event_arguments.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)core\debug\log_path.hpp" />

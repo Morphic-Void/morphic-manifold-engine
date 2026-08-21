@@ -76,7 +76,8 @@ public:
     [[nodiscard]] bool check_integrity() const noexcept;
 
 private:
-    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept { return (type == EJsonNodeType::array) || (type == EJsonNodeType::object); }
+    [[nodiscard]] static bool is_array_type(EJsonNodeType type) noexcept { return (type == EJsonNodeType::array) || (type == EJsonNodeType::recovered_duplicate_array); }
+    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept { return is_array_type(type) || (type == EJsonNodeType::object); }
     [[nodiscard]] static bool check_stable_strings(const CStableStrings& strings) noexcept
     {
         return (strings.memory_allocation_count() == 0u) || strings.check_integrity();
@@ -220,13 +221,13 @@ inline bool CLiveDocument::attach_before(const CNodeKey parent_key, const CNodeK
 inline bool CLiveDocument::append_array_child(const CNodeKey array, const CNodeKey child) noexcept
 {
     const CJsonSlot* const slot = node_slot(array);
-    return (slot != nullptr) && (slot->type == EJsonNodeType::array) && attach_before(array, CNodeKey{}, child, CPropertyNameId{});
+    return (slot != nullptr) && is_array_type(slot->type) && attach_before(array, CNodeKey{}, child, CPropertyNameId{});
 }
 
 inline bool CLiveDocument::insert_array_child_before(const CNodeKey array, const CNodeKey before, const CNodeKey child) noexcept
 {
     const CJsonSlot* const slot = node_slot(array);
-    return (slot != nullptr) && (slot->type == EJsonNodeType::array) && before.is_valid() && attach_before(array, before, child, CPropertyNameId{});
+    return (slot != nullptr) && is_array_type(slot->type) && before.is_valid() && attach_before(array, before, child, CPropertyNameId{});
 }
 
 inline bool CLiveDocument::object_has_name(const CNodeKey object, const CPropertyNameId name) const noexcept
@@ -314,7 +315,7 @@ inline CNodeKey CLiveDocument::object_child(const CNodeKey object, const CString
 inline CNodeKey CLiveDocument::array_at(const CNodeKey array, const std::uint32_t index) const noexcept
 {
     const CJsonSlot* const array_slot = node_slot(array);
-    if ((array_slot == nullptr) || (array_slot->type != EJsonNodeType::array) || (index >= array_slot->payload.children.count)) return CNodeKey{};
+    if ((array_slot == nullptr) || !is_array_type(array_slot->type) || (index >= array_slot->payload.children.count)) return CNodeKey{};
     CNodeKey child = array_slot->payload.children.first;
     for (std::uint32_t position = 0u; position < index; ++position) child = next_sibling(child);
     return child;
@@ -323,7 +324,7 @@ inline CNodeKey CLiveDocument::array_at(const CNodeKey array, const std::uint32_
 inline bool CLiveDocument::array_cursor_at(const CNodeKey array, const std::uint32_t index, CArrayCursor& cursor) const noexcept
 {
     const CJsonSlot* const array_slot = node_slot(array);
-    if ((array_slot == nullptr) || (array_slot->type != EJsonNodeType::array) || (index >= array_slot->payload.children.count)) return false;
+    if ((array_slot == nullptr) || !is_array_type(array_slot->type) || (index >= array_slot->payload.children.count)) return false;
     const CNodeKey child = array_at(array, index);
     if (!child.is_valid()) return false;
     cursor = CArrayCursor{ array, child, index, array_slot->payload.children.revision };
@@ -333,7 +334,7 @@ inline bool CLiveDocument::array_cursor_at(const CNodeKey array, const std::uint
 inline bool CLiveDocument::array_cursor_next(CArrayCursor& cursor) const noexcept
 {
     const CJsonSlot* const array_slot = node_slot(cursor.parent);
-    if ((array_slot == nullptr) || (array_slot->type != EJsonNodeType::array) || (array_slot->payload.children.revision != cursor.revision) || !cursor.current.is_valid()) return false;
+    if ((array_slot == nullptr) || !is_array_type(array_slot->type) || (array_slot->payload.children.revision != cursor.revision) || !cursor.current.is_valid()) return false;
     const CNodeKey next = next_sibling(cursor.current);
     if (!next.is_valid()) return false;
     cursor.current = next;
@@ -355,7 +356,7 @@ inline bool CLiveDocument::check_container_integrity(const CJsonSlot& container)
         const CJsonSlot* const child_slot = node_slot(child);
         if ((child_slot == nullptr) || (child_slot->parent != container.self) || (child_slot->previous_sibling != previous)) return false;
         if ((container.type == EJsonNodeType::object) && !child_slot->name_in_parent.is_valid()) return false;
-        if ((container.type == EJsonNodeType::array) && child_slot->name_in_parent.is_valid()) return false;
+        if (is_array_type(container.type) && child_slot->name_in_parent.is_valid()) return false;
         if (++traversed > list.count) return false;
         if (container.type == EJsonNodeType::object)
         {
@@ -383,7 +384,7 @@ inline bool CLiveDocument::check_integrity() const noexcept
     {
         const CJsonSlot* const slot = m_nodes.get_slot(index);
         if ((slot == nullptr) || !slot->self.is_valid() || (node_slot(slot->self) != slot)) return false;
-        if ((slot->type == EJsonNodeType::invalid) || (slot->type > EJsonNodeType::object)) return false;
+        if ((slot->type == EJsonNodeType::invalid) || (slot->type > EJsonNodeType::recovered_duplicate_array)) return false;
         if (slot->parent.is_valid())
         {
             const CJsonSlot* const parent_slot = node_slot(slot->parent);

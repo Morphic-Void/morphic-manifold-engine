@@ -13,7 +13,7 @@
 #include <type_traits>
 
 class CLiveDocument;
-class CBakedDocument;
+class CBakedDocumentBuilder;
 
 class CNodeKey
 {
@@ -31,7 +31,7 @@ private:
     explicit constexpr CNodeKey(const std::uint64_t value) noexcept : m_value(value) {}
     std::uint64_t m_value{ 0u };
     friend class CLiveDocument;
-    friend class CBakedDocument;
+    friend class CBakedDocumentBuilder;
 };
 
 [[nodiscard]] constexpr bool operator==(const CNodeKey lhs, const CNodeKey rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
@@ -49,7 +49,7 @@ private:
     explicit constexpr CPropertyNameId(const std::uint32_t value) noexcept : m_value(value) {}
     std::uint32_t m_value{ 0u };
     friend class CLiveDocument;
-    friend class CBakedDocument;
+    friend class CBakedDocumentBuilder;
 };
 
 class CStringValueId
@@ -64,7 +64,7 @@ private:
     explicit constexpr CStringValueId(const std::uint32_t value) noexcept : m_value(value) {}
     std::uint32_t m_value{ 0u };
     friend class CLiveDocument;
-    friend class CBakedDocument;
+    friend class CBakedDocumentBuilder;
 };
 
 [[nodiscard]] constexpr bool operator==(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
@@ -88,7 +88,7 @@ public:
 private:
     explicit constexpr CBakedNodeIndex(const std::uint32_t value) noexcept : m_value(value) {}
     std::uint32_t m_value{ 0u };
-    friend class CBakedDocument;
+    friend class CBakedDocumentBuilder;
 };
 
 [[nodiscard]] constexpr bool operator==(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
@@ -104,6 +104,7 @@ enum class EJsonNodeType : std::uint8_t
     string,
     array,
     object,
+    recovered_duplicate_array,
 };
 
 struct CChildList
