@@ -250,30 +250,34 @@ mechanics but is a separate node variant that records collision metadata.  It
 is created only by recovery import and cannot be created by ordinary mutation.
 
 Recovered documents are non-standard.  They exist solely to inspect and
-repair malformed input.  A diagnostic JSON writer may serialize them with an
-explicit named recovery object, for example under `$morphic.recovery`; this is
-not a valid engine document specification and normal parsing does not assign
-it special meaning.
+repair malformed input.  Their recovery node variants may propagate into a
+diagnostic baked artifact, which carries an explicit non-canonical header flag.
+The normal runtime loading path rejects such an artifact.  A diagnostic JSON
+writer may serialize it with an explicit named recovery object, for example
+under `$morphic.recovery`; this is not a valid engine document specification
+and normal parsing does not assign it special meaning.
 
 ## Purity and baking
 
-Only a pure live document may bake.  A pure document contains only standard
-node kinds and has no blocking diagnostics or recovery state.
+Canonical baking requires a pure live document.  A pure document contains only
+standard node kinds and has no blocking diagnostics or recovery state.
 
 ```text
-pure live document                 -> bake permitted
-recovered/non-standard document    -> bake rejected
+pure live document                 -> canonical bake permitted
+recovered/non-standard document    -> diagnostic non-canonical bake permitted
 fatal/invalid document             -> bake rejected
 ```
 
-The baked representation contains no live keys, slots, free-list state,
-recovery nodes, or recovery metadata.  It assigns dense baked indices and
-rewrites linked live children into dense contiguous array/member ranges for
-O(1) indexed access.  It strips unused strings and names.  Its node records
-should also use natural alignment, fixed-width fields, and a deliberate
-power-of-two size, normally 32 or 64 bytes as the actual binary payload and
-query profile require.  Loading binary creates a baked document; editing
-requires explicit promotion into a new live document.
+The canonical baked representation contains no live keys, slots, free-list
+state, or recovery metadata.  A diagnostic baked representation may contain explicit
+recovery node variants and carries a non-canonical header flag; it is never a
+runtime distribution asset.  Both forms assign dense baked indices and rewrite
+linked live children into dense contiguous array/member ranges for O(1)
+indexed access.  They strip unused strings and names.  Their node records
+should use natural alignment, fixed-width fields, and a deliberate power-of-two
+size, normally 32 or 64 bytes as the actual binary payload and query profile
+require.  Loading binary creates a baked document; editing requires explicit
+promotion into a new live document.
 
 ## Interface boundaries
 
