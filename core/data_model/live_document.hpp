@@ -32,62 +32,66 @@ public:
 
     //  A document is accessed by one thread at a time. Reading is permitted
     //  only while mutation is prohibited and the document is quiescent.
-    [[nodiscard]] bool initialise(std::size_t initial_slot_count = 0u) noexcept;
+    [[nodiscard]] bool initialise(const std::size_t initial_slot_count = 0u) noexcept;
     void deallocate() noexcept;
     [[nodiscard]] bool is_valid() const noexcept;
     [[nodiscard]] bool is_ready() const noexcept;
     [[nodiscard]] bool is_empty() const noexcept;
 
     [[nodiscard]] CNodeKey root() const noexcept;
-    [[nodiscard]] bool set_root(CNodeKey node) noexcept;
+    [[nodiscard]] bool set_root(const CNodeKey node) noexcept;
 
     [[nodiscard]] CNodeKey create_null() noexcept;
-    [[nodiscard]] CNodeKey create_boolean(bool value) noexcept;
-    [[nodiscard]] CNodeKey create_integer(std::int64_t value) noexcept;
-    [[nodiscard]] CNodeKey create_floating_point(double value) noexcept;
+    [[nodiscard]] CNodeKey create_boolean(const bool value) noexcept;
+    [[nodiscard]] CNodeKey create_integer(const std::int64_t value) noexcept;
+    [[nodiscard]] CNodeKey create_floating_point(const double value) noexcept;
     [[nodiscard]] CNodeKey create_string(const CStringView& value) noexcept;
     [[nodiscard]] CNodeKey create_array() noexcept;
     [[nodiscard]] CNodeKey create_object() noexcept;
 
     [[nodiscard]] CPropertyNameId intern_property_name(const CStringView& name) noexcept;
-    [[nodiscard]] CStringView property_name(CPropertyNameId name) const noexcept;
-    [[nodiscard]] CStringView string_value(CStringValueId value) const noexcept;
+    [[nodiscard]] CStringView property_name(const CPropertyNameId name) const noexcept;
+    [[nodiscard]] CStringView string_value(const CStringValueId value) const noexcept;
 
-    [[nodiscard]] bool append_array_child(CNodeKey array, CNodeKey child) noexcept;
-    [[nodiscard]] bool insert_array_child_before(CNodeKey array, CNodeKey before, CNodeKey child) noexcept;
-    [[nodiscard]] bool add_object_child(CNodeKey object, const CStringView& name, CNodeKey child) noexcept;
-    [[nodiscard]] bool detach(CNodeKey child) noexcept;
-    [[nodiscard]] bool erase_detached(CNodeKey node) noexcept;
+    [[nodiscard]] bool append_array_child(const CNodeKey array, const CNodeKey child) noexcept;
+    [[nodiscard]] bool insert_array_child_before(const CNodeKey array, const CNodeKey before, const CNodeKey child) noexcept;
+    [[nodiscard]] bool add_object_child(const CNodeKey object, const CStringView& name, const CNodeKey child) noexcept;
+    [[nodiscard]] bool detach(const CNodeKey child) noexcept;
+    [[nodiscard]] bool erase_detached(const CNodeKey node) noexcept;
 
-    [[nodiscard]] EJsonNodeType node_type(CNodeKey node) const noexcept;
-    [[nodiscard]] bool boolean_value(CNodeKey node, bool& value) const noexcept;
-    [[nodiscard]] bool integer_value(CNodeKey node, std::int64_t& value) const noexcept;
-    [[nodiscard]] bool floating_point_value(CNodeKey node, double& value) const noexcept;
-    [[nodiscard]] CStringView string_value(CNodeKey node) const noexcept;
-    [[nodiscard]] CNodeKey parent(CNodeKey node) const noexcept;
-    [[nodiscard]] CPropertyNameId name_in_parent(CNodeKey node) const noexcept;
-    [[nodiscard]] CNodeKey previous_sibling(CNodeKey node) const noexcept;
-    [[nodiscard]] CNodeKey next_sibling(CNodeKey node) const noexcept;
-    [[nodiscard]] std::uint32_t child_count(CNodeKey container) const noexcept;
-    [[nodiscard]] CNodeKey first_child(CNodeKey container) const noexcept;
-    [[nodiscard]] CNodeKey last_child(CNodeKey container) const noexcept;
-    [[nodiscard]] CNodeKey object_child(CNodeKey object, CPropertyNameId name) const noexcept;
-    [[nodiscard]] CNodeKey object_child(CNodeKey object, const CStringView& name) const noexcept;
-    [[nodiscard]] CNodeKey array_at(CNodeKey array, std::uint32_t index) const noexcept;
-    [[nodiscard]] bool array_cursor_at(CNodeKey array, std::uint32_t index, CArrayCursor& cursor) const noexcept;
+    [[nodiscard]] EJsonNodeType node_type(const CNodeKey node) const noexcept;
+    [[nodiscard]] bool boolean_value(const CNodeKey node, bool& value) const noexcept;
+    [[nodiscard]] bool integer_value(const CNodeKey node, std::int64_t& value) const noexcept;
+    [[nodiscard]] bool floating_point_value(const CNodeKey node, double& value) const noexcept;
+    [[nodiscard]] CStringView string_value(const CNodeKey node) const noexcept;
+    [[nodiscard]] CNodeKey parent(const CNodeKey node) const noexcept;
+    [[nodiscard]] CPropertyNameId name_in_parent(const CNodeKey node) const noexcept;
+    [[nodiscard]] CNodeKey previous_sibling(const CNodeKey node) const noexcept;
+    [[nodiscard]] CNodeKey next_sibling(const CNodeKey node) const noexcept;
+    [[nodiscard]] std::uint32_t child_count(const CNodeKey container) const noexcept;
+    [[nodiscard]] CNodeKey first_child(const CNodeKey container) const noexcept;
+    [[nodiscard]] CNodeKey last_child(const CNodeKey container) const noexcept;
+    [[nodiscard]] CNodeKey object_child(const CNodeKey object, const CPropertyNameId name) const noexcept;
+    [[nodiscard]] CNodeKey object_child(const CNodeKey object, const CStringView& name) const noexcept;
+    [[nodiscard]] CNodeKey array_at(const CNodeKey array, const std::uint32_t index) const noexcept;
+    [[nodiscard]] bool array_cursor_at(const CNodeKey array, const std::uint32_t index, CArrayCursor& cursor) const noexcept;
     [[nodiscard]] bool array_cursor_next(CArrayCursor& cursor) const noexcept;
     [[nodiscard]] bool check_integrity() const noexcept;
 
 private:
-    [[nodiscard]] static bool is_array_type(EJsonNodeType type) noexcept;
-    [[nodiscard]] static bool is_container_type(EJsonNodeType type) noexcept;
+    [[nodiscard]] static bool is_array_type(const EJsonNodeType type) noexcept;
+    [[nodiscard]] static bool is_container_type(const EJsonNodeType type) noexcept;
     [[nodiscard]] static bool check_stable_strings(const CStableStrings& strings) noexcept;
-    [[nodiscard]] CNodeKey create_node(EJsonNodeType type) noexcept;
-    [[nodiscard]] CJsonSlot* node_slot(CNodeKey node) noexcept;
-    [[nodiscard]] const CJsonSlot* node_slot(CNodeKey node) const noexcept;
-    [[nodiscard]] bool can_attach(CNodeKey parent, CNodeKey child) const noexcept;
-    [[nodiscard]] bool attach_before(CNodeKey parent, CNodeKey before, CNodeKey child, CPropertyNameId name) noexcept;
-    [[nodiscard]] bool object_has_name(CNodeKey object, CPropertyNameId name) const noexcept;
+    [[nodiscard]] CNodeKey create_node(const EJsonNodeType type) noexcept;
+    [[nodiscard]] CJsonSlot* node_slot(const CNodeKey node) noexcept;
+    [[nodiscard]] const CJsonSlot* node_slot(const CNodeKey node) const noexcept;
+    [[nodiscard]] bool can_attach(const CNodeKey parent, const CNodeKey child) const noexcept;
+    [[nodiscard]] bool attach_before(
+        const CNodeKey parent,
+        const CNodeKey before,
+        const CNodeKey child,
+        const CPropertyNameId name) noexcept;
+    [[nodiscard]] bool object_has_name(const CNodeKey object, const CPropertyNameId name) const noexcept;
     [[nodiscard]] bool check_container_integrity(const CJsonSlot& container) const noexcept;
 
     TPodOrderedSlots<CJsonSlot, CNodeKey> m_nodes;
@@ -215,11 +219,19 @@ inline CPropertyNameId CLiveDocument::intern_property_name(const CStringView& na
 {
     if (name.string() == nullptr) return CPropertyNameId{};
     const std::size_t id = m_property_names.append(name.string(), name.length());
-    return ((id == CStableStrings::k_invalid_id) || (id > std::numeric_limits<std::uint32_t>::max())) ? CPropertyNameId{} : CPropertyNameId{ static_cast<std::uint32_t>(id) };
+    if ((id == CStableStrings::k_invalid_id) || (id > std::numeric_limits<std::uint32_t>::max())) return CPropertyNameId{};
+    return CPropertyNameId{ static_cast<std::uint32_t>(id) };
 }
 
-inline CStringView CLiveDocument::property_name(const CPropertyNameId name) const noexcept { return name.is_valid() ? m_property_names.view(name.query_value()) : CStringView{}; }
-inline CStringView CLiveDocument::string_value(const CStringValueId value) const noexcept { return value.is_valid() ? m_string_values.view(value.query_value()) : CStringView{}; }
+inline CStringView CLiveDocument::property_name(const CPropertyNameId name) const noexcept
+{
+    return name.is_valid() ? m_property_names.view(name.query_value()) : CStringView{};
+}
+
+inline CStringView CLiveDocument::string_value(const CStringValueId value) const noexcept
+{
+    return value.is_valid() ? m_string_values.view(value.query_value()) : CStringView{};
+}
 
 inline bool CLiveDocument::can_attach(const CNodeKey parent_key, const CNodeKey child_key) const noexcept
 {
@@ -230,7 +242,11 @@ inline bool CLiveDocument::can_attach(const CNodeKey parent_key, const CNodeKey 
         (parent_slot->payload.children.count != std::numeric_limits<std::uint32_t>::max());
 }
 
-inline bool CLiveDocument::attach_before(const CNodeKey parent_key, const CNodeKey before_key, const CNodeKey child_key, const CPropertyNameId name) noexcept
+inline bool CLiveDocument::attach_before(
+    const CNodeKey parent_key,
+    const CNodeKey before_key,
+    const CNodeKey child_key,
+    const CPropertyNameId name) noexcept
 {
     if (!can_attach(parent_key, child_key)) return false;
     CJsonSlot* const parent_slot = node_slot(parent_key);
@@ -295,7 +311,11 @@ inline bool CLiveDocument::detach(const CNodeKey child_key) noexcept
     CJsonSlot* const previous_slot = node_slot(child_slot->previous_sibling);
     CJsonSlot* const next_slot = node_slot(child_slot->next_sibling);
     if ((parent_slot == nullptr) || !is_container_type(parent_slot->type) || (parent_slot->payload.children.count == 0u) ||
-        (child_slot->previous_sibling.is_valid() && (previous_slot == nullptr)) || (child_slot->next_sibling.is_valid() && (next_slot == nullptr))) return false;
+        (child_slot->previous_sibling.is_valid() && (previous_slot == nullptr)) ||
+        (child_slot->next_sibling.is_valid() && (next_slot == nullptr)))
+    {
+        return false;
+    }
     CChildList& list = parent_slot->payload.children;
     if (previous_slot != nullptr) previous_slot->next_sibling = child_slot->next_sibling; else list.first = child_slot->next_sibling;
     if (next_slot != nullptr) next_slot->previous_sibling = child_slot->previous_sibling; else list.last = child_slot->previous_sibling;
@@ -311,22 +331,98 @@ inline bool CLiveDocument::detach(const CNodeKey child_key) noexcept
 inline bool CLiveDocument::erase_detached(const CNodeKey node) noexcept
 {
     const CJsonSlot* const slot = node_slot(node);
-    return (slot != nullptr) && (node != m_root) && !slot->parent.is_valid() && !slot->previous_sibling.is_valid() && !slot->next_sibling.is_valid() &&
-        (!is_container_type(slot->type) || (slot->payload.children.count == 0u)) && m_nodes.erase(node);
+    return (slot != nullptr) && (node != m_root) && !slot->parent.is_valid() &&
+        !slot->previous_sibling.is_valid() && !slot->next_sibling.is_valid() &&
+        (!is_container_type(slot->type) || (slot->payload.children.count == 0u)) &&
+        m_nodes.erase(node);
 }
 
-inline EJsonNodeType CLiveDocument::node_type(const CNodeKey node) const noexcept { const CJsonSlot* const slot = node_slot(node); return (slot != nullptr) ? slot->type : EJsonNodeType::invalid; }
-inline bool CLiveDocument::boolean_value(const CNodeKey node, bool& value) const noexcept { const CJsonSlot* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::boolean)) return false; value = slot->payload.unsigned_bits != 0u; return true; }
-inline bool CLiveDocument::integer_value(const CNodeKey node, std::int64_t& value) const noexcept { const CJsonSlot* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::integer)) return false; value = slot->payload.integer_value; return true; }
-inline bool CLiveDocument::floating_point_value(const CNodeKey node, double& value) const noexcept { const CJsonSlot* const slot = node_slot(node); if ((slot == nullptr) || (slot->type != EJsonNodeType::floating_point)) return false; value = slot->payload.floating_value; return true; }
-inline CStringView CLiveDocument::string_value(const CNodeKey node) const noexcept { const CJsonSlot* const slot = node_slot(node); return ((slot != nullptr) && (slot->type == EJsonNodeType::string)) ? string_value(slot->payload.string_value) : CStringView{}; }
-inline CNodeKey CLiveDocument::parent(const CNodeKey node) const noexcept { const CJsonSlot* const slot = node_slot(node); return (slot != nullptr) ? slot->parent : CNodeKey{}; }
-inline CPropertyNameId CLiveDocument::name_in_parent(const CNodeKey node) const noexcept { const CJsonSlot* const slot = node_slot(node); return (slot != nullptr) ? slot->name_in_parent : CPropertyNameId{}; }
-inline CNodeKey CLiveDocument::previous_sibling(const CNodeKey node) const noexcept { const CJsonSlot* const slot = node_slot(node); return (slot != nullptr) ? slot->previous_sibling : CNodeKey{}; }
-inline CNodeKey CLiveDocument::next_sibling(const CNodeKey node) const noexcept { const CJsonSlot* const slot = node_slot(node); return (slot != nullptr) ? slot->next_sibling : CNodeKey{}; }
-inline std::uint32_t CLiveDocument::child_count(const CNodeKey container) const noexcept { const CJsonSlot* const slot = node_slot(container); return ((slot != nullptr) && is_container_type(slot->type)) ? slot->payload.children.count : 0u; }
-inline CNodeKey CLiveDocument::first_child(const CNodeKey container) const noexcept { const CJsonSlot* const slot = node_slot(container); return ((slot != nullptr) && is_container_type(slot->type)) ? slot->payload.children.first : CNodeKey{}; }
-inline CNodeKey CLiveDocument::last_child(const CNodeKey container) const noexcept { const CJsonSlot* const slot = node_slot(container); return ((slot != nullptr) && is_container_type(slot->type)) ? slot->payload.children.last : CNodeKey{}; }
+inline EJsonNodeType CLiveDocument::node_type(const CNodeKey node) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    return (slot != nullptr) ? slot->type : EJsonNodeType::invalid;
+}
+
+inline bool CLiveDocument::boolean_value(const CNodeKey node, bool& value) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    if ((slot == nullptr) || (slot->type != EJsonNodeType::boolean))
+    {
+        return false;
+    }
+    value = slot->payload.unsigned_bits != 0u;
+    return true;
+}
+
+inline bool CLiveDocument::integer_value(const CNodeKey node, std::int64_t& value) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    if ((slot == nullptr) || (slot->type != EJsonNodeType::integer))
+    {
+        return false;
+    }
+    value = slot->payload.integer_value;
+    return true;
+}
+
+inline bool CLiveDocument::floating_point_value(const CNodeKey node, double& value) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    if ((slot == nullptr) || (slot->type != EJsonNodeType::floating_point))
+    {
+        return false;
+    }
+    value = slot->payload.floating_value;
+    return true;
+}
+
+inline CStringView CLiveDocument::string_value(const CNodeKey node) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    return ((slot != nullptr) && (slot->type == EJsonNodeType::string)) ? string_value(slot->payload.string_value) : CStringView{};
+}
+
+inline CNodeKey CLiveDocument::parent(const CNodeKey node) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    return (slot != nullptr) ? slot->parent : CNodeKey{};
+}
+
+inline CPropertyNameId CLiveDocument::name_in_parent(const CNodeKey node) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    return (slot != nullptr) ? slot->name_in_parent : CPropertyNameId{};
+}
+
+inline CNodeKey CLiveDocument::previous_sibling(const CNodeKey node) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    return (slot != nullptr) ? slot->previous_sibling : CNodeKey{};
+}
+
+inline CNodeKey CLiveDocument::next_sibling(const CNodeKey node) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(node);
+    return (slot != nullptr) ? slot->next_sibling : CNodeKey{};
+}
+
+inline std::uint32_t CLiveDocument::child_count(const CNodeKey container) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(container);
+    return ((slot != nullptr) && is_container_type(slot->type)) ? slot->payload.children.count : 0u;
+}
+
+inline CNodeKey CLiveDocument::first_child(const CNodeKey container) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(container);
+    return ((slot != nullptr) && is_container_type(slot->type)) ? slot->payload.children.first : CNodeKey{};
+}
+
+inline CNodeKey CLiveDocument::last_child(const CNodeKey container) const noexcept
+{
+    const CJsonSlot* const slot = node_slot(container);
+    return ((slot != nullptr) && is_container_type(slot->type)) ? slot->payload.children.last : CNodeKey{};
+}
 
 inline CNodeKey CLiveDocument::object_child(const CNodeKey object, const CPropertyNameId name) const noexcept
 {
@@ -373,7 +469,11 @@ inline bool CLiveDocument::array_cursor_at(const CNodeKey array, const std::uint
 inline bool CLiveDocument::array_cursor_next(CArrayCursor& cursor) const noexcept
 {
     const CJsonSlot* const array_slot = node_slot(cursor.parent);
-    if ((array_slot == nullptr) || !is_array_type(array_slot->type) || (array_slot->payload.children.revision != cursor.revision) || !cursor.current.is_valid()) return false;
+    if ((array_slot == nullptr) || !is_array_type(array_slot->type) ||
+        (array_slot->payload.children.revision != cursor.revision) || !cursor.current.is_valid())
+    {
+        return false;
+    }
     const CNodeKey next = next_sibling(cursor.current);
     if (!next.is_valid()) return false;
     cursor.current = next;
@@ -408,7 +508,9 @@ inline bool CLiveDocument::check_container_integrity(const CJsonSlot& container)
         previous = child;
         child = child_slot->next_sibling;
     }
-    return (traversed == list.count) && (previous == list.last) && (!list.first.is_valid() || !previous_sibling(list.first).is_valid()) && (!list.last.is_valid() || !next_sibling(list.last).is_valid());
+    return (traversed == list.count) && (previous == list.last) &&
+        (!list.first.is_valid() || !previous_sibling(list.first).is_valid()) &&
+        (!list.last.is_valid() || !next_sibling(list.last).is_valid());
 }
 
 inline bool CLiveDocument::check_integrity() const noexcept
@@ -417,7 +519,11 @@ inline bool CLiveDocument::check_integrity() const noexcept
     if (m_root.is_valid())
     {
         const CJsonSlot* const root_slot = node_slot(m_root);
-        if ((root_slot == nullptr) || root_slot->parent.is_valid() || root_slot->previous_sibling.is_valid() || root_slot->next_sibling.is_valid()) return false;
+        if ((root_slot == nullptr) || root_slot->parent.is_valid() || root_slot->previous_sibling.is_valid() ||
+            root_slot->next_sibling.is_valid())
+        {
+            return false;
+        }
     }
     for (std::int32_t index = m_nodes.first_live(); index >= 0; index = m_nodes.next_live(index))
     {
@@ -430,8 +536,16 @@ inline bool CLiveDocument::check_integrity() const noexcept
             if ((parent_slot == nullptr) || !is_container_type(parent_slot->type)) return false;
         }
         else if (slot->previous_sibling.is_valid() || slot->next_sibling.is_valid() || slot->name_in_parent.is_valid()) return false;
-        if (slot->previous_sibling.is_valid()) { const CJsonSlot* const previous = node_slot(slot->previous_sibling); if ((previous == nullptr) || (previous->next_sibling != slot->self) || (previous->parent != slot->parent)) return false; }
-        if (slot->next_sibling.is_valid()) { const CJsonSlot* const next = node_slot(slot->next_sibling); if ((next == nullptr) || (next->previous_sibling != slot->self) || (next->parent != slot->parent)) return false; }
+        if (slot->previous_sibling.is_valid())
+        {
+            const CJsonSlot* const previous = node_slot(slot->previous_sibling);
+            if ((previous == nullptr) || (previous->next_sibling != slot->self) || (previous->parent != slot->parent)) return false;
+        }
+        if (slot->next_sibling.is_valid())
+        {
+            const CJsonSlot* const next = node_slot(slot->next_sibling);
+            if ((next == nullptr) || (next->previous_sibling != slot->self) || (next->parent != slot->parent)) return false;
+        }
         if (is_container_type(slot->type) && !check_container_integrity(*slot)) return false;
         if ((slot->type == EJsonNodeType::string) && !m_string_values.is_valid_id(slot->payload.string_value.query_value())) return false;
         if (slot->name_in_parent.is_valid() && !m_property_names.is_valid_id(slot->name_in_parent.query_value())) return false;

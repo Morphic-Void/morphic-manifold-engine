@@ -5,6 +5,7 @@
 //  File:   data_model_types.hpp
 //  Author: Ritchie Brannan
 //  Date:   20 August 2026
+//
 //  Fundamental POD types for the mutable structured-data model.
 
 #pragma once
@@ -30,7 +31,7 @@ public:
     [[nodiscard]] constexpr std::int32_t relationship(const CNodeKey& other) const noexcept;
 
 private:
-    explicit constexpr CNodeKey(std::uint64_t value) noexcept;
+    explicit constexpr CNodeKey(const std::uint64_t value) noexcept;
     std::uint64_t m_value{ 0u };
     friend class CLiveDocument;
     friend class CBakedDocumentBuilder;
@@ -38,8 +39,8 @@ private:
     friend class CBakedDocumentBlock;
 };
 
-[[nodiscard]] constexpr bool operator==(const CNodeKey lhs, const CNodeKey rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
-[[nodiscard]] constexpr bool operator!=(const CNodeKey lhs, const CNodeKey rhs) noexcept { return !(lhs == rhs); }
+[[nodiscard]] constexpr bool operator==(const CNodeKey lhs, const CNodeKey rhs) noexcept;
+[[nodiscard]] constexpr bool operator!=(const CNodeKey lhs, const CNodeKey rhs) noexcept;
 
 class CPropertyNameId
 {
@@ -50,7 +51,7 @@ public:
     [[nodiscard]] constexpr std::uint32_t query_value() const noexcept;
 
 private:
-    explicit constexpr CPropertyNameId(std::uint32_t value) noexcept;
+    explicit constexpr CPropertyNameId(const std::uint32_t value) noexcept;
     std::uint32_t m_value{ 0u };
     friend class CLiveDocument;
     friend class CBakedDocumentBuilder;
@@ -67,7 +68,7 @@ public:
     [[nodiscard]] constexpr std::uint32_t query_value() const noexcept;
 
 private:
-    explicit constexpr CStringValueId(std::uint32_t value) noexcept;
+    explicit constexpr CStringValueId(const std::uint32_t value) noexcept;
     std::uint32_t m_value{ 0u };
     friend class CLiveDocument;
     friend class CBakedDocumentBuilder;
@@ -75,10 +76,10 @@ private:
     friend class CBakedDocumentBlock;
 };
 
-[[nodiscard]] constexpr bool operator==(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
-[[nodiscard]] constexpr bool operator!=(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept { return !(lhs == rhs); }
-[[nodiscard]] constexpr bool operator==(const CStringValueId lhs, const CStringValueId rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
-[[nodiscard]] constexpr bool operator!=(const CStringValueId lhs, const CStringValueId rhs) noexcept { return !(lhs == rhs); }
+[[nodiscard]] constexpr bool operator==(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept;
+[[nodiscard]] constexpr bool operator!=(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept;
+[[nodiscard]] constexpr bool operator==(const CStringValueId lhs, const CStringValueId rhs) noexcept;
+[[nodiscard]] constexpr bool operator!=(const CStringValueId lhs, const CStringValueId rhs) noexcept;
 
 //==============================================================================
 //  CBakedNodeIndex
@@ -94,15 +95,15 @@ public:
     [[nodiscard]] constexpr std::uint32_t query_value() const noexcept;
 
 private:
-    explicit constexpr CBakedNodeIndex(std::uint32_t value) noexcept;
+    explicit constexpr CBakedNodeIndex(const std::uint32_t value) noexcept;
     std::uint32_t m_value{ 0u };
     friend class CBakedDocumentBuilder;
     friend class CBakedDocument;
     friend class CBakedDocumentBlock;
 };
 
-[[nodiscard]] constexpr bool operator==(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
-[[nodiscard]] constexpr bool operator!=(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept { return !(lhs == rhs); }
+[[nodiscard]] constexpr bool operator==(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept;
+[[nodiscard]] constexpr bool operator!=(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept;
 
 enum class EJsonNodeType : std::uint8_t
 {
@@ -191,7 +192,13 @@ constexpr CNodeKey::CNodeKey(const std::uint64_t value) noexcept : m_value(value
 constexpr bool CNodeKey::is_valid() const noexcept { return m_value != 0u; }
 constexpr CNodeKey::operator bool() const noexcept { return is_valid(); }
 constexpr std::uint64_t CNodeKey::query_value() const noexcept { return m_value; }
-constexpr std::int32_t CNodeKey::relationship(const CNodeKey& other) const noexcept { return (m_value < other.m_value) ? -1 : ((m_value > other.m_value) ? 1 : 0); }
+constexpr std::int32_t CNodeKey::relationship(const CNodeKey& other) const noexcept
+{
+    return (m_value < other.m_value) ? -1 : ((m_value > other.m_value) ? 1 : 0);
+}
+
+constexpr bool operator==(const CNodeKey lhs, const CNodeKey rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
+constexpr bool operator!=(const CNodeKey lhs, const CNodeKey rhs) noexcept { return !(lhs == rhs); }
 
 constexpr CPropertyNameId::CPropertyNameId(const std::uint32_t value) noexcept : m_value(value) {}
 constexpr bool CPropertyNameId::is_valid() const noexcept { return m_value != 0u; }
@@ -203,10 +210,18 @@ constexpr bool CStringValueId::is_valid() const noexcept { return m_value != 0u;
 constexpr CStringValueId::operator bool() const noexcept { return is_valid(); }
 constexpr std::uint32_t CStringValueId::query_value() const noexcept { return m_value; }
 
+constexpr bool operator==(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
+constexpr bool operator!=(const CPropertyNameId lhs, const CPropertyNameId rhs) noexcept { return !(lhs == rhs); }
+constexpr bool operator==(const CStringValueId lhs, const CStringValueId rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
+constexpr bool operator!=(const CStringValueId lhs, const CStringValueId rhs) noexcept { return !(lhs == rhs); }
+
 constexpr CBakedNodeIndex::CBakedNodeIndex(const std::uint32_t value) noexcept : m_value(value) {}
 constexpr bool CBakedNodeIndex::is_valid() const noexcept { return m_value != 0u; }
 constexpr CBakedNodeIndex::operator bool() const noexcept { return is_valid(); }
 constexpr std::uint32_t CBakedNodeIndex::query_value() const noexcept { return m_value; }
+
+constexpr bool operator==(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept { return lhs.query_value() == rhs.query_value(); }
+constexpr bool operator!=(const CBakedNodeIndex lhs, const CBakedNodeIndex rhs) noexcept { return !(lhs == rhs); }
 
 static_assert(std::is_trivially_copyable_v<CNodeKey>);
 static_assert(std::is_standard_layout_v<CNodeKey>);
