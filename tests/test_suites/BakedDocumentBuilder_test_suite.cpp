@@ -6,6 +6,7 @@
 #include <type_traits>
 
 #include "data_model/baked_document_builder.hpp"
+#include "data_model/baked_document.hpp"
 #include "tests/support/test_context.hpp"
 
 namespace
@@ -90,6 +91,27 @@ void test_bake_is_atomic_and_rejects_invalid_source(TTestContext& ctx)
     TEST_EXPECT(ctx, baked.root() == old_root);
     TEST_EXPECT(ctx, baked.check_integrity());
 }
+
+void test_final_baked_block(TTestContext& ctx)
+{
+    CLiveDocument live;
+    TEST_EXPECT(ctx, live.initialise());
+    const CNodeKey root=live.create_object(), value=live.create_string(text("value"));
+    TEST_EXPECT(ctx, live.set_root(root));
+    TEST_EXPECT(ctx, live.add_object_child(root,text("key"),value));
+    CBakedDocumentBuilder builder;
+    TEST_EXPECT(ctx, builder.build_from(live));
+    CBakedDocumentBlock block;
+    TEST_EXPECT(ctx, block.build_from(builder));
+    const CBakedDocument& doc=block.document();
+    TEST_EXPECT(ctx, doc.is_ready() && doc.check_integrity());
+    const CBakedNodeIndex child=doc.object_child(doc.root(),text("key"));
+    TEST_EXPECT(ctx, child.is_valid());
+    TEST_EXPECT(ctx, doc.string_value(child).length()==5u);
+    TEST_EXPECT(ctx, std::memcmp(doc.string_value(child).string(),"value",5u)==0);
+    CBakedDocument invalid{block.bytes().data(),block.bytes().size()-1u};
+    TEST_EXPECT(ctx, !invalid.is_ready());
+}
 }
 
 int run_baked_document_builder_tests()
@@ -97,6 +119,7 @@ int run_baked_document_builder_tests()
     TTestContext ctx;
     test_bake_preserves_reachable_semantics(ctx);
     test_bake_is_atomic_and_rejects_invalid_source(ctx);
+    test_final_baked_block(ctx);
     std::cout << "BakedDocumentBuilder: " << ctx.passed << " passed, " << ctx.failed << " failed\n";
     return ctx.failed;
 }

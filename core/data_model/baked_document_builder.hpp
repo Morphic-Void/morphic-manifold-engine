@@ -20,6 +20,7 @@
 
 class CBakedDocumentBuilder
 {
+    friend class CBakedDocumentBlock;
 public:
     CBakedDocumentBuilder() noexcept = default;
     CBakedDocumentBuilder(const CBakedDocumentBuilder&) = delete;

@@ -228,6 +228,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)core\data_model\baked_document_builder.hpp">
       <Filter>Core\include\data_model</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)core\data_model\baked_document.hpp">
+      <Filter>Core\include\data_model</Filter>
+    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\data_model\live_document.hpp">
       <Filter>Core\include\data_model</Filter>
     </ClInclude>
