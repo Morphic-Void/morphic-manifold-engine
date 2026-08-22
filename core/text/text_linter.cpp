@@ -91,7 +91,7 @@ static bool is_likely_printable(const unicode_t value) noexcept
 }
 
 static bool is_white_space(const unicode_t value) noexcept
-{
+{   //  check for breaking and non-breaking white space
     return unicode::isBreakingWhite(value) || (value == 0x00a0u) || (value == 0x2007u) || (value == 0x202fu);
 }
 
