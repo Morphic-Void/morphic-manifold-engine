@@ -47,6 +47,7 @@
     <ClCompile Include="tests\test_suites\TRingTransport_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
     <ClCompile Include="tests\test_suites\TUnorderedCollection_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
     <ClCompile Include="tests\test_suites\TUnorderedSlots_test_harness.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
+    <ClCompile Include="tests\test_suites\TextLinter_test_suite.cpp"><Filter>Tests\test_suites</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\environment\erased_owner_payloads.def"><Filter>Tests\environment</Filter></ClInclude>
@@ -83,6 +84,7 @@
     <ClInclude Include="tests\test_suites\TRingTransport_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
     <ClInclude Include="tests\test_suites\TUnorderedCollection_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
     <ClInclude Include="tests\test_suites\TUnorderedSlots_test_harness.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
+    <ClInclude Include="tests\test_suites\TextLinter_test_suite.hpp"><Filter>Tests\test_suites</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="tests\data\input\files\test_input.tga"><Filter>Tests\data\input\files</Filter></None>

@@ -121,6 +121,7 @@
     <ClCompile Include="tests\test_suites\TRingTransport_test_suite.cpp" />
     <ClCompile Include="tests\test_suites\TUnorderedCollection_test_suite.cpp" />
     <ClCompile Include="tests\test_suites\TUnorderedSlots_test_harness.cpp" />
+    <ClCompile Include="tests\test_suites\TextLinter_test_suite.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\environment\erased_owner_payloads.def" />
@@ -157,6 +158,7 @@
     <ClInclude Include="tests\test_suites\TRingTransport_test_suite.hpp" />
     <ClInclude Include="tests\test_suites\TUnorderedCollection_test_suite.hpp" />
     <ClInclude Include="tests\test_suites\TUnorderedSlots_test_harness.hpp" />
+    <ClInclude Include="tests\test_suites\TextLinter_test_suite.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tests\data\input\files\test_input.tga" />

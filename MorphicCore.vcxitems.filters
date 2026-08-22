@@ -73,6 +73,9 @@
     <Filter Include="Core\include\threading\transports">
       <UniqueIdentifier>{b67d7b99-c024-af0b-b5a9-30bff759d272}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Core\include\text">
+      <UniqueIdentifier>{2f4e5aa1-63b5-4174-b5f1-15d82d70a6d2}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Core\include\types">
       <UniqueIdentifier>{8cc4803c-c149-c117-2381-902d8f8db5b6}</UniqueIdentifier>
     </Filter>
@@ -126,6 +129,9 @@
     </Filter>
     <Filter Include="Core\src\threading\messages">
       <UniqueIdentifier>{8c826f53-8c4a-a693-8cd9-35d80dc72616}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\src\text">
+      <UniqueIdentifier>{b917c6a3-8f23-48f9-9a1c-6c2e3a3c90e1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Core\src\types">
       <UniqueIdentifier>{2756db4c-76c3-a2b1-589d-bd9132fd932c}</UniqueIdentifier>
@@ -459,6 +465,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)core\threading\transports\TRingTransport.hpp">
       <Filter>Core\include\threading\transports</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)core\text\text_linter.hpp">
+      <Filter>Core\include\text</Filter>
+    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)core\types\atomic_types.hpp">
       <Filter>Core\include\types</Filter>
     </ClInclude>
@@ -583,6 +592,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\threading\messages\CErasedPodMsgTransport.cpp">
       <Filter>Core\src\threading\messages</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)core\text\text_linter.cpp">
+      <Filter>Core\src\text</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)core\types\fp16data_t.cpp">
       <Filter>Core\src\types</Filter>
