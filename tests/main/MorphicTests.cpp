@@ -21,8 +21,15 @@ int main(const int argc, char** const argv)
             "Invalid --log-tag. Use --log-tag=<value> with 1-48 ASCII letters, digits, '.', '_' or '-'.\n";
         return 2;
     }
+    const char* output_directory = nullptr;
+    if (!parse_output_directory(argc, argv, output_directory))
+    {
+        std::cerr <<
+            "Invalid --output-directory. Use --output-directory=<path>.\n";
+        return 2;
+    }
     if (!test_environment::initialise_paths(
-        (argc > 0) ? argv[0] : nullptr, log_tag))
+        (argc > 0) ? argv[0] : nullptr, log_tag, output_directory))
     {
         std::cerr << "MorphicTests could not initialise repository paths and log output.\n";
         return 1;

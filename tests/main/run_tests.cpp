@@ -128,7 +128,9 @@ void print_usage()
         "  --tests=<0-3>\n"
         "               Long-form equivalent of -t0..-t3\n"
         "  --log-tag=<value>\n"
-        "               Add a 1-48 character disambiguation tag to test logs\n";
+        "               Add a 1-48 character disambiguation tag to test logs\n"
+        "  --output-directory=<path>\n"
+        "               Write test output beneath the supplied directory\n";
 }
 
 bool parse_log_tag(const int argc, char** const argv, const char*& log_tag)
@@ -149,6 +151,33 @@ bool parse_log_tag(const int argc, char** const argv, const char*& log_tag)
             log_tag = candidate;
         }
         else if ((argument != nullptr) && (std::strcmp(argument, "--log-tag") == 0))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool parse_output_directory(
+    const int argc, char** const argv, const char*& output_directory)
+{
+    constexpr char prefix[] = "--output-directory=";
+    output_directory = nullptr;
+    for (int index = 1; index < argc; ++index)
+    {
+        const char* const argument = argv[index];
+        if ((argument != nullptr) &&
+            (std::strncmp(argument, prefix, sizeof(prefix) - 1u) == 0))
+        {
+            const char* const candidate = argument + (sizeof(prefix) - 1u);
+            if ((output_directory != nullptr) || (candidate[0] == 0))
+            {
+                return false;
+            }
+            output_directory = candidate;
+        }
+        else if ((argument != nullptr) &&
+            (std::strcmp(argument, "--output-directory") == 0))
         {
             return false;
         }

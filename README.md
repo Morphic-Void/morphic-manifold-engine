@@ -19,6 +19,10 @@ supplied for human or automation reconciliation, for example
 absolute log-path pattern at startup. Concurrent invocations therefore remain
 isolated even when the tag is omitted or accidentally reused.
 
+Test output defaults to `tests/data/output`. Pass
+`--output-directory=<path>` to use another location; logs are written beneath
+that directory's `logs` child.
+
 The Executive-driven TGA load/decode/encode/save path remains a Host integration
 exercise. The separate direct TGA round-trip helper is compiled into
 `MorphicTests` as a manual test but is intentionally not registered or invoked.

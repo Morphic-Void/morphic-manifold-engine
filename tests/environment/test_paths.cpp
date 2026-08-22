@@ -56,7 +56,9 @@ std::filesystem::path find_repository_root(std::filesystem::path candidate)
 }
 
 bool initialise_paths(
-    const char* const executable_argument, const char* const log_tag)
+    const char* const executable_argument,
+    const char* const log_tag,
+    const char* const output_directory)
 {
     std::error_code error;
     const std::filesystem::path current = std::filesystem::current_path(error);
@@ -111,7 +113,21 @@ bool initialise_paths(
     {
         s_log_tag = log_tag;
     }
-    s_log_directory = s_repository_root / "tests" / "data" / "output" / "logs";
+    std::filesystem::path output_path;
+    if ((output_directory != nullptr) && (output_directory[0] != 0))
+    {
+        output_path = std::filesystem::absolute(
+            std::filesystem::path(output_directory), error);
+        if (error)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        output_path = s_repository_root / "tests" / "data" / "output";
+    }
+    s_log_directory = output_path.lexically_normal() / "logs";
     std::filesystem::create_directories(s_log_directory, error);
     if (error)
     {

@@ -408,6 +408,10 @@ direct log and prints its absolute path pattern before running tests. This
 allows parallel invocations to be reconciled with captured command output
 without sharing writable files.
 
+Test output defaults to `tests/data/output`. The optional command-line form
+`--output-directory=<path>` selects another output root, with suite logs written
+beneath its `logs` child. Relative paths are resolved from the launch directory.
+
 The current TGA processing and worker-management sketch did not influence the
 service internals. Future backing-file, multi-step-operation, module-loading,
 identity, and memory-provisioning infrastructure should relocate these
