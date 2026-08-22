@@ -103,6 +103,10 @@
     <ClInclude Include="executive\runtime\executive_thread.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="external\SuiteUTF\SuiteUTF.vcxproj">
+      <Project>{0BF5D948-138E-45A7-915F-AA8C3D6DBA08}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
     <ProjectReference Include="MorphicPolicyValidator.vcxproj">
       <Project>{9F240D42-75CB-4F16-A5B4-2B8D6A7E2C41}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
