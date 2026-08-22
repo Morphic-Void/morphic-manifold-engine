@@ -587,8 +587,8 @@ inline bool CBakedDocumentBlock::build_from(const CBakedDocumentBuilder& source)
         string_value_reference_count,
         string_value_bytes_offset,
         static_cast<std::uint32_t>(string_value_bytes_size),
-        0u
-    };
+        0u };
+
     std::memcpy(staged_bytes.data() + nodes_offset, source.m_nodes.data(), std::size_t(baked_node_count) * sizeof(CBakedNode));
     copy_strings(staged_bytes, source.m_property_names, property_name_references_offset, property_name_bytes_offset, property_name_reference_count);
     copy_strings(staged_bytes, source.m_string_values, string_value_references_offset, string_value_bytes_offset, string_value_reference_count);
